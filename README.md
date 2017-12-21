@@ -1,0 +1,3 @@
+# GeneriekeFrontendSeed
+
+Algemene frontend seed

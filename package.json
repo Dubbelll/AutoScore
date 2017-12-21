@@ -1,0 +1,45 @@
+{
+    "private": true,
+    "name": "generieke_frontend_seed",
+    "version": "0.0.1",
+    "description": "Algemene frontend seed",
+    "main": "app.js",
+    "scripts": {
+        "optimize:js": "uglifyjs dist/app.js --compress --mangle",
+        "optimize:css": "cleancss src/assets/css/app.css -o dist/app.css",
+        "optimize": "npm run optimize:js & npm run optimize:css",
+        "svg:generate": "svg-sprite-generate -d src/assets/svg -o src/sprite/icons.svg",
+        "copy:css": "cp src/assets/css/app.css dist/",
+        "copy:html": "cp src/index.html dist/",
+        "copy:icons": "cp src/assets/sprite/icons.svg dist/",
+        "copy:development": "npm run copy:css && npm run copy:html && npm run copy:icons",
+        "copy:production": "npm run copy:html && npm run copy:icons",
+        "elm:development": "elm-make src/app/App.elm --output=dist/app.js --debug",
+        "elm:production": "elm-make src/app/App.elm --output=dist/app.js",
+        "build:development": "npm run elm:development && npm run copy:development",
+        "build:production": "npm run elm:production && npm run copy:production && npm run optimize",
+        "watch": "watch 'npm run build:development' src/",
+        "server": "browser-sync start --server 'dist' --files 'dist'"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://gitlab.com/GeneriekBedrijf/GeneriekeFrontendSeed"
+    },
+    "keywords": [
+        "GeneriekeFrontendSeed",
+        "Generiek",
+        "Frontend",
+        "Seed"
+    ],
+    "author": "Lode Lesage",
+    "license": "ISC",
+    "devDependencies": {
+        "elm": "0.18.0",
+        "elm-format": "0.7.0-exp",
+        "svg-sprite-generator": "0.0.7",
+        "watch": "1.0.2",
+        "clean-css-cli": "4.1.10",
+        "uglify-es": "3.2.2",
+        "browser-sync": "2.19.0"
+    }
+}

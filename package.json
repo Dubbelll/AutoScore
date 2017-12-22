@@ -19,7 +19,7 @@
         "build:development": "npm run elm:development && npm run copy:development",
         "build:production": "npm run elm:production && npm run copy:production && npm run optimize",
         "watch": "watch 'npm run build:development' src/",
-        "server": "browser-sync start --server 'dist' --files 'dist'"
+        "server": "browser-sync start --config 'bs-config.js'"
     },
     "repository": {
         "type": "git",
@@ -34,12 +34,13 @@
     "author": "Lode Lesage",
     "license": "ISC",
     "devDependencies": {
+        "browser-sync": "2.19.0",
+        "clean-css-cli": "4.1.10",
         "elm": "0.18.0",
         "elm-format": "0.7.0-exp",
+        "http-proxy-middleware": "^0.17.4",
         "svg-sprite-generator": "0.0.7",
-        "watch": "1.0.2",
-        "clean-css-cli": "4.1.10",
         "uglify-es": "3.2.2",
-        "browser-sync": "2.19.0"
+        "watch": "1.0.2"
     }
 }

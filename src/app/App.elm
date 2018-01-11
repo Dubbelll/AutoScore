@@ -4,18 +4,23 @@ import Html exposing (Html, button, div, h1, text)
 import Html.Events exposing (onClick)
 import Http
 import Json.Decode as Decode
-import Json.Encode as Encode exposing (Value, encode, object, string)
 
 
-main : Program Never Model Msg
+main : Program Flags Model Msg
 main =
-    Html.program { init = init, view = view, update = update, subscriptions = subscriptions }
+    Html.programWithFlags { init = init, view = view, update = update, subscriptions = subscriptions }
+
+
 
 -- MODEL
 
 
 type alias Model =
-    { token : String, docs : String }
+    { config : Config, token : String }
+
+
+type alias Flags =
+    { version : String, baseURL : String }
 
 
 type alias JWT =
@@ -23,21 +28,16 @@ type alias JWT =
 
 
 type alias Config =
-    { key : String, version : String, baseURL : String }
+    { version : String, baseURL : String }
 
 
-init : ( Model, Cmd Msg )
-init =
-    ( { token = "", docs = "" }, Cmd.none )
+init : Flags -> ( Model, Cmd Msg )
+init flags =
+    ( { config = { version = flags.version, baseURL = flags.baseURL }, token = "" }, Cmd.none )
 
 
-config : Config
-config =
-    { key = "be37fd3a-a070-4e44-815e-f430e1e5dfd2", version = "/v1", baseURL = "http://localhost:3000/api" }
-
-
-fullURL : String
-fullURL =
+fullURL : Config -> String
+fullURL config =
     config.baseURL ++ config.version
 
 
@@ -45,13 +45,6 @@ decodeJWT : Decode.Decoder JWT
 decodeJWT =
     Decode.map JWT
         (Decode.field "token" Decode.string)
-
-
-encodeAPIKey : String -> Encode.Value
-encodeAPIKey key =
-    Encode.object
-        [ ( "api_key", Encode.string key )
-        ]
 
 
 
@@ -67,7 +60,7 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update message model =
     case message of
         Authenticate ->
-            ( model, authenticate config.key )
+            ( model, authenticate model )
 
         NewToken (Ok newToken) ->
             ( { model | token = newToken.token }, Cmd.none )
@@ -76,17 +69,14 @@ update message model =
             ( model, Cmd.none )
 
 
-authenticate : String -> Cmd Msg
-authenticate key =
+authenticate : Model -> Cmd Msg
+authenticate model =
     let
         url =
-            fullURL ++ "/authenticate"
-
-        body =
-            encodeAPIKey key |> Http.jsonBody
+            fullURL model.config ++ "/authenticate"
 
         request =
-            Http.post url body decodeJWT
+            Http.post url Http.emptyBody decodeJWT
     in
     Http.send NewToken request
 

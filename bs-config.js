@@ -1,4 +1,3 @@
-
 /*
  |--------------------------------------------------------------------------
  | Browser-sync config file
@@ -16,7 +15,10 @@
 const proxy = require("http-proxy-middleware")
 const proxyAPI = proxy("/api", {
     target: "http://localhost:8000",
-    logLevel: "debug"
+    logLevel: "debug",
+    onProxyReq(proxyReq, req, res) {
+        proxyReq.setHeader("API-Key", "be37fd3a-a070-4e44-815e-f430e1e5dfd2")
+    }
 })
 
 module.exports = {

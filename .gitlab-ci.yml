@@ -1,0 +1,18 @@
+test-merge:
+  image: node:8.9.4
+  stage: test
+  cache:
+    paths:
+      - node_modules/
+  before_script:
+    - npm install
+  script:
+    - npm run test
+    - >-
+      MR_IID=$(curl --header "Private-Token:$PRIVATE_TOKEN" -X POST
+      $CREATE_MR_URL | python -c "$PRINT_MR_IID_CMD")
+    - >-
+      curl --header "Private-Token:$PRIVATE_TOKEN" -X PUT
+      https://gitlab.com/api/v4/projects/4958070/merge_requests/$MR_IID/merge?merge_when_pipeline_succeeds=true
+  only:
+    - development

@@ -66,7 +66,7 @@ module.exports = {
     "scrollElements": [],
     "scrollElementMapping": [],
     "reloadDelay": 0,
-    "reloadDebounce": 0,
+    "reloadDebounce": 1000,
     "reloadThrottle": 0,
     "plugins": [],
     "injectChanges": true,

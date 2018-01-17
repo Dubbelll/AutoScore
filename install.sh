@@ -5,7 +5,7 @@ CI_PIPELINE_ID=$1
 echo "Changing directory to builds..."
 cd /home/private/builds
 echo "Removing builds if there are more than 5, oldest first..."
-ls -tr | head -n -5 | xargs --no-run-if-empty rm
+ls -A1t | tail -n +6 | xargs --no-run-if-empty rm
 echo "Deleting current active build .zip..."
 rm /home/public/build-*.zip
 echo "Copying .zip..."

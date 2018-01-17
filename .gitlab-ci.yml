@@ -72,7 +72,7 @@ deploy-production:
     - npm run elm:install
   script:
     - npm run build:production
-    - zip -r -q build-$CI_PIPELINE_ID.zip dist/*
+    - zip -r -j -q build-$CI_PIPELINE_ID.zip dist/*
     - scp build-$CI_PIPELINE_ID.zip $REMOTE_USER@$REMOTE_ADDRESS:$REMOTE_DESTINATION_BUILD
     - scp install.sh $REMOTE_USER@$REMOTE_ADDRESS:$REMOTE_DESTINATION_INSTALL
     - ssh $REMOTE_USER@$REMOTE_ADDRESS ". $INSTALL_SCRIPT $CI_PIPELINE_ID"

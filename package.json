@@ -5,8 +5,8 @@
     "description": "Algemene frontend seed",
     "main": "app.js",
     "scripts": {
-        "optimize:js": "uglifyjs dist/app.js --compress --mangle",
-        "optimize:css": "cleancss dist/app.css",
+        "optimize:js": "uglifyjs dist/app.js --compress --mangle --output dist/app.js",
+        "optimize:css": "cleancss dist/app.css --output dist/app.css",
         "optimize": "npm run optimize:js & npm run optimize:css",
         "svg:generate": "svg-sprite-generate -d src/assets/svg -o src/sprite/icons.svg",
         "sass:generate": "sass --sourcemap=none src/assets/scss/app.scss:dist/app.css",

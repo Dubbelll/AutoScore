@@ -4,15 +4,74 @@ test-merge:
   cache:
     paths:
       - node_modules/
+  variables:
+    PRINT_MR_IID_CMD: "import sys,json; print(json.load(sys.stdin)['iid'])"
+    CREATE_MR_URL: "https://gitlab.com/api/v4/projects/$CI_PROJECT_ID/merge_requests/?source_branch=development&target_branch=master&title=Automatic%20merge%20from%20GitLab%20CI&"
   before_script:
     - npm install
   script:
     - npm run test
-    - >-
-      MR_IID=$(curl --header "Private-Token:$PRIVATE_TOKEN" -X POST
-      $CREATE_MR_URL | python -c "$PRINT_MR_IID_CMD")
-    - >-
-      curl --header "Private-Token:$PRIVATE_TOKEN" -X PUT
-      https://gitlab.com/api/v4/projects/4958070/merge_requests/$MR_IID/merge?merge_when_pipeline_succeeds=true
+    - MR_IID=$(curl --header "Private-Token:$PRIVATE_TOKEN" -X POST $CREATE_MR_URL | python -c "$PRINT_MR_IID_CMD")
+    - ACCEPT_MR_URL="https://gitlab.com/api/v4/projects/$CI_PROJECT_ID/merge_requests/$MR_IID/merge?merge_when_pipeline_succeeds=true"
+    - curl --header "Private-Token:$PRIVATE_TOKEN" -X PUT $ACCEPT_MR_URL
   only:
+    - development
+deploy-staging:
+  image: node:8.9.4
+  stage: deploy
+  cache:
+    paths:
+      - node_modules/
+  variables:
+    REMOTE_USER: "musilitar_carcrashmysterystaging"
+    REMOTE_ADDRESS: "ssh.phx.nearlyfreespeech.net"
+    REMOTE_DESTINATION: "/home/private/builds"
+    INSTALL_SCRIPT: "$REMOTE_DESTINATION/install.sh"
+  before_script:
+    - apt-get update -y
+    - apt-get install zip -y
+    - eval $(ssh-agent -s)
+    - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add - > /dev/null
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+    - echo "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+    - chmod 644 ~/.ssh/known_hosts
+    - npm install
+    - npm run elm:install
+  script:
+    - npm run build:staging
+    - zip build-$CI_PIPELINE_ID.zip dist/
+    - scp build-$CI_PIPELINE_ID.zip install.sh $REMOTE_USER@$REMOTE_ADDRESS:$REMOTE_DESTINATION
+    - ssh $REMOTE_USER@$REMOTE_ADDRESS ". $INSTALL_SCRIPT $CI_PIPELINE_ID"
+  only:
+    - development
+deploy-production:
+  image: node:8.9.4
+  stage: deploy
+  cache:
+    paths:
+      - node_modules/
+  variables:
+    REMOTE_USER: "musilitar_carcrashmystery"
+    REMOTE_ADDRESS: "ssh.phx.nearlyfreespeech.net"
+    REMOTE_DESTINATION: "/home/private/builds"
+    INSTALL_SCRIPT: "$REMOTE_DESTINATION/install.sh"
+  before_script:
+    - apt-get update -y
+    - apt-get install openssh-client -y
+    - eval $(ssh-agent -s)
+    - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add - > /dev/null
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+    - echo "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+    - chmod 644 ~/.ssh/known_hosts
+    - npm install
+  script:
+    - npm run build:production
+    - zip build-$CI_PIPELINE_ID.zip dist/
+    - scp build-$CI_PIPELINE_ID.zip install.sh $REMOTE_USER@$REMOTE_ADDRESS:$REMOTE_DESTINATION
+    - ssh $REMOTE_USER@$REMOTE_ADDRESS ". $INSTALL_SCRIPT $CI_PIPELINE_ID"
+  only:
+    - tag
+  except:
     - development

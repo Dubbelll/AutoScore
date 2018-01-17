@@ -17,6 +17,7 @@
         "copy:icons": "cp src/assets/sprite/icons.svg dist/",
         "copy:development": "npm run copy:html && npm run copy:icons",
         "copy:production": "npm run copy:html && npm run copy:icons",
+        "elm:install": "elm-package install --yes",
         "elm:development": "elm-make src/app/App.elm --output=dist/app.js --debug",
         "elm:production": "elm-make src/app/App.elm --output=dist/app.js",
         "build:development": "npm run elm:development && npm run sass:generate && npm run copy:development && npm run config:development",

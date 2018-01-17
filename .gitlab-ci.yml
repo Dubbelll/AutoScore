@@ -25,8 +25,9 @@ deploy-staging:
   variables:
     REMOTE_USER: "musilitar_carcrashmysterystaging"
     REMOTE_ADDRESS: "ssh.phx.nearlyfreespeech.net"
-    REMOTE_DESTINATION: "/home/private/builds"
-    INSTALL_SCRIPT: "$REMOTE_DESTINATION/install.sh"
+    REMOTE_DESTINATION_BUILD: "/home/private/builds"
+    REMOTE_DESTINATION_INSTALL: "/home/private/install"
+    INSTALL_SCRIPT: "$REMOTE_DESTINATION_BUILD/install.sh"
   before_script:
     - apt-get update -y
     - apt-get install zip -y
@@ -40,8 +41,9 @@ deploy-staging:
     - npm run elm:install
   script:
     - npm run build:staging
-    - zip build-$CI_PIPELINE_ID.zip dist/
-    - scp build-$CI_PIPELINE_ID.zip install.sh $REMOTE_USER@$REMOTE_ADDRESS:$REMOTE_DESTINATION
+    - zip -r -q build-$CI_PIPELINE_ID.zip dist/*
+    - scp build-$CI_PIPELINE_ID.zip $REMOTE_USER@$REMOTE_ADDRESS:$REMOTE_DESTINATION_BUILD
+    - scp install.sh $REMOTE_USER@$REMOTE_ADDRESS:$REMOTE_DESTINATION_INSTALL
     - ssh $REMOTE_USER@$REMOTE_ADDRESS ". $INSTALL_SCRIPT $CI_PIPELINE_ID"
   only:
     - development

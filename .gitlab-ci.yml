@@ -35,7 +35,7 @@ deploy-production:
   script:
     - curl -X POST -d "" $NETLIFY_URL_PRODUCTION
   only:
-    - tag
+    - tags
 # deploy-staging:
 #   image: node:8.9.4
 #   stage: deploy

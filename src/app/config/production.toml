@@ -1,0 +1,12 @@
+[[redirects]]
+from = "/api/*/authenticate"
+to = "https://www.generiekebackend.com/api/:splat/authenticate"
+status = 200
+force = true
+headers = {API-key = "be37fd3a-a070-4e44-815e-f430e1e5dfd2"}
+
+[[redirects]]
+from = "/api/*"
+to = "https://www.generiekebackend.com/api/:splat"
+status = 200
+force = true

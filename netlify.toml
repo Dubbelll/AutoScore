@@ -1,25 +1,27 @@
-[[redirects]]
-  from = "https://www.carcrashmystery.com/api/*"
-  to = "https://www.generiekebackend.com/api/:splat"
-  status = 200
-  force = true
+[context.master]
+    [[redirects]]
+        from = "/api/*"
+        to = "https://www.generiekebackend.com/api/:splat"
+        status = 200
+        force = true
 
-[[redirects]]
-  from = "https://www.carcrashmystery.com/api/*/authenticate"
-  to = "https://www.generiekebackend.com/api/:splat/authenticate"
-  status = 200
-  force = true
-  headers = {API-key: be37fd3a-a070-4e44-815e-f430e1e5dfd2}
+    [[redirects]]
+        from = "/api/*/authenticate"
+        to = "https://www.generiekebackend.com/api/:splat/authenticate"
+        status = 200
+        force = true
+        headers = {API-key = "be37fd3a-a070-4e44-815e-f430e1e5dfd2"}
 
-[[redirects]]
-  from = "https://staging.carcrashmystery.com/api/*"
-  to = "https://staging.generiekebackend.com/api/:splat"
-  status = 200
-  force = true
+[context.development]
+    [[redirects]]
+        from = "/api/*"
+        to = "https://staging.generiekebackend.com/api/:splat"
+        status = 200
+        force = true
 
-[[redirects]]
-  from = "https://staging.carcrashmystery.com/api/*/authenticate"
-  to = "https://staging.generiekebackend.com/api/:splat/authenticate"
-  status = 200
-  force = true
-  headers = {API-key: 6f5dfb13-c9ec-47a9-8417-129506410658}
+    [[redirects]]
+        from = "/api/*/authenticate"
+        to = "https://staging.generiekebackend.com/api/:splat/authenticate"
+        status = 200
+        force = true
+        headers = {API-key = "6f5dfb13-c9ec-47a9-8417-129506410658"}

@@ -15,9 +15,7 @@ test-merge:
     - ACCEPT_MR_URL="https://gitlab.com/api/v4/projects/$CI_PROJECT_ID/merge_requests/$MR_IID/merge?merge_when_pipeline_succeeds=true"
     - curl --header "Private-Token:$PRIVATE_TOKEN" -X PUT $ACCEPT_MR_URL
   only:
-    - tag
-  except:
-    - master
+    - development
 deploy-staging:
   image: debian:latest
   stage: deploy
@@ -25,11 +23,19 @@ deploy-staging:
     - apt-get update -y
     - apt-get install curl -y
   script:
-    - curl -X POST $NETLIFY_WEBHOOK_URL
+    - curl -X POST -d "" $NETLIFY_URL_STAGING
+  only:
+    - development
+deploy-production:
+  image: debian:latest
+  stage: deploy
+  before_script:
+    - apt-get update -y
+    - apt-get install curl -y
+  script:
+    - curl -X POST -d "" $NETLIFY_URL_PRODUCTION
   only:
     - tag
-  except:
-    - master
 # deploy-staging:
 #   image: node:8.9.4
 #   stage: deploy

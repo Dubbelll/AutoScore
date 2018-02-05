@@ -1,0 +1,78 @@
+# Location
+msgid "Translation.App.locationShop"
+msgstr "boutique"
+
+msgid "Translation.App.locationInfo"
+msgstr "info"
+
+# Path
+msgid "Translation.App.pathLanding"
+msgstr "#"
+
+msgid "Translation.App.pathShop"
+msgstr "#boutique"
+
+msgid "Translation.App.pathInfo"
+msgstr "#info"
+
+# Title
+msgid "Translation.App.titleGeneric"
+msgstr "GENERIEK"
+
+msgid "Translation.App.titleCompany"
+msgstr "BEDRIJF"
+
+msgid "Translation.App.titleShop"
+msgstr "BOUTIQUE"
+
+msgid "Translation.App.titleInfo"
+msgstr "INFO"
+
+msgid "Translation.App.titleWhat"
+msgstr "Quoi?"
+
+msgid "Translation.App.titleWho"
+msgstr "Qui?"
+
+msgid "Translation.App.titleWhy"
+msgstr "Pourquoi?"
+
+msgid "Translation.App.titleHow"
+msgstr "Comment?"
+
+# Explanation
+msgid "Translation.App.explanationShop"
+msgstr "Devenez le propriétaire d'une expérience unique: achète un site web!"
+
+msgid "Translation.App.explanationInfo"
+msgstr "Quoi, qui, pourquoi, comment?"
+
+# Text
+msgid "Translation.App.textIconBack"
+msgstr "RETOUR"
+
+msgid "Translation.App.textIconType"
+msgstr "TYPE"
+
+msgid "Translation.App.textIconCart"
+msgstr "PANIER"
+
+msgid "Translation.App.textIconAdd"
+msgstr "PANIER"
+
+# Description 
+msgid "Translation.App.descriptionExample"
+msgstr "Résumé de ce site en une phrase"
+
+# Body
+msgid "Translation.App.bodyWhat"
+msgstr "Ceci est un texte expliquant ce que. Ce n'est pas beaucoup, mais c'est là!"
+
+msgid "Translation.App.bodyWhy"
+msgstr "Ceci est un texte expliquant ce pourquoi. Ce n'est pas beaucoup, mais c'est là!"
+
+msgid "Translation.App.bodyWho"
+msgstr "Ceci est un texte expliquant ce qui. Ce n'est pas beaucoup, mais c'est là!"
+
+msgid "Translation.App.bodyHow"
+msgstr "Ceci est un texte expliquant ce comment. Ce n'est pas beaucoup, mais c'est là!"

@@ -1,0 +1,78 @@
+# Location
+msgid "Translation.App.locationShop"
+msgstr "shop"
+
+msgid "Translation.App.locationInfo"
+msgstr "info"
+
+# Path
+msgid "Translation.App.pathLanding"
+msgstr "#"
+
+msgid "Translation.App.pathShop"
+msgstr "#shop"
+
+msgid "Translation.App.pathInfo"
+msgstr "#info"
+
+# Title
+msgid "Translation.App.titleGeneric"
+msgstr "GENERIEK"
+
+msgid "Translation.App.titleCompany"
+msgstr "BEDRIJF"
+
+msgid "Translation.App.titleShop"
+msgstr "SHOP"
+
+msgid "Translation.App.titleInfo"
+msgstr "INFO"
+
+msgid "Translation.App.titleWhat"
+msgstr "What?"
+
+msgid "Translation.App.titleWho"
+msgstr "Who?"
+
+msgid "Translation.App.titleWhy"
+msgstr "Why?"
+
+msgid "Translation.App.titleHow"
+msgstr "How?"
+
+# Explanation
+msgid "Translation.App.explanationShop"
+msgstr "Become the owner of a unique experience: buy a website!"
+
+msgid "Translation.App.explanationInfo"
+msgstr "Who, what, why, how?"
+
+# Text
+msgid "Translation.App.textIconBack"
+msgstr "BACK"
+
+msgid "Translation.App.textIconType"
+msgstr "TYPE"
+
+msgid "Translation.App.textIconCart"
+msgstr "CART"
+
+msgid "Translation.App.textIconAdd"
+msgstr "CART"
+
+# Description 
+msgid "Translation.App.descriptionExample"
+msgstr "Summary of this site in one sentence"
+
+# Body
+msgid "Translation.App.bodyWhat"
+msgstr "This is a text explaining what. It's not much, but it's there!"
+
+msgid "Translation.App.bodyWhy"
+msgstr "This is a text explaining why. It's not much, but it's there!"
+
+msgid "Translation.App.bodyWho"
+msgstr "This is a text explaining who. It's not much, but it's there!"
+
+msgid "Translation.App.bodyHow"
+msgstr "This is a text explaining how. It's not much, but it's there!"

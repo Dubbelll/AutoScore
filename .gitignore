@@ -3,3 +3,4 @@ dist
 elm-stuff
 .sass-cache
 .cache
+src/app/Translation

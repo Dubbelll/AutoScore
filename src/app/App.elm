@@ -2,22 +2,32 @@ module App exposing (..)
 
 import Html exposing (Html, button, div, h1, text)
 import Html.Events exposing (onClick)
+import Navigation exposing (Location)
+import Translation.App as Translation
+import UrlParser exposing (..)
 import Http
-import Json.Decode as Decode
-import Jwt
+import Json.Decode as JD
+import Json.Decode.Pipeline as JDP
 
 
 main : Program Flags Model Msg
 main =
-    Html.programWithFlags { init = init, view = view, update = update, subscriptions = subscriptions }
+    Navigation.programWithFlags LocationChange { init = init, view = view, update = update, subscriptions = subscriptions }
 
 
 
 -- MODEL
 
 
+type Route
+    = RouteLanding
+    | RouteShop
+    | RouteInfo
+    | RouteNotFound
+
+
 type alias Model =
-    { config : Config, token : String, example : String }
+    { config : Config, route : Route, examples : List Example }
 
 
 type alias Flags =
@@ -28,17 +38,17 @@ type alias Config =
     { version : String, baseURL : String }
 
 
-type alias JWT =
-    { token : String }
-
-
 type alias Example =
-    { example : String }
+    { id : String, description : String, added_date_time : String }
 
 
-init : Flags -> ( Model, Cmd Msg )
-init flags =
-    ( { config = { version = flags.version, baseURL = flags.baseURL }, token = "", example = "" }, Cmd.none )
+init : Flags -> Location -> ( Model, Cmd Msg )
+init flags location =
+    let
+        currentRoute =
+            parseLocation location
+    in
+        ( { config = { version = flags.version, baseURL = flags.baseURL }, route = currentRoute, examples = [] }, Cmd.none )
 
 
 fullURL : Config -> String
@@ -46,16 +56,41 @@ fullURL config =
     config.baseURL ++ config.version
 
 
-decodeJWT : Decode.Decoder JWT
-decodeJWT =
-    Decode.map JWT
-        (Decode.field "token" Decode.string)
-
-
-decodeExample : Decode.Decoder Example
+decodeExample : JD.Decoder Example
 decodeExample =
-    Decode.map Example
-        (Decode.field "example" Decode.string)
+    JDP.decode Example
+        |> JDP.required "id" JD.string
+        |> JDP.required "description" JD.string
+        |> JDP.required "added_date_time" JD.string
+
+
+decodeExamples : JD.Decoder (List Example)
+decodeExamples =
+    JD.list decodeExample
+
+
+
+-- DATA
+-- ROUTING
+
+
+matchers : Parser (Route -> a) a
+matchers =
+    oneOf
+        [ map RouteLanding top
+        , map RouteShop (s Translation.locationShop)
+        , map RouteInfo (s Translation.locationInfo)
+        ]
+
+
+parseLocation : Location -> Route
+parseLocation location =
+    case parseHash matchers location of
+        Just route ->
+            route
+
+        Nothing ->
+            RouteNotFound
 
 
 
@@ -63,56 +98,41 @@ decodeExample =
 
 
 type Msg
-    = Authenticate
-    | NewToken (Result Http.Error JWT)
-    | RetrieveExample
-    | NewExample (Result Http.Error Example)
+    = LocationChange Location
+    | RetrieveExamples
+    | NewExamples (Result Http.Error (List Example))
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update message model =
     case message of
-        Authenticate ->
-            ( model, authenticate model )
+        LocationChange location ->
+            let
+                newRoute =
+                    parseLocation location
+            in
+                ( { model | route = newRoute }, Cmd.none )
 
-        NewToken (Ok newToken) ->
-            ( { model | token = newToken.token }, Cmd.none )
+        RetrieveExamples ->
+            ( model, retrieveExamples model )
 
-        NewToken (Err _) ->
+        NewExamples (Ok newExamples) ->
+            ( { model | examples = newExamples }, Cmd.none )
+
+        NewExamples (Err _) ->
             ( model, Cmd.none )
 
-        RetrieveExample ->
-            ( model, retrieveExample model )
 
-        NewExample (Ok newExample) ->
-            ( { model | example = newExample.example }, Cmd.none )
-
-        NewExample (Err _) ->
-            ( model, Cmd.none )
-
-
-authenticate : Model -> Cmd Msg
-authenticate model =
+retrieveExamples : Model -> Cmd Msg
+retrieveExamples model =
     let
         url =
-            fullURL model.config ++ "/authenticate"
+            fullURL model.config ++ "/examples"
 
         request =
-            Http.post url Http.emptyBody decodeJWT
+            Http.get url decodeExamples
     in
-    Http.send NewToken request
-
-
-retrieveExample : Model -> Cmd Msg
-retrieveExample model =
-    let
-        url =
-            fullURL model.config ++ "/example/authorized"
-
-        request =
-            Jwt.createRequest "GET" model.token url Http.emptyBody decodeExample
-    in
-    Http.send NewExample request
+        Http.send NewExamples request
 
 
 
@@ -131,7 +151,6 @@ subscriptions model =
 view : Model -> Html Msg
 view model =
     div []
-        [ h1 [] [ text "GeneriekeFrontendSeed" ]
-        , button [ onClick Authenticate ] [ text "Authenticate" ]
-        , button [ onClick RetrieveExample ] [ text "Authorized retrieval" ]
+        [ h1 [] [ text "CarCrashMystery" ]
+        , button [ onClick RetrieveExamples ] [ text "Retrieve example" ]
         ]

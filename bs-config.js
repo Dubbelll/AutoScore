@@ -17,7 +17,7 @@ const proxyAPI = proxy("/api", {
     target: "http://localhost:8000",
     logLevel: "debug",
     onProxyReq(proxyReq, req, res) {
-        proxyReq.setHeader("API-Key", "be37fd3a-a070-4e44-815e-f430e1e5dfd2")
+        proxyReq.setHeader("Authorization", "be37fd3a-a070-4e44-815e-f430e1e5dfd2")
     }
 })
 
@@ -32,7 +32,14 @@ module.exports = {
     "watchOptions": {
         "ignoreInitial": true
     },
-    "server": "dist",
+    "server": {
+        "baseDir": "dist",
+        "routes": {
+            "/en": "dist/index-EN.html",
+            "/nl": "dist/index-NL.html",
+            "/fr": "dist/index-FR.html"
+        }
+    },
     "proxy": false,
     "port": 3000,
     "middleware": [proxyAPI],
@@ -53,7 +60,7 @@ module.exports = {
     "logFileChanges": true,
     "logSnippet": true,
     "rewriteRules": [],
-    "open": "local",
+    "open": false,
     "browser": "default",
     "cors": false,
     "xip": false,

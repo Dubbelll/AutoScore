@@ -21,8 +21,6 @@ main =
 
 type Route
     = RouteLanding
-    | RouteShop
-    | RouteInfo
     | RouteNotFound
 
 
@@ -39,7 +37,11 @@ type alias Config =
 
 
 type alias Example =
-    { id : String, description : String, added_date_time : String }
+    { id : Int, description : String, addedDateTime : String }
+
+
+type alias Contact =
+    { id : Int, smartphoneId : Int, name : String }
 
 
 init : Flags -> Location -> ( Model, Cmd Msg )
@@ -51,15 +53,14 @@ init flags location =
         ( { config = { version = flags.version, baseURL = flags.baseURL }, route = currentRoute, examples = [] }, Cmd.none )
 
 
-fullURL : Config -> String
-fullURL config =
-    config.baseURL ++ config.version
+
+-- DECODERS
 
 
 decodeExample : JD.Decoder Example
 decodeExample =
     JDP.decode Example
-        |> JDP.required "id" JD.string
+        |> JDP.required "id" JD.int
         |> JDP.required "description" JD.string
         |> JDP.required "added_date_time" JD.string
 
@@ -70,7 +71,6 @@ decodeExamples =
 
 
 
--- DATA
 -- ROUTING
 
 
@@ -78,8 +78,6 @@ matchers : Parser (Route -> a) a
 matchers =
     oneOf
         [ map RouteLanding top
-        , map RouteShop (s Translation.locationShop)
-        , map RouteInfo (s Translation.locationInfo)
         ]
 
 
@@ -127,7 +125,7 @@ retrieveExamples : Model -> Cmd Msg
 retrieveExamples model =
     let
         url =
-            fullURL model.config ++ "/examples"
+            model.config.baseURL ++ "/examples"
 
         request =
             Http.get url decodeExamples

@@ -13,8 +13,8 @@ suite =
                 \_ ->
                     let
                         config =
-                            App.Config "v1" "http://localhost:3000/api/"
+                            App.Config "v1" "http://localhost:3000/api"
                     in
-                    Expect.equal (App.fullURL config) "http://localhost:3000/api/v1"
+                        Expect.equal config.baseURL "http://localhost:3000/api"
             ]
         ]

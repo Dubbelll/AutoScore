@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>GeneriekBedrijf</title>
+    <link href="https://fonts.googleapis.com/css?family=Nunito" rel="stylesheet">
+    <link rel="stylesheet" href="app.css">
+</head>
+
+<body>
+    <div id="app"></div>
+    <script src="config.js"></script>
+    <script src="app-EN.js"></script>
+    <script>
+        const element = document.getElementById("app");
+        const flags =
+            {
+                version: CONFIG_API_VERSION,
+                baseURL: CONFIG_API_BASE_URL
+            };
+        Elm.App.embed(element, flags);
+    </script>
+</body>
+
+</html>

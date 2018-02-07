@@ -15,9 +15,10 @@
 const proxy = require("http-proxy-middleware")
 const proxyAPI = proxy("/api", {
     target: "http://localhost:8000",
+    pathRewrite: { "^/api/": "/" },
     logLevel: "debug",
     onProxyReq(proxyReq, req, res) {
-        proxyReq.setHeader("API-Key", "be37fd3a-a070-4e44-815e-f430e1e5dfd2")
+        proxyReq.setHeader("Authorization", "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiY2xpZW50X215c3RlcnkifQ.PzLybcYYAY4Fu8A4zOoBuHQ8GXZtqTTHGLXfOCtrBic")
     }
 })
 
@@ -32,7 +33,14 @@ module.exports = {
     "watchOptions": {
         "ignoreInitial": true
     },
-    "server": "dist",
+    "server": {
+        "baseDir": "dist",
+        "routes": {
+            "/en": "dist/index-EN.html",
+            "/nl": "dist/index-NL.html",
+            "/fr": "dist/index-FR.html"
+        }
+    },
     "proxy": false,
     "port": 3000,
     "middleware": [proxyAPI],
@@ -53,7 +61,7 @@ module.exports = {
     "logFileChanges": true,
     "logSnippet": true,
     "rewriteRules": [],
-    "open": "local",
+    "open": false,
     "browser": "default",
     "cors": false,
     "xip": false,

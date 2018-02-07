@@ -1,26 +1,48 @@
 /* Colors */
-$color-dark-primary: #455A64;
-$color-default-primary: #607D8B;
-$color-light-primary: #CFD8DC;
-$color-text-primary: #FFFFFF;
-$color-accent: #03A9F4;
-$color-primary-text: #212121;
-$color-secondary-text: #757575;
-$color-divider: #BDBDBD;
+$color-background-primary: #FDFDFD;
+$color-background-secondary: #FFC107;
+$color-background-tertiary: #FFECB3;
+$color-text-primary: #2F2F2F;
+$color-text-secondary: #FDFDFD;
+$color-header-primary: #2F2F2F;
+$color-accent-primary: #03A9F4;
 
 /* Font */
+$font-family-default: "Nunito", sans-serif;
 $font-size-default: 1vmin;
-$font-size-input: 2rem;
+$font-size-title: 5rem;
+$font-size-icon-fake: 3.75rem;
+$font-size-heading: 2.5rem;
+$font-size-description: 2.25rem;
+$font-size-icon: 1.75rem;
+$font-size-body: 1.25rem;
+
+/* Line */
+$line-height-tight: 1.25;
 
 /* Padding */
 $padding-default: 2rem;
-$padding-input: 1rem;
+$padding-minimal: 1rem;
 
 /* Margin */
 $margin-default: 2rem;
+$margin-minimal: 1rem;
 
 /* Border */
 $border-width-default: 2px;
+$border-width-menu-item: 25rem;
+$border-width-menu-explanation: 0.5rem;
 
 /* Icons */
 $icon-size-default: 2.5rem;
+$icon-size-nav: 4rem;
+$icon-size-big: 10rem;
+
+/* Depth */
+$depth-header: 9;
+$depth-menu-item: 8;
+$depth-shop-item: 8;
+$depth-shop-item-description: 7;
+$depth-shop-item-image: 6;
+$depth-footer: 9;
+$depth-accent: 10;

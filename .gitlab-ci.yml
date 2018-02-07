@@ -8,6 +8,7 @@ test-merge:
     PRINT_MR_IID_CMD: "import sys,json; print(json.load(sys.stdin)['iid'])"
     CREATE_MR_URL: "https://gitlab.com/api/v4/projects/$CI_PROJECT_ID/merge_requests/?source_branch=development&target_branch=master&title=Automatic%20merge%20from%20GitLab%20CI&"
   before_script:
+    - mkdir src/app/Translation
     - npm install
   script:
     - npm run test
@@ -17,86 +18,66 @@ test-merge:
   only:
     - development
 deploy-staging:
-  image: debian:latest
+  image: node:8.9.4
   stage: deploy
+  cache:
+    paths:
+      - node_modules/
+  variables:
+    REMOTE_USER: "musilitar"
+    REMOTE_ADDRESS: "209.250.253.37"
+    PATH_BUILDS: "/home/musilitar/builds/carcrashmystery"
+    PATH_SCRIPTS: "/home/musilitar/scripts/carcrashmystery"
+    PATH_INSTALL_SCRIPT: "$PATH_SCRIPTS/install.sh"
   before_script:
-    - apt-get update -y
-    - apt-get install curl -y
+    - apt-get update -qq > /dev/null
+    - apt-get install zip -qq > /dev/null
+    - eval $(ssh-agent -s)
+    - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add - > /dev/null
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+    - echo "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+    - chmod 644 ~/.ssh/known_hosts
+    - mkdir src/app/Translation
+    - mkdir dist
+    - npm install
   script:
-    - curl -X POST -d "" $NETLIFY_URL_STAGING
+    - npm run install:staging
+    - zip -r -j -q build-$CI_PIPELINE_ID.zip dist/*
+    - scp install.sh $REMOTE_USER@$REMOTE_ADDRESS:$PATH_INSTALL_SCRIPT
+    - scp build-$CI_PIPELINE_ID.zip $REMOTE_USER@$REMOTE_ADDRESS:$PATH_BUILDS
+    - ssh $REMOTE_USER@$REMOTE_ADDRESS ". $PATH_INSTALL_SCRIPT $CI_PIPELINE_ID"
   only:
     - development
 deploy-production:
-  image: debian:latest
+  image: node:8.9.4
   stage: deploy
+  cache:
+    paths:
+      - node_modules/
+  variables:
+    REMOTE_USER: "musilitar"
+    REMOTE_ADDRESS: "45.76.38.194"
+    PATH_BUILDS: "/home/musilitar/builds/carcrashmystery"
+    PATH_SCRIPTS: "/home/musilitar/scripts/carcrashmystery"
+    PATH_INSTALL_SCRIPT: "$PATH_SCRIPTS/install.sh"
   before_script:
-    - apt-get update -y
-    - apt-get install curl -y
+    - apt-get update -qq > /dev/null
+    - apt-get install zip -qq > /dev/null
+    - eval $(ssh-agent -s)
+    - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add - > /dev/null
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+    - echo "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+    - chmod 644 ~/.ssh/known_hosts
+    - mkdir src/app/Translation
+    - mkdir dist
+    - npm install
   script:
-    - curl -X POST -d "" $NETLIFY_URL_PRODUCTION
+    - npm run install:production
+    - zip -r -j -q build-$CI_PIPELINE_ID.zip dist/*
+    - scp install.sh $REMOTE_USER@$REMOTE_ADDRESS:$PATH_INSTALL_SCRIPT
+    - scp build-$CI_PIPELINE_ID.zip $REMOTE_USER@$REMOTE_ADDRESS:$PATH_BUILDS
+    - ssh $REMOTE_USER@$REMOTE_ADDRESS ". $PATH_INSTALL_SCRIPT $CI_PIPELINE_ID"
   only:
     - tags
-# deploy-staging:
-#   image: node:8.9.4
-#   stage: deploy
-#   cache:
-#     paths:
-#       - node_modules/
-#   variables:
-#     REMOTE_USER: "musilitar_carcrashmysterystaging"
-#     REMOTE_ADDRESS: "ssh.phx.nearlyfreespeech.net"
-#     REMOTE_DESTINATION_BUILD: "/home/private/builds"
-#     REMOTE_DESTINATION_INSTALL: "/home/private/install"
-#     INSTALL_SCRIPT: "$REMOTE_DESTINATION_INSTALL/install.sh"
-#   before_script:
-#     - apt-get update -y
-#     - apt-get install zip -y
-#     - eval $(ssh-agent -s)
-#     - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add - > /dev/null
-#     - mkdir -p ~/.ssh
-#     - chmod 700 ~/.ssh
-#     - echo "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
-#     - chmod 644 ~/.ssh/known_hosts
-#     - npm install
-#     - npm run elm:install
-#   script:
-#     - npm run build:staging
-#     - zip -r -j -q build-$CI_PIPELINE_ID.zip dist/*
-#     - scp build-$CI_PIPELINE_ID.zip $REMOTE_USER@$REMOTE_ADDRESS:$REMOTE_DESTINATION_BUILD
-#     - scp install.sh $REMOTE_USER@$REMOTE_ADDRESS:$REMOTE_DESTINATION_INSTALL
-#     - ssh $REMOTE_USER@$REMOTE_ADDRESS ". $INSTALL_SCRIPT $CI_PIPELINE_ID"
-#   only:
-#     - development
-# deploy-production:
-#   image: node:8.9.4
-#   stage: deploy
-#   cache:
-#     paths:
-#       - node_modules/
-#   variables:
-#     REMOTE_USER: "musilitar_carcrashmystery"
-#     REMOTE_ADDRESS: "ssh.phx.nearlyfreespeech.net"
-#     REMOTE_DESTINATION_BUILD: "/home/private/builds"
-#     REMOTE_DESTINATION_INSTALL: "/home/private/install"
-#     INSTALL_SCRIPT: "$REMOTE_DESTINATION_INSTALL/install.sh"
-#   before_script:
-#     - apt-get update -y
-#     - apt-get install openssh-client -y
-#     - eval $(ssh-agent -s)
-#     - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add - > /dev/null
-#     - mkdir -p ~/.ssh
-#     - chmod 700 ~/.ssh
-#     - echo "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
-#     - chmod 644 ~/.ssh/known_hosts
-#     - npm install
-#     - npm run elm:install
-#   script:
-#     - npm run build:production
-#     - zip -r -j -q build-$CI_PIPELINE_ID.zip dist/*
-#     - scp build-$CI_PIPELINE_ID.zip $REMOTE_USER@$REMOTE_ADDRESS:$REMOTE_DESTINATION_BUILD
-#     - scp install.sh $REMOTE_USER@$REMOTE_ADDRESS:$REMOTE_DESTINATION_INSTALL
-#     - ssh $REMOTE_USER@$REMOTE_ADDRESS ". $INSTALL_SCRIPT $CI_PIPELINE_ID"
-#   only:
-#     - tag
-#   except:
-#     - development

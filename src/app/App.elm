@@ -108,8 +108,8 @@ parseLocation location =
 
 type Msg
     = LocationChange Location
-    | FileSelected FileSubscriptionPort
-    | FileRead FileDataPort
+    | FileSelected PT.FileSubscriptionPort
+    | FileRead PT.FileDataPort
     | RetrieveExamples
     | NewExamples (Result Http.Error (List Example))
 
@@ -182,7 +182,7 @@ view model =
         ]
 
 
-viewFileWithPreview : Model -> FileSubscriptionPort -> Html Msg
+viewFileWithPreview : Model -> PT.FileSubscriptionPort -> Html Msg
 viewFileWithPreview model subscription =
     let
         filePreview =

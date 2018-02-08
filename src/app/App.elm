@@ -1,13 +1,15 @@
 module App exposing (..)
 
-import Html exposing (Html, button, div, h1, text)
-import Html.Events exposing (onClick)
+import Html exposing (Html, button, div, h1, text, img, input)
+import Html.Attributes exposing (src, title, class, id, type_)
+import Html.Events exposing (on, onClick)
 import Navigation exposing (Location)
 import Translation.App as Translation
 import UrlParser exposing (..)
 import Http
 import Json.Decode as JD
 import Json.Decode.Pipeline as JDP
+import Ports as PT exposing (..)
 
 
 main : Program Flags Model Msg
@@ -25,7 +27,7 @@ type Route
 
 
 type alias Model =
-    { config : Config, route : Route, examples : List Example }
+    { config : Config, route : Route, examples : List Example, file : Maybe File }
 
 
 type alias Flags =
@@ -34,6 +36,10 @@ type alias Flags =
 
 type alias Config =
     { version : String, baseURL : String }
+
+
+type alias File =
+    { name : String, content : String }
 
 
 type alias Example =
@@ -50,7 +56,7 @@ init flags location =
         currentRoute =
             parseLocation location
     in
-        ( { config = { version = flags.version, baseURL = flags.baseURL }, route = currentRoute, examples = [] }, Cmd.none )
+        ( { config = { version = flags.version, baseURL = flags.baseURL }, route = currentRoute, examples = [], file = Nothing }, Cmd.none )
 
 
 
@@ -97,6 +103,8 @@ parseLocation location =
 
 type Msg
     = LocationChange Location
+    | FileSelected String
+    | FileRead FileDataPort
     | RetrieveExamples
     | NewExamples (Result Http.Error (List Example))
 
@@ -110,6 +118,16 @@ update message model =
                     parseLocation location
             in
                 ( { model | route = newRoute }, Cmd.none )
+
+        FileSelected elementId ->
+            ( model, PT.fileSelected elementId )
+
+        FileRead file ->
+            let
+                newFile =
+                    { name = file.name, content = file.content }
+            in
+                ( { model | file = Just newFile }, Cmd.none )
 
         RetrieveExamples ->
             ( model, retrieveExamples model )
@@ -139,7 +157,7 @@ retrieveExamples model =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    Sub.none
+    PT.fileContentRead FileRead
 
 
 
@@ -151,4 +169,27 @@ view model =
     div []
         [ h1 [] [ text "CarCrashMystery" ]
         , button [ onClick RetrieveExamples ] [ text "Retrieve example" ]
+        , viewFile model
         ]
+
+
+viewFile : Model -> Html Msg
+viewFile model =
+    let
+        filePreview =
+            case model.file of
+                Just file ->
+                    viewAppIcon file
+
+                Nothing ->
+                    text ""
+    in
+        div [ class "file-upload-container" ]
+            [ input [ id "fileAppIcon", type_ "file", on "change" (JD.succeed (FileSelected "fileAppIcon")) ] []
+            , filePreview
+            ]
+
+
+viewAppIcon : File -> Html Msg
+viewAppIcon appIcon =
+    img [ src appIcon.content, title appIcon.name ] []

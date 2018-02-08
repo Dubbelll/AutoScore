@@ -1,13 +1,20 @@
 port module Ports exposing (..)
 
 
+type alias FileSubscriptionPort =
+    { key : String
+    , id : String
+    }
+
+
 type alias FileDataPort =
-    { name : String
+    { key : String
+    , name : String
     , content : String
     }
 
 
-port fileSelected : String -> Cmd msg
+port fileSelected : FileSubscriptionPort -> Cmd msg
 
 
 port fileContentRead : (FileDataPort -> msg) -> Sub msg

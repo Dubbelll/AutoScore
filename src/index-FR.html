@@ -20,8 +20,8 @@
             };
         const app = Elm.App.embed(element, flags);
 
-        app.ports.fileSelected.subscribe(function (id) {
-            const element = document.getElementById(id);
+        app.ports.fileSelected.subscribe(function (subscription) {
+            const element = document.getElementById(subscription.id);
             if (element === null || element.files.length === 0) {
                 return;
             }
@@ -33,6 +33,7 @@
                 const fileAsBase64 = event.target.result;
                 const fileAsPort =
                     {
+                        key: subscription.key,
                         name: file.name,
                         content: fileAsBase64
                     };

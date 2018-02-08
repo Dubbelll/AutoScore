@@ -10,6 +10,7 @@ import Http
 import Json.Decode as JD
 import Json.Decode.Pipeline as JDP
 import Ports as PT exposing (..)
+import Dict exposing (Dict)
 
 
 main : Program Flags Model Msg
@@ -27,7 +28,7 @@ type Route
 
 
 type alias Model =
-    { config : Config, route : Route, examples : List Example, file : Maybe File }
+    { config : Config, route : Route, examples : List Example, files : Files }
 
 
 type alias Flags =
@@ -40,6 +41,10 @@ type alias Config =
 
 type alias File =
     { name : String, content : String }
+
+
+type alias Files =
+    Dict String File
 
 
 type alias Example =
@@ -56,7 +61,7 @@ init flags location =
         currentRoute =
             parseLocation location
     in
-        ( { config = { version = flags.version, baseURL = flags.baseURL }, route = currentRoute, examples = [], file = Nothing }, Cmd.none )
+        ( { config = { version = flags.version, baseURL = flags.baseURL }, route = currentRoute, examples = [], files = Dict.empty }, Cmd.none )
 
 
 
@@ -103,7 +108,7 @@ parseLocation location =
 
 type Msg
     = LocationChange Location
-    | FileSelected String
+    | FileSelected FileSubscriptionPort
     | FileRead FileDataPort
     | RetrieveExamples
     | NewExamples (Result Http.Error (List Example))
@@ -119,15 +124,18 @@ update message model =
             in
                 ( { model | route = newRoute }, Cmd.none )
 
-        FileSelected elementId ->
-            ( model, PT.fileSelected elementId )
+        FileSelected subscription ->
+            ( model, PT.fileSelected subscription )
 
         FileRead file ->
             let
                 newFile =
                     { name = file.name, content = file.content }
+
+                newKey =
+                    file.key
             in
-                ( { model | file = Just newFile }, Cmd.none )
+                ( { model | files = Dict.insert newKey newFile model.files }, Cmd.none )
 
         RetrieveExamples ->
             ( model, retrieveExamples model )
@@ -169,27 +177,28 @@ view model =
     div []
         [ h1 [] [ text "CarCrashMystery" ]
         , button [ onClick RetrieveExamples ] [ text "Retrieve example" ]
-        , viewFile model
+        , viewFileWithPreview model { key = "appIcon", id = "file-app-icon" }
+        , viewFileWithPreview model { key = "walletPicture", id = "file-wallet-picture" }
         ]
 
 
-viewFile : Model -> Html Msg
-viewFile model =
+viewFileWithPreview : Model -> FileSubscriptionPort -> Html Msg
+viewFileWithPreview model subscription =
     let
         filePreview =
-            case model.file of
+            case Dict.get subscription.key model.files of
                 Just file ->
-                    viewAppIcon file
+                    viewFileImage file
 
                 Nothing ->
                     text ""
     in
         div [ class "file-upload-container" ]
-            [ input [ id "fileAppIcon", type_ "file", on "change" (JD.succeed (FileSelected "fileAppIcon")) ] []
+            [ input [ id subscription.id, type_ "file", on "change" (JD.succeed (FileSelected subscription)) ] []
             , filePreview
             ]
 
 
-viewAppIcon : File -> Html Msg
-viewAppIcon appIcon =
-    img [ src appIcon.content, title appIcon.name ] []
+viewFileImage : File -> Html Msg
+viewFileImage file =
+    img [ src file.content, title file.name ] []

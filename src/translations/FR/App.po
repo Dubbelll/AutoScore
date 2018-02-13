@@ -1,78 +1,121 @@
 # Location
-msgid "Translation.App.locationShop"
-msgstr "boutique"
+msgid "Translation.App.locationLanding"
+msgstr ""
 
-msgid "Translation.App.locationInfo"
-msgstr "info"
+msgid "Translation.App.locationMystery"
+msgstr "mystère"
+
+msgid "Translation.App.locationDriver"
+msgstr "chauffeur"
+
+msgid "Translation.App.locationSmartphone"
+msgstr "smartphone"
+
+msgid "Translation.App.locationContacts"
+msgstr "contacts"
+
+msgid "Translation.App.locationApps"
+msgstr "apps"
+
+msgid "Translation.App.locationMessages"
+msgstr "messages"
+
+msgid "Translation.App.locationToDoList"
+msgstr "liste-tâches"
+
+msgid "Translation.App.locationBrowserHistory"
+msgstr "historique-navigateur"
+
+msgid "Translation.App.locationCallHistory"
+msgstr "historique-appels"
+
+msgid "Translation.App.locationWallet"
+msgstr "portefeuille"
+
+msgid "Translation.App.locationCreditCards"
+msgstr "cartes-crédit"
+
+msgid "Translation.App.locationKeys"
+msgstr "clés"
+
+msgid "Translation.App.locationCar"
+msgstr "voiture"
+
+msgid "Translation.App.locationGloveCompartment"
+msgstr "boîte-gants"
+
+msgid "Translation.App.locationTrunk"
+msgstr "coffre"
+
+msgid "Translation.App.locationCupHolder"
+msgstr "porte-gobelet"
+
+msgid "Translation.App.locationDamage"
+msgstr "dégâts"
+
+msgid "Translation.App.locationDiary"
+msgstr "journal-intime"
+
+msgid "Translation.App.locationTags"
+msgstr "mots-clés"
 
 # Path
 msgid "Translation.App.pathLanding"
-msgstr "#"
+msgstr "#/"
 
-msgid "Translation.App.pathShop"
-msgstr "#boutique"
+msgid "Translation.App.pathMystery"
+msgstr "#/mystère"
 
-msgid "Translation.App.pathInfo"
-msgstr "#info"
+msgid "Translation.App.pathDriver"
+msgstr "#/chauffeur"
 
-# Title
-msgid "Translation.App.titleGeneric"
-msgstr "GENERIEK"
+msgid "Translation.App.pathSmartphone"
+msgstr "#/smartphone"
 
-msgid "Translation.App.titleCompany"
-msgstr "BEDRIJF"
+msgid "Translation.App.pathContacts"
+msgstr "#/contacts"
 
-msgid "Translation.App.titleShop"
-msgstr "BOUTIQUE"
+msgid "Translation.App.pathApps"
+msgstr "#/apps"
 
-msgid "Translation.App.titleInfo"
-msgstr "INFO"
+msgid "Translation.App.pathMessages"
+msgstr "#/messages"
 
-msgid "Translation.App.titleWhat"
-msgstr "Quoi?"
+msgid "Translation.App.pathToDoList"
+msgstr "#/liste-tâches"
 
-msgid "Translation.App.titleWho"
-msgstr "Qui?"
+msgid "Translation.App.pathBrowserHistory"
+msgstr "#/historique-navigateur"
 
-msgid "Translation.App.titleWhy"
-msgstr "Pourquoi?"
+msgid "Translation.App.pathCallHistory"
+msgstr "#/historique-appels"
 
-msgid "Translation.App.titleHow"
-msgstr "Comment?"
+msgid "Translation.App.pathWallet"
+msgstr "#/portefeuille"
 
-# Explanation
-msgid "Translation.App.explanationShop"
-msgstr "Devenez le propriétaire d'une expérience unique: achète un site web!"
+msgid "Translation.App.pathCreditCards"
+msgstr "#/cartes-crédit"
 
-msgid "Translation.App.explanationInfo"
-msgstr "Quoi, qui, pourquoi, comment?"
+msgid "Translation.App.pathKeys"
+msgstr "#/clés"
 
-# Text
-msgid "Translation.App.textIconBack"
-msgstr "RETOUR"
+msgid "Translation.App.pathCar"
+msgstr "#/voiture"
 
-msgid "Translation.App.textIconType"
-msgstr "TYPE"
+msgid "Translation.App.pathGloveCompartment"
+msgstr "#/boîte-gants"
 
-msgid "Translation.App.textIconCart"
-msgstr "PANIER"
+msgid "Translation.App.pathTrunk"
+msgstr "#/coffre"
 
-msgid "Translation.App.textIconAdd"
-msgstr "PANIER"
+msgid "Translation.App.pathCupHolder"
+msgstr "#/porte-gobelet"
 
-# Description 
-msgid "Translation.App.descriptionExample"
-msgstr "Résumé de ce site en une phrase"
+msgid "Translation.App.pathDamage"
+msgstr "#/dégâts"
 
-# Body
-msgid "Translation.App.bodyWhat"
-msgstr "Ceci est un texte expliquant ce que. Ce n'est pas beaucoup, mais c'est là!"
+msgid "Translation.App.pathDiary"
+msgstr "#/journal-intime"
 
-msgid "Translation.App.bodyWhy"
-msgstr "Ceci est un texte expliquant ce pourquoi. Ce n'est pas beaucoup, mais c'est là!"
-
-msgid "Translation.App.bodyWho"
-msgstr "Ceci est un texte expliquant ce qui. Ce n'est pas beaucoup, mais c'est là!"
-
-msgid "Translation.App.bodyHow"
-msgstr "Ceci est un texte expliquant ce comment. Ce n'est pas beaucoup, mais c'est là!"
+msgid "Translation.App.pathTags"
+msgstr "#/mots-clés"

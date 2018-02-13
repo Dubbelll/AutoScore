@@ -3,121 +3,201 @@ module Translation.App exposing (..)
 {-| -}
 
 
-locationShop : String
-locationShop =
-    "boutique"
+locationLanding : String
+locationLanding =
+    ""
 
 
-locationInfo : String
-locationInfo =
-    "info"
+locationMystery : String
+locationMystery =
+    "mystère"
+
+
+locationDriver : String
+locationDriver =
+    "chauffeur"
+
+
+locationSmartphone : String
+locationSmartphone =
+    "smartphone"
+
+
+locationContacts : String
+locationContacts =
+    "contacts"
+
+
+locationApps : String
+locationApps =
+    "apps"
+
+
+locationMessages : String
+locationMessages =
+    "messages"
+
+
+locationToDoList : String
+locationToDoList =
+    "liste-tâches"
+
+
+locationBrowserHistory : String
+locationBrowserHistory =
+    "historique-navigateur"
+
+
+locationCallHistory : String
+locationCallHistory =
+    "historique-appels"
+
+
+locationWallet : String
+locationWallet =
+    "portefeuille"
+
+
+locationCreditCards : String
+locationCreditCards =
+    "cartes-crédit"
+
+
+locationKeys : String
+locationKeys =
+    "clés"
+
+
+locationCar : String
+locationCar =
+    "voiture"
+
+
+locationGloveCompartment : String
+locationGloveCompartment =
+    "boîte-gants"
+
+
+locationTrunk : String
+locationTrunk =
+    "coffre"
+
+
+locationCupHolder : String
+locationCupHolder =
+    "porte-gobelet"
+
+
+locationDamage : String
+locationDamage =
+    "dégâts"
+
+
+locationDiary : String
+locationDiary =
+    "journal-intime"
+
+
+locationTags : String
+locationTags =
+    "mots-clés"
 
 
 pathLanding : String
 pathLanding =
-    "#"
+    "#/"
 
 
-pathShop : String
-pathShop =
-    "#boutique"
+pathMystery : String
+pathMystery =
+    "#/mystère"
 
 
-pathInfo : String
-pathInfo =
-    "#info"
+pathDriver : String
+pathDriver =
+    "#/chauffeur"
 
 
-titleGeneric : String
-titleGeneric =
-    "GENERIEK"
+pathSmartphone : String
+pathSmartphone =
+    "#/smartphone"
 
 
-titleCompany : String
-titleCompany =
-    "BEDRIJF"
+pathContacts : String
+pathContacts =
+    "#/contacts"
 
 
-titleShop : String
-titleShop =
-    "BOUTIQUE"
+pathApps : String
+pathApps =
+    "#/apps"
 
 
-titleInfo : String
-titleInfo =
-    "INFO"
+pathMessages : String
+pathMessages =
+    "#/messages"
 
 
-titleWhat : String
-titleWhat =
-    "Quoi?"
+pathToDoList : String
+pathToDoList =
+    "#/liste-tâches"
 
 
-titleWho : String
-titleWho =
-    "Qui?"
+pathBrowserHistory : String
+pathBrowserHistory =
+    "#/historique-navigateur"
 
 
-titleWhy : String
-titleWhy =
-    "Pourquoi?"
+pathCallHistory : String
+pathCallHistory =
+    "#/historique-appels"
 
 
-titleHow : String
-titleHow =
-    "Comment?"
+pathWallet : String
+pathWallet =
+    "#/portefeuille"
 
 
-explanationShop : String
-explanationShop =
-    "Devenez le propriétaire d'une expérience unique: achète un site web!"
+pathCreditCards : String
+pathCreditCards =
+    "#/cartes-crédit"
 
 
-explanationInfo : String
-explanationInfo =
-    "Quoi, qui, pourquoi, comment?"
+pathKeys : String
+pathKeys =
+    "#/clés"
 
 
-textIconBack : String
-textIconBack =
-    "RETOUR"
+pathCar : String
+pathCar =
+    "#/voiture"
 
 
-textIconType : String
-textIconType =
-    "TYPE"
+pathGloveCompartment : String
+pathGloveCompartment =
+    "#/boîte-gants"
 
 
-textIconCart : String
-textIconCart =
-    "PANIER"
+pathTrunk : String
+pathTrunk =
+    "#/coffre"
 
 
-textIconAdd : String
-textIconAdd =
-    "PANIER"
+pathCupHolder : String
+pathCupHolder =
+    "#/porte-gobelet"
 
 
-descriptionExample : String
-descriptionExample =
-    "Résumé de ce site en une phrase"
+pathDamage : String
+pathDamage =
+    "#/dégâts"
 
 
-bodyWhat : String
-bodyWhat =
-    "Ceci est un texte expliquant ce que. Ce n'est pas beaucoup, mais c'est là!"
+pathDiary : String
+pathDiary =
+    "#/journal-intime"
 
 
-bodyWhy : String
-bodyWhy =
-    "Ceci est un texte expliquant ce pourquoi. Ce n'est pas beaucoup, mais c'est là!"
-
-
-bodyWho : String
-bodyWho =
-    "Ceci est un texte expliquant ce qui. Ce n'est pas beaucoup, mais c'est là!"
-
-
-bodyHow : String
-bodyHow =
-    "Ceci est un texte expliquant ce comment. Ce n'est pas beaucoup, mais c'est là!"
+pathTags : String
+pathTags =
+    "#/mots-clés"

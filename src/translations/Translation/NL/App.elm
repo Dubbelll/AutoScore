@@ -3,121 +3,201 @@ module Translation.App exposing (..)
 {-| -}
 
 
-locationShop : String
-locationShop =
-    "winkel"
+locationLanding : String
+locationLanding =
+    ""
 
 
-locationInfo : String
-locationInfo =
-    "info"
+locationMystery : String
+locationMystery =
+    "mysterie"
+
+
+locationDriver : String
+locationDriver =
+    "bestuurder"
+
+
+locationSmartphone : String
+locationSmartphone =
+    "smartphone"
+
+
+locationContacts : String
+locationContacts =
+    "contacten"
+
+
+locationApps : String
+locationApps =
+    "apps"
+
+
+locationMessages : String
+locationMessages =
+    "berichten"
+
+
+locationToDoList : String
+locationToDoList =
+    "takenlijst"
+
+
+locationBrowserHistory : String
+locationBrowserHistory =
+    "browsergeschiedenis"
+
+
+locationCallHistory : String
+locationCallHistory =
+    "oproepgeschiedenis"
+
+
+locationWallet : String
+locationWallet =
+    "portefeuille"
+
+
+locationCreditCards : String
+locationCreditCards =
+    "kredietkaarten"
+
+
+locationKeys : String
+locationKeys =
+    "sleutels"
+
+
+locationCar : String
+locationCar =
+    "auto"
+
+
+locationGloveCompartment : String
+locationGloveCompartment =
+    "handschoenenkastje"
+
+
+locationTrunk : String
+locationTrunk =
+    "koffer"
+
+
+locationCupHolder : String
+locationCupHolder =
+    "bekerhouder"
+
+
+locationDamage : String
+locationDamage =
+    "schade"
+
+
+locationDiary : String
+locationDiary =
+    "dagboek"
+
+
+locationTags : String
+locationTags =
+    "labels"
 
 
 pathLanding : String
 pathLanding =
-    "#"
+    "#/"
 
 
-pathShop : String
-pathShop =
-    "#winkel"
+pathMystery : String
+pathMystery =
+    "#/mysterie"
 
 
-pathInfo : String
-pathInfo =
-    "#info"
+pathDriver : String
+pathDriver =
+    "#/bestuurder"
 
 
-titleGeneric : String
-titleGeneric =
-    "GENERIEK"
+pathSmartphone : String
+pathSmartphone =
+    "#/smartphone"
 
 
-titleCompany : String
-titleCompany =
-    "BEDRIJF"
+pathContacts : String
+pathContacts =
+    "#/contacten"
 
 
-titleShop : String
-titleShop =
-    "WINKEL"
+pathApps : String
+pathApps =
+    "#/apps"
 
 
-titleInfo : String
-titleInfo =
-    "INFO"
+pathMessages : String
+pathMessages =
+    "#/berichten"
 
 
-titleWhat : String
-titleWhat =
-    "Wat?"
+pathToDoList : String
+pathToDoList =
+    "#/takenlijst"
 
 
-titleWho : String
-titleWho =
-    "Wie?"
+pathBrowserHistory : String
+pathBrowserHistory =
+    "#/browsergeschiedenis"
 
 
-titleWhy : String
-titleWhy =
-    "Waarom?"
+pathCallHistory : String
+pathCallHistory =
+    "#/oproepgeschiedenis"
 
 
-titleHow : String
-titleHow =
-    "Hoe?"
+pathWallet : String
+pathWallet =
+    "#/portefeuille"
 
 
-explanationShop : String
-explanationShop =
-    "Wordt de eigenaar een unieke ervaring: koop een website!"
+pathCreditCards : String
+pathCreditCards =
+    "#/kredietkaarten"
 
 
-explanationInfo : String
-explanationInfo =
-    "Wat, wie, waarom, hoe?"
+pathKeys : String
+pathKeys =
+    "#/sleutels"
 
 
-textIconBack : String
-textIconBack =
-    "TERUG"
+pathCar : String
+pathCar =
+    "#/auto"
 
 
-textIconType : String
-textIconType =
-    "TYPE"
+pathGloveCompartment : String
+pathGloveCompartment =
+    "#/handschoenenkastje"
 
 
-textIconCart : String
-textIconCart =
-    "MAND"
+pathTrunk : String
+pathTrunk =
+    "#/koffer"
 
 
-textIconAdd : String
-textIconAdd =
-    "MAND"
+pathCupHolder : String
+pathCupHolder =
+    "#/bekerhouder"
 
 
-descriptionExample : String
-descriptionExample =
-    "Samenvatting van deze site in één zin"
+pathDamage : String
+pathDamage =
+    "#/schade"
 
 
-bodyWhat : String
-bodyWhat =
-    "Dit is tekst die uitleg wat. Het is niet veel, maar het staat er!"
+pathDiary : String
+pathDiary =
+    "#/dagboek"
 
 
-bodyWhy : String
-bodyWhy =
-    "Dit is tekst die uitleg waarom. Het is niet veel, maar het staat er!"
-
-
-bodyWho : String
-bodyWho =
-    "Dit is tekst die uitleg wie. Het is niet veel, maar het staat er!"
-
-
-bodyHow : String
-bodyHow =
-    "Dit is tekst die uitleg waarom. Het is niet veel, maar het staat er!"
+pathTags : String
+pathTags =
+    "#/labels"

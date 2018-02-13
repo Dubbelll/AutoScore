@@ -1,78 +1,121 @@
 # Location
-msgid "Translation.App.locationShop"
-msgstr "shop"
+msgid "Translation.App.locationLanding"
+msgstr ""
 
-msgid "Translation.App.locationInfo"
-msgstr "info"
+msgid "Translation.App.locationMystery"
+msgstr "mystery"
+
+msgid "Translation.App.locationDriver"
+msgstr "driver"
+
+msgid "Translation.App.locationSmartphone"
+msgstr "smartphone"
+
+msgid "Translation.App.locationContacts"
+msgstr "contacts"
+
+msgid "Translation.App.locationApps"
+msgstr "apps"
+
+msgid "Translation.App.locationMessages"
+msgstr "messages"
+
+msgid "Translation.App.locationToDoList"
+msgstr "to-do-list"
+
+msgid "Translation.App.locationBrowserHistory"
+msgstr "browser-history"
+
+msgid "Translation.App.locationCallHistory"
+msgstr "call-history"
+
+msgid "Translation.App.locationWallet"
+msgstr "wallet"
+
+msgid "Translation.App.locationCreditCards"
+msgstr "credit-cards"
+
+msgid "Translation.App.locationKeys"
+msgstr "keys"
+
+msgid "Translation.App.locationCar"
+msgstr "car"
+
+msgid "Translation.App.locationGloveCompartment"
+msgstr "glove-compartment"
+
+msgid "Translation.App.locationTrunk"
+msgstr "trunk"
+
+msgid "Translation.App.locationCupHolder"
+msgstr "cup-holder"
+
+msgid "Translation.App.locationDamage"
+msgstr "damage"
+
+msgid "Translation.App.locationDiary"
+msgstr "diary"
+
+msgid "Translation.App.locationTags"
+msgstr "tags"
 
 # Path
 msgid "Translation.App.pathLanding"
-msgstr "#"
+msgstr "#/"
 
-msgid "Translation.App.pathShop"
-msgstr "#shop"
+msgid "Translation.App.pathMystery"
+msgstr "#/mystery"
 
-msgid "Translation.App.pathInfo"
-msgstr "#info"
+msgid "Translation.App.pathDriver"
+msgstr "#/driver"
 
-# Title
-msgid "Translation.App.titleGeneric"
-msgstr "GENERIEK"
+msgid "Translation.App.pathSmartphone"
+msgstr "#/smartphone"
 
-msgid "Translation.App.titleCompany"
-msgstr "BEDRIJF"
+msgid "Translation.App.pathContacts"
+msgstr "#/contacts"
 
-msgid "Translation.App.titleShop"
-msgstr "SHOP"
+msgid "Translation.App.pathApps"
+msgstr "#/apps"
 
-msgid "Translation.App.titleInfo"
-msgstr "INFO"
+msgid "Translation.App.pathMessages"
+msgstr "#/messages"
 
-msgid "Translation.App.titleWhat"
-msgstr "What?"
+msgid "Translation.App.pathToDoList"
+msgstr "#/to-do-list"
 
-msgid "Translation.App.titleWho"
-msgstr "Who?"
+msgid "Translation.App.pathBrowserHistory"
+msgstr "#/browser-history"
 
-msgid "Translation.App.titleWhy"
-msgstr "Why?"
+msgid "Translation.App.pathCallHistory"
+msgstr "#/call-history"
 
-msgid "Translation.App.titleHow"
-msgstr "How?"
+msgid "Translation.App.pathWallet"
+msgstr "#/wallet"
 
-# Explanation
-msgid "Translation.App.explanationShop"
-msgstr "Become the owner of a unique experience: buy a website!"
+msgid "Translation.App.pathCreditCards"
+msgstr "#/credit-cards"
 
-msgid "Translation.App.explanationInfo"
-msgstr "Who, what, why, how?"
+msgid "Translation.App.pathKeys"
+msgstr "#/keys"
 
-# Text
-msgid "Translation.App.textIconBack"
-msgstr "BACK"
+msgid "Translation.App.pathCar"
+msgstr "#/car"
 
-msgid "Translation.App.textIconType"
-msgstr "TYPE"
+msgid "Translation.App.pathGloveCompartment"
+msgstr "#/glove-compartment"
 
-msgid "Translation.App.textIconCart"
-msgstr "CART"
+msgid "Translation.App.pathTrunk"
+msgstr "#/trunk"
 
-msgid "Translation.App.textIconAdd"
-msgstr "CART"
+msgid "Translation.App.pathCupHolder"
+msgstr "#/cup-holder"
 
-# Description 
-msgid "Translation.App.descriptionExample"
-msgstr "Summary of this site in one sentence"
+msgid "Translation.App.pathDamage"
+msgstr "#/damage"
 
-# Body
-msgid "Translation.App.bodyWhat"
-msgstr "This is a text explaining what. It's not much, but it's there!"
+msgid "Translation.App.pathDiary"
+msgstr "#/diary"
 
-msgid "Translation.App.bodyWhy"
-msgstr "This is a text explaining why. It's not much, but it's there!"
-
-msgid "Translation.App.bodyWho"
-msgstr "This is a text explaining who. It's not much, but it's there!"
-
-msgid "Translation.App.bodyHow"
-msgstr "This is a text explaining how. It's not much, but it's there!"
+msgid "Translation.App.pathTags"
+msgstr "#/tags"

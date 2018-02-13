@@ -3,121 +3,201 @@ module Translation.App exposing (..)
 {-| -}
 
 
-locationShop : String
-locationShop =
-    "shop"
+locationLanding : String
+locationLanding =
+    ""
 
 
-locationInfo : String
-locationInfo =
-    "info"
+locationMystery : String
+locationMystery =
+    "mystery"
+
+
+locationDriver : String
+locationDriver =
+    "driver"
+
+
+locationSmartphone : String
+locationSmartphone =
+    "smartphone"
+
+
+locationContacts : String
+locationContacts =
+    "contacts"
+
+
+locationApps : String
+locationApps =
+    "apps"
+
+
+locationMessages : String
+locationMessages =
+    "messages"
+
+
+locationToDoList : String
+locationToDoList =
+    "to-do-list"
+
+
+locationBrowserHistory : String
+locationBrowserHistory =
+    "browser-history"
+
+
+locationCallHistory : String
+locationCallHistory =
+    "call-history"
+
+
+locationWallet : String
+locationWallet =
+    "wallet"
+
+
+locationCreditCards : String
+locationCreditCards =
+    "credit-cards"
+
+
+locationKeys : String
+locationKeys =
+    "keys"
+
+
+locationCar : String
+locationCar =
+    "car"
+
+
+locationGloveCompartment : String
+locationGloveCompartment =
+    "glove-compartment"
+
+
+locationTrunk : String
+locationTrunk =
+    "trunk"
+
+
+locationCupHolder : String
+locationCupHolder =
+    "cup-holder"
+
+
+locationDamage : String
+locationDamage =
+    "damage"
+
+
+locationDiary : String
+locationDiary =
+    "diary"
+
+
+locationTags : String
+locationTags =
+    "tags"
 
 
 pathLanding : String
 pathLanding =
-    "#"
+    "#/"
 
 
-pathShop : String
-pathShop =
-    "#shop"
+pathMystery : String
+pathMystery =
+    "#/mystery"
 
 
-pathInfo : String
-pathInfo =
-    "#info"
+pathDriver : String
+pathDriver =
+    "#/driver"
 
 
-titleGeneric : String
-titleGeneric =
-    "GENERIEK"
+pathSmartphone : String
+pathSmartphone =
+    "#/smartphone"
 
 
-titleCompany : String
-titleCompany =
-    "BEDRIJF"
+pathContacts : String
+pathContacts =
+    "#/contacts"
 
 
-titleShop : String
-titleShop =
-    "SHOP"
+pathApps : String
+pathApps =
+    "#/apps"
 
 
-titleInfo : String
-titleInfo =
-    "INFO"
+pathMessages : String
+pathMessages =
+    "#/messages"
 
 
-titleWhat : String
-titleWhat =
-    "What?"
+pathToDoList : String
+pathToDoList =
+    "#/to-do-list"
 
 
-titleWho : String
-titleWho =
-    "Who?"
+pathBrowserHistory : String
+pathBrowserHistory =
+    "#/browser-history"
 
 
-titleWhy : String
-titleWhy =
-    "Why?"
+pathCallHistory : String
+pathCallHistory =
+    "#/call-history"
 
 
-titleHow : String
-titleHow =
-    "How?"
+pathWallet : String
+pathWallet =
+    "#/wallet"
 
 
-explanationShop : String
-explanationShop =
-    "Become the owner of a unique experience: buy a website!"
+pathCreditCards : String
+pathCreditCards =
+    "#/credit-cards"
 
 
-explanationInfo : String
-explanationInfo =
-    "Who, what, why, how?"
+pathKeys : String
+pathKeys =
+    "#/keys"
 
 
-textIconBack : String
-textIconBack =
-    "BACK"
+pathCar : String
+pathCar =
+    "#/car"
 
 
-textIconType : String
-textIconType =
-    "TYPE"
+pathGloveCompartment : String
+pathGloveCompartment =
+    "#/glove-compartment"
 
 
-textIconCart : String
-textIconCart =
-    "CART"
+pathTrunk : String
+pathTrunk =
+    "#/trunk"
 
 
-textIconAdd : String
-textIconAdd =
-    "CART"
+pathCupHolder : String
+pathCupHolder =
+    "#/cup-holder"
 
 
-descriptionExample : String
-descriptionExample =
-    "Summary of this site in one sentence"
+pathDamage : String
+pathDamage =
+    "#/damage"
 
 
-bodyWhat : String
-bodyWhat =
-    "This is a text explaining what. It's not much, but it's there!"
+pathDiary : String
+pathDiary =
+    "#/diary"
 
 
-bodyWhy : String
-bodyWhy =
-    "This is a text explaining why. It's not much, but it's there!"
-
-
-bodyWho : String
-bodyWho =
-    "This is a text explaining who. It's not much, but it's there!"
-
-
-bodyHow : String
-bodyHow =
-    "This is a text explaining how. It's not much, but it's there!"
+pathTags : String
+pathTags =
+    "#/tags"

@@ -1,78 +1,121 @@
 # Location
-msgid "Translation.App.locationShop"
-msgstr "winkel"
+msgid "Translation.App.locationLanding"
+msgstr ""
 
-msgid "Translation.App.locationInfo"
-msgstr "info"
+msgid "Translation.App.locationMystery"
+msgstr "mysterie"
+
+msgid "Translation.App.locationDriver"
+msgstr "bestuurder"
+
+msgid "Translation.App.locationSmartphone"
+msgstr "smartphone"
+
+msgid "Translation.App.locationContacts"
+msgstr "contacten"
+
+msgid "Translation.App.locationApps"
+msgstr "apps"
+
+msgid "Translation.App.locationMessages"
+msgstr "berichten"
+
+msgid "Translation.App.locationToDoList"
+msgstr "takenlijst"
+
+msgid "Translation.App.locationBrowserHistory"
+msgstr "browsergeschiedenis"
+
+msgid "Translation.App.locationCallHistory"
+msgstr "oproepgeschiedenis"
+
+msgid "Translation.App.locationWallet"
+msgstr "portefeuille"
+
+msgid "Translation.App.locationCreditCards"
+msgstr "kredietkaarten"
+
+msgid "Translation.App.locationKeys"
+msgstr "sleutels"
+
+msgid "Translation.App.locationCar"
+msgstr "auto"
+
+msgid "Translation.App.locationGloveCompartment"
+msgstr "handschoenenkastje"
+
+msgid "Translation.App.locationTrunk"
+msgstr "koffer"
+
+msgid "Translation.App.locationCupHolder"
+msgstr "bekerhouder"
+
+msgid "Translation.App.locationDamage"
+msgstr "schade"
+
+msgid "Translation.App.locationDiary"
+msgstr "dagboek"
+
+msgid "Translation.App.locationTags"
+msgstr "labels"
 
 # Path
 msgid "Translation.App.pathLanding"
-msgstr "#"
+msgstr "#/"
 
-msgid "Translation.App.pathShop"
-msgstr "#winkel"
+msgid "Translation.App.pathMystery"
+msgstr "#/mysterie"
 
-msgid "Translation.App.pathInfo"
-msgstr "#info"
+msgid "Translation.App.pathDriver"
+msgstr "#/bestuurder"
 
-# Title
-msgid "Translation.App.titleGeneric"
-msgstr "GENERIEK"
+msgid "Translation.App.pathSmartphone"
+msgstr "#/smartphone"
 
-msgid "Translation.App.titleCompany"
-msgstr "BEDRIJF"
+msgid "Translation.App.pathContacts"
+msgstr "#/contacten"
 
-msgid "Translation.App.titleShop"
-msgstr "WINKEL"
+msgid "Translation.App.pathApps"
+msgstr "#/apps"
 
-msgid "Translation.App.titleInfo"
-msgstr "INFO"
+msgid "Translation.App.pathMessages"
+msgstr "#/berichten"
 
-msgid "Translation.App.titleWhat"
-msgstr "Wat?"
+msgid "Translation.App.pathToDoList"
+msgstr "#/takenlijst"
 
-msgid "Translation.App.titleWho"
-msgstr "Wie?"
+msgid "Translation.App.pathBrowserHistory"
+msgstr "#/browsergeschiedenis"
 
-msgid "Translation.App.titleWhy"
-msgstr "Waarom?"
+msgid "Translation.App.pathCallHistory"
+msgstr "#/oproepgeschiedenis"
 
-msgid "Translation.App.titleHow"
-msgstr "Hoe?"
+msgid "Translation.App.pathWallet"
+msgstr "#/portefeuille"
 
-# Explanation
-msgid "Translation.App.explanationShop"
-msgstr "Wordt de eigenaar een unieke ervaring: koop een website!"
+msgid "Translation.App.pathCreditCards"
+msgstr "#/kredietkaarten"
 
-msgid "Translation.App.explanationInfo"
-msgstr "Wat, wie, waarom, hoe?"
+msgid "Translation.App.pathKeys"
+msgstr "#/sleutels"
 
-# Text
-msgid "Translation.App.textIconBack"
-msgstr "TERUG"
+msgid "Translation.App.pathCar"
+msgstr "#/auto"
 
-msgid "Translation.App.textIconType"
-msgstr "TYPE"
+msgid "Translation.App.pathGloveCompartment"
+msgstr "#/handschoenenkastje"
 
-msgid "Translation.App.textIconCart"
-msgstr "MAND"
+msgid "Translation.App.pathTrunk"
+msgstr "#/koffer"
 
-msgid "Translation.App.textIconAdd"
-msgstr "MAND"
+msgid "Translation.App.pathCupHolder"
+msgstr "#/bekerhouder"
 
-# Description 
-msgid "Translation.App.descriptionExample"
-msgstr "Samenvatting van deze site in één zin"
+msgid "Translation.App.pathDamage"
+msgstr "#/schade"
 
-# Body
-msgid "Translation.App.bodyWhat"
-msgstr "Dit is tekst die uitleg wat. Het is niet veel, maar het staat er!"
+msgid "Translation.App.pathDiary"
+msgstr "#/dagboek"
 
-msgid "Translation.App.bodyWhy"
-msgstr "Dit is tekst die uitleg waarom. Het is niet veel, maar het staat er!"
-
-msgid "Translation.App.bodyWho"
-msgstr "Dit is tekst die uitleg wie. Het is niet veel, maar het staat er!"
-
-msgid "Translation.App.bodyHow"
-msgstr "Dit is tekst die uitleg waarom. Het is niet veel, maar het staat er!"
+msgid "Translation.App.pathTags"
+msgstr "#/labels"

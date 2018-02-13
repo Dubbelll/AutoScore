@@ -18,31 +18,7 @@
                 version: CONFIG_API_VERSION,
                 baseURL: CONFIG_API_BASE_URL
             };
-        const app = Elm.App.embed(element, flags);
-
-        app.ports.fileSelected.subscribe(function (subscription) {
-            const element = document.getElementById(subscription.id);
-            if (element === null || element.files.length === 0) {
-                return;
-            }
-
-            const file = element.files[0];
-            const reader = new FileReader();
-
-            reader.onload = (function (event) {
-                const fileAsBase64 = event.target.result;
-                const fileAsPort =
-                    {
-                        key: subscription.key,
-                        name: file.name,
-                        content: fileAsBase64
-                    };
-
-                app.ports.fileContentRead.send(fileAsPort);
-            });
-
-            reader.readAsDataURL(file);
-        });
+        Elm.App.embed(element, flags);
     </script>
 </body>
 

@@ -58,7 +58,7 @@
         "watch:elm": "onchange \"src/app/App.elm\"  -- npm run elm:development:en",
         "watch:translations": "onchange \"src/translations/**/*.po\" -- npm run build:development:en",
         "watch:scss": "onchange \"src/assets/scss/**/*.scss\" -- npm run sass:generate",
-        "watch:assets": "onchange \"src/assets/sprite/icons.svg src/*.html\" -- npm run copy:development",
+        "watch:assets": "onchange \"src/*.html\" \"src/assets/sprite/icons.svg\" -- npm run copy:development",
         "server": "browser-sync start --config \"bs-config.js\"",
         "format": "elm-format"
     },

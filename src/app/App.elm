@@ -1,8 +1,8 @@
 module App exposing (..)
 
-import Html exposing (Html, Attribute, button, div, h1, text, img, input, a, ul, li)
-import Html.Attributes exposing (src, title, class, id, type_, href)
-import Html.Events exposing (on, onWithOptions, onClick)
+import Html exposing (..)
+import Html.Attributes exposing (..)
+import Html.Events exposing (..)
 import Navigation exposing (Location)
 import Translation.App as Translation
 import UrlParser as UP
@@ -11,6 +11,7 @@ import Json.Decode as JD
 import Json.Decode.Extra as JDE
 import Json.Decode.Pipeline as JDP
 import Date exposing (Date)
+import Time exposing (Time)
 
 
 main : Program Flags Model Msg
@@ -23,7 +24,7 @@ main =
 
 
 type alias Model =
-    { config : Config, route : Route, location : Location,  mysteries : List Mystery }
+    { config : Config, route : Route, location : Location, mysteries : List Mystery, mystery : Mystery }
 
 
 type alias Flags =
@@ -35,11 +36,11 @@ type alias Config =
 
 
 type alias Mystery =
-    { id : String, drivers : List Driver, cars : List Car, mysteriesSolveTags : List MysterySolveTag }
+    { id : String, driver : Driver, car : Car, mysteriesSolveTags : List MysterySolveTag }
 
 
 type alias Driver =
-    { id : Int, mysteryId : String, name : String, birthDate : Date, gender : String, race : String, email : String, address : String, smartphones : List Smartphone, wallets : List Wallet, keyNames : List KeyName }
+    { id : Int, mysteryId : String, name : String, birthDate : Date, gender : String, race : String, email : String, address : String, smartphone : Smartphone, wallet : Wallet, keyNames : List KeyName }
 
 
 type alias Smartphone =
@@ -120,7 +121,107 @@ init flags location =
         currentRoute =
             parseLocation location
     in
-        ( { config = { version = flags.version, baseURL = flags.baseURL }, route = currentRoute, location = location, mysteries = [] }, Cmd.none )
+        ( { config = { version = flags.version, baseURL = flags.baseURL }, route = currentRoute, location = location, mysteries = [], mystery = makeEmptyMystery }, Cmd.none )
+
+
+makeEmptyMystery : Mystery
+makeEmptyMystery =
+    Mystery "" makeEmptyDriver makeEmptyCar [ makeEmptyMysterySolveTag ]
+
+
+makeEmptyDriver : Driver
+makeEmptyDriver =
+    Driver 0 "" "" (Date.fromTime (Time.millisecond * 0)) "" "" "" "" makeEmptySmartphone makeEmptyWallet [ makeEmptyKeyName ]
+
+
+makeEmptySmartphone : Smartphone
+makeEmptySmartphone =
+    Smartphone 0 0 [ makeEmptyContact ] [ makeEmptyApp ] [ makeEmptyMessage ] [ makeEmptyToDoItem ] [ makeEmptyBrowserHistoryEntry ] [ makeEmptyCallHistoryEntry ]
+
+
+makeEmptyContact : Contact
+makeEmptyContact =
+    Contact 0 0 ""
+
+
+makeEmptyApp : App
+makeEmptyApp =
+    App 0 0 ""
+
+
+makeEmptyMessage : Message
+makeEmptyMessage =
+    Message 0 0 "" "" (Date.fromTime (Time.millisecond * 0)) "" False
+
+
+makeEmptyToDoItem : ToDoItem
+makeEmptyToDoItem =
+    ToDoItem 0 0 "" False (Date.fromTime (Time.millisecond * 0))
+
+
+makeEmptyBrowserHistoryEntry : BrowserHistoryEntry
+makeEmptyBrowserHistoryEntry =
+    BrowserHistoryEntry 0 0 "" (Date.fromTime (Time.millisecond * 0))
+
+
+makeEmptyCallHistoryEntry : CallHistoryEntry
+makeEmptyCallHistoryEntry =
+    CallHistoryEntry 0 0 "" (Date.fromTime (Time.millisecond * 0)) False False False
+
+
+makeEmptyWallet : Wallet
+makeEmptyWallet =
+    Wallet 0 0 "" 0 "" [ makeEmptyCreditCard ]
+
+
+makeEmptyCreditCard : CreditCard
+makeEmptyCreditCard =
+    CreditCard 0 0 "" (Date.fromTime (Time.millisecond * 0)) "" ""
+
+
+makeEmptyKeyName : KeyName
+makeEmptyKeyName =
+    KeyName 0 0 ""
+
+
+makeEmptyCar : Car
+makeEmptyCar =
+    Car 0 "" "" "" "" "" "" [ makeEmptyGloveCompartmentItem ] [ makeEmptyTrunkContentItem ] [ makeEmptyCupHolderContentItem ] [ makeEmptyDamageEntry ] [ makeEmptyDiaryEntry ]
+
+
+makeEmptyGloveCompartmentItem : GloveCompartmentItem
+makeEmptyGloveCompartmentItem =
+    GloveCompartmentItem 0 0 ""
+
+
+makeEmptyTrunkContentItem : TrunkContentItem
+makeEmptyTrunkContentItem =
+    TrunkContentItem 0 0 ""
+
+
+makeEmptyCupHolderContentItem : CupHolderContentItem
+makeEmptyCupHolderContentItem =
+    CupHolderContentItem 0 0 ""
+
+
+makeEmptyDamageEntry : DamageEntry
+makeEmptyDamageEntry =
+    DamageEntry 0 0 ""
+
+
+makeEmptyDiaryEntry : DiaryEntry
+makeEmptyDiaryEntry =
+    DiaryEntry 0 0 0 (Date.fromTime (Time.millisecond * 0)) "" ""
+
+
+makeEmptyMysterySolveTag : MysterySolveTag
+makeEmptyMysterySolveTag =
+    MysterySolveTag "" 0 makeEmptySolveTag
+
+
+makeEmptySolveTag : SolveTag
+makeEmptySolveTag =
+    SolveTag 0 ""
 
 
 
@@ -134,7 +235,12 @@ endpointMysteries =
 
 queryMysteries : String
 queryMysteries =
-    "?select=id,driver:drivers(*,smartphone:smartphones(*,contacts(*),apps(*),messages(*),toDo_items(*),browser_history_entries(*),call_history_entries(*)),wallet:wallets(*,credit_cards(*)),key_names(*)),car:cars(*,glove_compartment_items(*),trunk_content_items(*),cupHolder_content_items(*),damage_entries(*),diary_entries(*)),mysteries_solve_tags(*,solve_tag:solve_tags(*))"
+    "?select=id,driver:drivers(*,smartphone:smartphones(*,contacts(*),apps(*),messages(*),todo_items(*),browser_history_entries(*),call_history_entries(*)),wallet:wallets(*,credit_cards(*)),key_names(*)),car:cars(*,glove_compartment_items(*),trunk_content_items(*),cupholder_content_items(*),damage_entries(*),diary_entries(*)),mysteries_solve_tags(*,solve_tag:solve_tags(*))"
+
+
+queryMystery : String -> String
+queryMystery id =
+    "?id=eq." ++ id ++ "&select=id,driver:drivers(*,smartphone:smartphones(*,contacts(*),apps(*),messages(*),todo_items(*),browser_history_entries(*),call_history_entries(*)),wallet:wallets(*,credit_cards(*)),key_names(*)),car:cars(*,glove_compartment_items(*),trunk_content_items(*),cupholder_content_items(*),damage_entries(*),diary_entries(*)),mysteries_solve_tags(*,solve_tag:solve_tags(*))"
 
 
 
@@ -145,8 +251,8 @@ decodeMystery : JD.Decoder Mystery
 decodeMystery =
     JDP.decode Mystery
         |> JDP.required "id" JD.string
-        |> JDP.required "driver" decodeDrivers
-        |> JDP.required "car" decodeCars
+        |> JDP.required "driver" (JD.index 0 decodeDriver)
+        |> JDP.required "car" (JD.index 0 decodeCar)
         |> JDP.required "mysteries_solve_tags" decodeMysteriesSolveTags
 
 
@@ -166,8 +272,8 @@ decodeDriver =
         |> JDP.required "race" JD.string
         |> JDP.required "email" JD.string
         |> JDP.required "address" JD.string
-        |> JDP.required "smartphone" decodeSmartphones
-        |> JDP.required "wallet" decodeWallets
+        |> JDP.required "smartphone" (JD.index 0 decodeSmartphone)
+        |> JDP.required "wallet" (JD.index 0 decodeWallet)
         |> JDP.required "key_names" decodeKeyNames
 
 
@@ -184,7 +290,7 @@ decodeSmartphone =
         |> JDP.required "contacts" decodeContacts
         |> JDP.required "apps" decodeApps
         |> JDP.required "messages" decodeMessages
-        |> JDP.required "toDo_items" decodeToDoItems
+        |> JDP.required "todo_items" decodeToDoItems
         |> JDP.required "browser_history_entries" decodeBrowserHistoryEntries
         |> JDP.required "call_history_entries" decodeCallHistoryEntries
 
@@ -340,7 +446,7 @@ decodeCar =
         |> JDP.required "license_plate" JD.string
         |> JDP.required "glove_compartment_items" decodeGloveCompartmentItems
         |> JDP.required "trunk_content_items" decodeTrunkContentItems
-        |> JDP.required "cupHolder_content_items" decodeCupHolderContentItems
+        |> JDP.required "cupholder_content_items" decodeCupHolderContentItems
         |> JDP.required "damage_entries" decodeDamageEntries
         |> JDP.required "diary_entries" decodeDiaryEntries
 
@@ -440,6 +546,8 @@ decodeSolveTag =
 
 
 -- ROUTING
+
+
 type Route
     = RouteLanding
     | RouteMystery
@@ -462,6 +570,7 @@ type Route
     | RouteDiary
     | RouteTags
     | RouteNotFound
+
 
 matchers : UP.Parser (Route -> a) a
 matchers =
@@ -508,6 +617,8 @@ type Msg
     | LocationChange Location
     | RetrieveMysteries
     | NewMysteries (Result Http.Error (List Mystery))
+    | RetrieveMystery String
+    | NewMystery (Result Http.Error Mystery)
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -521,7 +632,7 @@ update message model =
                 newRoute =
                     parseLocation location
             in
-                ( { model | route = newRoute }, Cmd.none )
+                ( { model | route = newRoute, location = location }, Cmd.none )
 
         RetrieveMysteries ->
             ( model, retrieveMysteries model )
@@ -530,6 +641,15 @@ update message model =
             ( { model | mysteries = newMysteries }, Cmd.none )
 
         NewMysteries (Err _) ->
+            ( model, Cmd.none )
+
+        RetrieveMystery id ->
+            ( model, retrieveMystery model id )
+
+        NewMystery (Ok newMystery) ->
+            ( { model | mystery = newMystery }, Cmd.none )
+
+        NewMystery (Err _) ->
             ( model, Cmd.none )
 
 
@@ -543,6 +663,18 @@ retrieveMysteries model =
             Http.get url decodeMysteries
     in
         Http.send NewMysteries request
+
+
+retrieveMystery : Model -> String -> Cmd Msg
+retrieveMystery model id =
+    let
+        url =
+            model.config.baseURL ++ endpointMysteries ++ (queryMystery id)
+
+        request =
+            Http.get url (JD.index 0 decodeMystery)
+    in
+        Http.send NewMystery request
 
 
 
@@ -563,33 +695,46 @@ view model =
     div []
         [ h1 [] [ text "CarCrashMystery" ]
         , button [ onClick RetrieveMysteries ] [ text "Retrieve mysteries" ]
-        , ul [] 
-            [ li [] [a [ href Translation.pathMystery ] [ text Translation.pathMystery ]]
-            , li [] [a [ href Translation.pathDriver ] [ text Translation.pathDriver ]]
-            , li [] [a [ href Translation.pathSmartphone ] [ text Translation.pathSmartphone ]]
-            , li [] [a [ href Translation.pathContacts ] [ text Translation.pathContacts ]]
-            , li [] [a [ href Translation.pathApps ] [ text Translation.pathApps ]]
-            , li [] [a [ href Translation.pathMessages ] [ text Translation.pathMessages ]]
-            , li [] [a [ href Translation.pathToDoList ] [ text Translation.pathToDoList ]]
-            , li [] [a [ href Translation.pathBrowserHistory ] [ text Translation.pathBrowserHistory ]]
-            , li [] [a [ href Translation.pathCallHistory ] [ text Translation.pathCallHistory ]]
-            , li [] [a [ href Translation.pathWallet ] [ text Translation.pathWallet ]]
-            , li [] [a [ href Translation.pathCreditCards ] [ text Translation.pathCreditCards ]]
-            , li [] [a [ href Translation.pathKeys ] [ text Translation.pathKeys ]]
-            , li [] [a [ href Translation.pathCar ] [ text Translation.pathCar ]]
-            , li [] [a [ href Translation.pathGloveCompartment ] [ text Translation.pathGloveCompartment ]]
-            , li [] [a [ href Translation.pathTrunk ] [ text Translation.pathTrunk ]]
-            , li [] [a [ href Translation.pathCupHolder ] [ text Translation.pathCupHolder ]]
-            , li [] [a [ href Translation.pathDamage ] [ text Translation.pathDamage ]]
-            , li [] [a [ href Translation.pathDiary ] [ text Translation.pathDiary ]]
-            , li [] [a [ href Translation.pathTags ] [ text Translation.pathTags ]]
+        , button [ onClick (RetrieveMystery "992441ae-8bd2-4ef3-a3f4-15a4c8625125") ] [ text "Retrieve mystery" ]
+        , ul []
+            [ li [] [ a [ href Translation.pathMystery ] [ text Translation.pathMystery ] ]
+            , li [] [ a [ href Translation.pathDriver ] [ text Translation.pathDriver ] ]
+            , li [] [ a [ href Translation.pathSmartphone ] [ text Translation.pathSmartphone ] ]
+            , li [] [ a [ href Translation.pathContacts ] [ text Translation.pathContacts ] ]
+            , li [] [ a [ href Translation.pathApps ] [ text Translation.pathApps ] ]
+            , li [] [ a [ href Translation.pathMessages ] [ text Translation.pathMessages ] ]
+            , li [] [ a [ href Translation.pathToDoList ] [ text Translation.pathToDoList ] ]
+            , li [] [ a [ href Translation.pathBrowserHistory ] [ text Translation.pathBrowserHistory ] ]
+            , li [] [ a [ href Translation.pathCallHistory ] [ text Translation.pathCallHistory ] ]
+            , li [] [ a [ href Translation.pathWallet ] [ text Translation.pathWallet ] ]
+            , li [] [ a [ href Translation.pathCreditCards ] [ text Translation.pathCreditCards ] ]
+            , li [] [ a [ href Translation.pathKeys ] [ text Translation.pathKeys ] ]
+            , li [] [ a [ href Translation.pathCar ] [ text Translation.pathCar ] ]
+            , li [] [ a [ href Translation.pathGloveCompartment ] [ text Translation.pathGloveCompartment ] ]
+            , li [] [ a [ href Translation.pathTrunk ] [ text Translation.pathTrunk ] ]
+            , li [] [ a [ href Translation.pathCupHolder ] [ text Translation.pathCupHolder ] ]
+            , li [] [ a [ href Translation.pathDamage ] [ text Translation.pathDamage ] ]
+            , li [] [ a [ href Translation.pathDiary ] [ text Translation.pathDiary ] ]
+            , li [] [ a [ href Translation.pathTags ] [ text Translation.pathTags ] ]
             ]
-        , overlay model
+        , viewOverlay model
         ]
 
 
-overlay : Model -> Html Msg
-overlay model =
+viewCar : Model -> Html Msg
+viewCar model =
+    div [ classList [ ( "car", True ) ] ]
+        []
+
+
+viewCard : Model -> Html Msg
+viewCard model =
+    div [ classList [ ( "card", True ) ] ]
+        []
+
+
+viewOverlay : Model -> Html Msg
+viewOverlay model =
     case model.route of
         RouteLanding ->
             div [] []
@@ -620,7 +765,7 @@ overlay model =
 
         RouteCallHistory ->
             div [] [ text Translation.locationCallHistory ]
-            
+
         RouteWallet ->
             div [] [ text Translation.locationWallet ]
 

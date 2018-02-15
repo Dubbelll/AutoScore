@@ -12,6 +12,9 @@ import Json.Decode.Extra as JDE
 import Json.Decode.Pipeline as JDP
 import Date exposing (Date)
 import Time exposing (Time)
+import Svg exposing (svg, use)
+import Svg.Attributes as SA exposing (class, xlinkHref)
+import Dict exposing (Dict)
 
 
 main : Program Flags Model Msg
@@ -24,7 +27,7 @@ main =
 
 
 type alias Model =
-    { config : Config, route : Route, location : Location, mysteries : List Mystery, mystery : Mystery }
+    { config : Config, route : Route, location : Location, togglesVisibility : Toggles, mysteries : List Mystery, mystery : Mystery }
 
 
 type alias Flags =
@@ -33,6 +36,10 @@ type alias Flags =
 
 type alias Config =
     { version : String, baseURL : String }
+
+
+type alias Toggles =
+    Dict String Bool
 
 
 type alias Mystery =
@@ -120,8 +127,11 @@ init flags location =
     let
         currentRoute =
             parseLocation location
+
+        model =
+            { config = { version = flags.version, baseURL = flags.baseURL }, route = currentRoute, location = location, togglesVisibility = Dict.empty, mysteries = [], mystery = makeEmptyMystery }
     in
-        ( { config = { version = flags.version, baseURL = flags.baseURL }, route = currentRoute, location = location, mysteries = [], mystery = makeEmptyMystery }, Cmd.none )
+        ( model, retrieveMysteryLatest model )
 
 
 makeEmptyMystery : Mystery
@@ -224,6 +234,16 @@ makeEmptySolveTag =
     SolveTag 0 ""
 
 
+checkVisibility : Model -> String -> Bool
+checkVisibility model key =
+    case Dict.get key model.togglesVisibility of
+        Just value ->
+            value
+
+        Nothing ->
+            False
+
+
 
 -- DATA
 
@@ -235,12 +255,17 @@ endpointMysteries =
 
 queryMysteries : String
 queryMysteries =
-    "?select=id,driver:drivers(*,smartphone:smartphones(*,contacts(*),apps(*),messages(*),todo_items(*),browser_history_entries(*),call_history_entries(*)),wallet:wallets(*,credit_cards(*)),key_names(*)),car:cars(*,glove_compartment_items(*),trunk_content_items(*),cupholder_content_items(*),damage_entries(*),diary_entries(*)),mysteries_solve_tags(*,solve_tag:solve_tags(*))"
+    "?select=id,created_date_time,driver:drivers(*,smartphone:smartphones(*,contacts(*),apps(*),messages(*),todo_items(*),browser_history_entries(*),call_history_entries(*)),wallet:wallets(*,credit_cards(*)),key_names(*)),car:cars(*,glove_compartment_items(*),trunk_content_items(*),cupholder_content_items(*),damage_entries(*),diary_entries(*)),mysteries_solve_tags(*,solve_tag:solve_tags(*))"
 
 
 queryMystery : String -> String
 queryMystery id =
-    "?id=eq." ++ id ++ "&select=id,driver:drivers(*,smartphone:smartphones(*,contacts(*),apps(*),messages(*),todo_items(*),browser_history_entries(*),call_history_entries(*)),wallet:wallets(*,credit_cards(*)),key_names(*)),car:cars(*,glove_compartment_items(*),trunk_content_items(*),cupholder_content_items(*),damage_entries(*),diary_entries(*)),mysteries_solve_tags(*,solve_tag:solve_tags(*))"
+    "?id=eq." ++ id ++ "&select=id,created_date_time,driver:drivers(*,smartphone:smartphones(*,contacts(*),apps(*),messages(*),todo_items(*),browser_history_entries(*),call_history_entries(*)),wallet:wallets(*,credit_cards(*)),key_names(*)),car:cars(*,glove_compartment_items(*),trunk_content_items(*),cupholder_content_items(*),damage_entries(*),diary_entries(*)),mysteries_solve_tags(*,solve_tag:solve_tags(*))"
+
+
+queryMysteryLatest : String
+queryMysteryLatest =
+    "?limit=1&order=created_date_time.desc&select=id,created_date_time,driver:drivers(*,smartphone:smartphones(*,contacts(*),apps(*),messages(*),todo_items(*),browser_history_entries(*),call_history_entries(*)),wallet:wallets(*,credit_cards(*)),key_names(*)),car:cars(*,glove_compartment_items(*),trunk_content_items(*),cupholder_content_items(*),damage_entries(*),diary_entries(*)),mysteries_solve_tags(*,solve_tag:solve_tags(*))"
 
 
 
@@ -615,6 +640,7 @@ parseLocation location =
 type Msg
     = ChangePath String
     | LocationChange Location
+    | ToggleVisibility String
     | RetrieveMysteries
     | NewMysteries (Result Http.Error (List Mystery))
     | RetrieveMystery String
@@ -633,6 +659,13 @@ update message model =
                     parseLocation location
             in
                 ( { model | route = newRoute, location = location }, Cmd.none )
+
+        ToggleVisibility key ->
+            let
+                oldBool =
+                    checkVisibility model key
+            in
+                ( { model | togglesVisibility = Dict.insert key (not oldBool) model.togglesVisibility }, Cmd.none )
 
         RetrieveMysteries ->
             ( model, retrieveMysteries model )
@@ -677,6 +710,18 @@ retrieveMystery model id =
         Http.send NewMystery request
 
 
+retrieveMysteryLatest : Model -> Cmd Msg
+retrieveMysteryLatest model =
+    let
+        url =
+            model.config.baseURL ++ endpointMysteries ++ queryMysteryLatest
+
+        request =
+            Http.get url (JD.index 0 decodeMystery)
+    in
+        Http.send NewMystery request
+
+
 
 -- SUBSCRIPTIONS
 
@@ -692,38 +737,167 @@ subscriptions model =
 
 view : Model -> Html Msg
 view model =
-    div []
-        [ h1 [] [ text "CarCrashMystery" ]
-        , button [ onClick RetrieveMysteries ] [ text "Retrieve mysteries" ]
-        , button [ onClick (RetrieveMystery "992441ae-8bd2-4ef3-a3f4-15a4c8625125") ] [ text "Retrieve mystery" ]
-        , ul []
-            [ li [] [ a [ href Translation.pathMystery ] [ text Translation.pathMystery ] ]
-            , li [] [ a [ href Translation.pathDriver ] [ text Translation.pathDriver ] ]
-            , li [] [ a [ href Translation.pathSmartphone ] [ text Translation.pathSmartphone ] ]
-            , li [] [ a [ href Translation.pathContacts ] [ text Translation.pathContacts ] ]
-            , li [] [ a [ href Translation.pathApps ] [ text Translation.pathApps ] ]
-            , li [] [ a [ href Translation.pathMessages ] [ text Translation.pathMessages ] ]
-            , li [] [ a [ href Translation.pathToDoList ] [ text Translation.pathToDoList ] ]
-            , li [] [ a [ href Translation.pathBrowserHistory ] [ text Translation.pathBrowserHistory ] ]
-            , li [] [ a [ href Translation.pathCallHistory ] [ text Translation.pathCallHistory ] ]
-            , li [] [ a [ href Translation.pathWallet ] [ text Translation.pathWallet ] ]
-            , li [] [ a [ href Translation.pathCreditCards ] [ text Translation.pathCreditCards ] ]
-            , li [] [ a [ href Translation.pathKeys ] [ text Translation.pathKeys ] ]
-            , li [] [ a [ href Translation.pathCar ] [ text Translation.pathCar ] ]
-            , li [] [ a [ href Translation.pathGloveCompartment ] [ text Translation.pathGloveCompartment ] ]
-            , li [] [ a [ href Translation.pathTrunk ] [ text Translation.pathTrunk ] ]
-            , li [] [ a [ href Translation.pathCupHolder ] [ text Translation.pathCupHolder ] ]
-            , li [] [ a [ href Translation.pathDamage ] [ text Translation.pathDamage ] ]
-            , li [] [ a [ href Translation.pathDiary ] [ text Translation.pathDiary ] ]
-            , li [] [ a [ href Translation.pathTags ] [ text Translation.pathTags ] ]
-            ]
+    div [ classList [ ( "app-container", True ) ] ]
+        [ viewMystery model
         , viewOverlay model
         ]
 
 
+viewIcon : String -> String -> Html Msg
+viewIcon name modifier =
+    svg [ SA.class ("icon " ++ modifier) ]
+        [ use [ xlinkHref ("icons.svg#" ++ name) ] [] ]
+
+
+viewMystery : Model -> Html Msg
+viewMystery model =
+    div [ classList [ ( "mystery", True ) ] ]
+        [ viewBuilding model
+        , viewDriver model
+        , viewCar model
+        , viewTags model
+        ]
+
+
+viewBuilding : Model -> Html Msg
+viewBuilding model =
+    div [ classList [ ( "building", True ) ] ] []
+
+
+viewDriver : Model -> Html Msg
+viewDriver model =
+    div [ classList [ ( "driver", True ) ] ]
+        [ viewIcon "smartphone" ""
+        , viewSmartphone model
+        , viewIcon "wallet" ""
+        , viewWallet model
+        , viewIcon "key" ""
+        , viewKeys model
+        ]
+
+
+viewSmartphone : Model -> Html Msg
+viewSmartphone model =
+    div [ classList [ ( "smartphone", True ) ] ]
+        [ viewContacts model
+        , viewApps model
+        , viewMessages model
+        , viewToDoList model
+        , viewBrowserHistory model
+        , viewCallHistory model
+        ]
+
+
+viewContacts : Model -> Html Msg
+viewContacts model =
+    div [ classList [ ( "smartphone-contacts", True ) ] ]
+        []
+
+
+viewApps : Model -> Html Msg
+viewApps model =
+    div [ classList [ ( "smartphone-apps", True ) ] ]
+        []
+
+
+viewMessages : Model -> Html Msg
+viewMessages model =
+    div [ classList [ ( "smartphone-messages", True ) ] ]
+        []
+
+
+viewToDoList : Model -> Html Msg
+viewToDoList model =
+    div [ classList [ ( "smartphone-to-do-list", True ) ] ]
+        []
+
+
+viewBrowserHistory : Model -> Html Msg
+viewBrowserHistory model =
+    div [ classList [ ( "smartphone-browser-history", True ) ] ]
+        []
+
+
+viewCallHistory : Model -> Html Msg
+viewCallHistory model =
+    div [ classList [ ( "smartphone-call-history", True ) ] ]
+        []
+
+
+viewWallet : Model -> Html Msg
+viewWallet model =
+    div [ classList [ ( "wallet", True ) ] ]
+        [ viewCreditCards model ]
+
+
+viewCreditCards : Model -> Html Msg
+viewCreditCards model =
+    div [ classList [ ( "wallet-credit-cards", True ) ] ]
+        []
+
+
+viewKeys : Model -> Html Msg
+viewKeys model =
+    div [ classList [ ( "keys", True ) ] ]
+        []
+
+
 viewCar : Model -> Html Msg
 viewCar model =
-    div [ classList [ ( "car", True ) ] ]
+    div [ classList [ ( "car", True ) ], onClick (ToggleVisibility "car-detail") ]
+        [ viewCarDetail model
+        ]
+
+
+viewCarDetail : Model -> Html Msg
+viewCarDetail model =
+    div [ classList [ ( "car-detail", True ), ( "visible", (checkVisibility model "car-detail") ) ] ]
+        [ viewIcon "hands" ""
+        , viewGloveCompartment model
+        , viewIcon "trunk" ""
+        , viewTrunk model
+        , viewIcon "drink" ""
+        , viewCupHolder model
+        , viewIcon "damage" ""
+        , viewDamage model
+        , viewIcon "book" ""
+        , viewDiary model
+        ]
+
+
+viewGloveCompartment : Model -> Html Msg
+viewGloveCompartment model =
+    div [ classList [ ( "car-glove-compartment", True ) ] ]
+        []
+
+
+viewTrunk : Model -> Html Msg
+viewTrunk model =
+    div [ classList [ ( "car-trunk", True ) ] ]
+        []
+
+
+viewCupHolder : Model -> Html Msg
+viewCupHolder model =
+    div [ classList [ ( "car-cup-holder", True ) ] ]
+        []
+
+
+viewDamage : Model -> Html Msg
+viewDamage model =
+    div [ classList [ ( "car-damage", True ) ] ]
+        []
+
+
+viewDiary : Model -> Html Msg
+viewDiary model =
+    div [ classList [ ( "car-diary", True ) ] ]
+        []
+
+
+viewTags : Model -> Html Msg
+viewTags model =
+    div [ classList [ ( "tags", True ) ] ]
         []
 
 

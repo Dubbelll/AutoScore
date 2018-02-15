@@ -10,7 +10,7 @@ locationLanding =
 
 locationMystery : String
 locationMystery =
-    "mystère"
+    "mystere"
 
 
 locationDriver : String
@@ -40,7 +40,7 @@ locationMessages =
 
 locationToDoList : String
 locationToDoList =
-    "liste-tâches"
+    "liste-taches"
 
 
 locationBrowserHistory : String
@@ -60,12 +60,12 @@ locationWallet =
 
 locationCreditCards : String
 locationCreditCards =
-    "cartes-crédit"
+    "cartes-credit"
 
 
 locationKeys : String
 locationKeys =
-    "clés"
+    "cles"
 
 
 locationCar : String
@@ -75,7 +75,7 @@ locationCar =
 
 locationGloveCompartment : String
 locationGloveCompartment =
-    "boîte-gants"
+    "boite-gants"
 
 
 locationTrunk : String
@@ -90,7 +90,7 @@ locationCupHolder =
 
 locationDamage : String
 locationDamage =
-    "dégâts"
+    "degats"
 
 
 locationDiary : String
@@ -100,7 +100,7 @@ locationDiary =
 
 locationTags : String
 locationTags =
-    "mots-clés"
+    "mots-cles"
 
 
 pathLanding : String
@@ -110,7 +110,7 @@ pathLanding =
 
 pathMystery : String
 pathMystery =
-    "#/mystère"
+    "#/mystere"
 
 
 pathDriver : String
@@ -140,7 +140,7 @@ pathMessages =
 
 pathToDoList : String
 pathToDoList =
-    "#/liste-tâches"
+    "#/liste-taches"
 
 
 pathBrowserHistory : String
@@ -160,12 +160,12 @@ pathWallet =
 
 pathCreditCards : String
 pathCreditCards =
-    "#/cartes-crédit"
+    "#/cartes-credit"
 
 
 pathKeys : String
 pathKeys =
-    "#/clés"
+    "#/cles"
 
 
 pathCar : String
@@ -175,7 +175,7 @@ pathCar =
 
 pathGloveCompartment : String
 pathGloveCompartment =
-    "#/boîte-gants"
+    "#/boite-gants"
 
 
 pathTrunk : String
@@ -190,7 +190,7 @@ pathCupHolder =
 
 pathDamage : String
 pathDamage =
-    "#/dégâts"
+    "#/degats"
 
 
 pathDiary : String
@@ -200,4 +200,4 @@ pathDiary =
 
 pathTags : String
 pathTags =
-    "#/mots-clés"
+    "#/mots-cles"

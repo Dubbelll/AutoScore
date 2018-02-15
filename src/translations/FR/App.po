@@ -3,7 +3,7 @@ msgid "Translation.App.locationLanding"
 msgstr ""
 
 msgid "Translation.App.locationMystery"
-msgstr "mystère"
+msgstr "mystere"
 
 msgid "Translation.App.locationDriver"
 msgstr "chauffeur"
@@ -21,7 +21,7 @@ msgid "Translation.App.locationMessages"
 msgstr "messages"
 
 msgid "Translation.App.locationToDoList"
-msgstr "liste-tâches"
+msgstr "liste-taches"
 
 msgid "Translation.App.locationBrowserHistory"
 msgstr "historique-navigateur"
@@ -33,16 +33,16 @@ msgid "Translation.App.locationWallet"
 msgstr "portefeuille"
 
 msgid "Translation.App.locationCreditCards"
-msgstr "cartes-crédit"
+msgstr "cartes-credit"
 
 msgid "Translation.App.locationKeys"
-msgstr "clés"
+msgstr "cles"
 
 msgid "Translation.App.locationCar"
 msgstr "voiture"
 
 msgid "Translation.App.locationGloveCompartment"
-msgstr "boîte-gants"
+msgstr "boite-gants"
 
 msgid "Translation.App.locationTrunk"
 msgstr "coffre"
@@ -51,20 +51,20 @@ msgid "Translation.App.locationCupHolder"
 msgstr "porte-gobelet"
 
 msgid "Translation.App.locationDamage"
-msgstr "dégâts"
+msgstr "degats"
 
 msgid "Translation.App.locationDiary"
 msgstr "journal-intime"
 
 msgid "Translation.App.locationTags"
-msgstr "mots-clés"
+msgstr "mots-cles"
 
 # Path
 msgid "Translation.App.pathLanding"
 msgstr "#/"
 
 msgid "Translation.App.pathMystery"
-msgstr "#/mystère"
+msgstr "#/mystere"
 
 msgid "Translation.App.pathDriver"
 msgstr "#/chauffeur"
@@ -82,7 +82,7 @@ msgid "Translation.App.pathMessages"
 msgstr "#/messages"
 
 msgid "Translation.App.pathToDoList"
-msgstr "#/liste-tâches"
+msgstr "#/liste-taches"
 
 msgid "Translation.App.pathBrowserHistory"
 msgstr "#/historique-navigateur"
@@ -94,16 +94,16 @@ msgid "Translation.App.pathWallet"
 msgstr "#/portefeuille"
 
 msgid "Translation.App.pathCreditCards"
-msgstr "#/cartes-crédit"
+msgstr "#/cartes-credit"
 
 msgid "Translation.App.pathKeys"
-msgstr "#/clés"
+msgstr "#/cles"
 
 msgid "Translation.App.pathCar"
 msgstr "#/voiture"
 
 msgid "Translation.App.pathGloveCompartment"
-msgstr "#/boîte-gants"
+msgstr "#/boite-gants"
 
 msgid "Translation.App.pathTrunk"
 msgstr "#/coffre"
@@ -112,10 +112,10 @@ msgid "Translation.App.pathCupHolder"
 msgstr "#/porte-gobelet"
 
 msgid "Translation.App.pathDamage"
-msgstr "#/dégâts"
+msgstr "#/degats"
 
 msgid "Translation.App.pathDiary"
 msgstr "#/journal-intime"
 
 msgid "Translation.App.pathTags"
-msgstr "#/mots-clés"
+msgstr "#/mots-cles"

@@ -119,3 +119,55 @@ msgstr "#/dagboek"
 
 msgid "Translation.App.pathTags"
 msgstr "#/labels"
+
+# Icon
+msgid "Translation.App.smartphone"
+msgstr "Smartphone"
+
+msgid "Translation.App.contacts"
+msgstr "Contacten"
+
+msgid "Translation.App.apps"
+msgstr "Apps"
+
+msgid "Translation.App.messages"
+msgstr "Berichten"
+
+msgid "Translation.App.toDoList"
+msgstr "Takenlijst"
+
+msgid "Translation.App.browserHistory"
+msgstr "Browsergeschiedenis"
+
+msgid "Translation.App.callHistory"
+msgstr "Oproepgeschiedenis"
+
+msgid "Translation.App.wallet"
+msgstr "Portefeuille"
+
+msgid "Translation.App.creditCards"
+msgstr "Kredietkaarten"
+
+msgid "Translation.App.keys"
+msgstr "Sleutels"
+
+msgid "Translation.App.car"
+msgstr "Auto"
+
+msgid "Translation.App.gloveCompartment"
+msgstr "Handschoenenkastje"
+
+msgid "Translation.App.trunk"
+msgstr "Koffer"
+
+msgid "Translation.App.cupHolder"
+msgstr "Bekerhouder"
+
+msgid "Translation.App.damage"
+msgstr "Schade"
+
+msgid "Translation.App.diary"
+msgstr "Dagboek"
+
+msgid "Translation.App.tags"
+msgstr "Labels"

@@ -1,2 +1,2 @@
 const CONFIG_API_VERSION = "v1";
-const CONFIG_API_BASE_URL = "http://localhost:3000/api";
+const CONFIG_API_BASE_URL = "http://192.168.0.163:3000/api";

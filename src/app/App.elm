@@ -737,26 +737,81 @@ subscriptions model =
 
 view : Model -> Html Msg
 view model =
-    div [ classList [ ( "app-container", True ) ] ]
-        [ viewMystery model
-        , viewOverlay model
-        ]
+    div [ classList [ ( "container-app", True ) ] ]
+        [ viewMystery model ]
+
+
+
+-- VIEW GENERAL
 
 
 viewIcon : String -> String -> Html Msg
 viewIcon name modifier =
     svg [ SA.class ("icon " ++ modifier) ]
-        [ use [ xlinkHref ("icons.svg#" ++ name) ] [] ]
+        [ use [ xlinkHref ("#" ++ name) ] [] ]
+
+
+viewIconText : String -> String -> String -> Html Msg
+viewIconText name modifier description =
+    span [ classList [ ( "container-icon-text", True ) ] ]
+        [ viewIcon name modifier
+        , span [ classList [ ( "text-icon", True ) ] ] [ text description ]
+        ]
+
+
+viewIconTextLink : String -> String -> String -> String -> Html Msg
+viewIconTextLink name modifier description path =
+    span [ classList [ ( "container-icon-text", True ), ( "link-fake", True ) ], onClick (ChangePath path) ]
+        [ viewIcon name modifier
+        , span [ classList [ ( "text-icon", True ) ] ] [ text description ]
+        , viewIcon "forward" (modifier ++ " icon--hover")
+        ]
+
+
+viewListItem : String -> Html Msg
+viewListItem description =
+    li []
+        [ viewIconText "bullet" "icon--big" description ]
+
+viewCardLink : Html Msg
+viewCardLink =
+    div [classList [("card-link", True)]]
+        [ span [ classList [("card-link-circle", True), ("card-link-circle--left", True)]] []
+        , span [ classList [("card-link-line", True)]] []
+        , span [ classList [("card-link-circle", True), ("card-link-circle--right", True)]] []
+        ]
+
+
+
+-- VIEW CONTENT
 
 
 viewMystery : Model -> Html Msg
 viewMystery model =
     div [ classList [ ( "mystery", True ) ] ]
-        [ viewBuilding model
+        [ viewCards model
+        , viewBuilding model
         , viewDriver model
         , viewCar model
         , viewTags model
         ]
+
+
+viewCards : Model -> Html Msg
+viewCards model =
+    case model.route of
+        RouteCar ->
+            div [ classList [ ( "cards", True ) ] ]
+                [ viewCardCar model ]
+
+        RouteGloveCompartment ->
+            div [ classList [ ( "cards", True ) ] ]
+                [ viewCardCar model
+                , viewCardGloveCompartment model
+                ]
+
+        _ ->
+            div [] []
 
 
 viewBuilding : Model -> Html Msg
@@ -844,31 +899,28 @@ viewKeys model =
 
 viewCar : Model -> Html Msg
 viewCar model =
-    div [ classList [ ( "car", True ) ], onClick (ToggleVisibility "car-detail") ]
-        [ viewCarDetail model
-        ]
-
-
-viewCarDetail : Model -> Html Msg
-viewCarDetail model =
-    div [ classList [ ( "car-detail", True ), ( "visible", (checkVisibility model "car-detail") ) ] ]
-        [ viewIcon "hands" ""
-        , viewGloveCompartment model
-        , viewIcon "trunk" ""
-        , viewTrunk model
-        , viewIcon "drink" ""
-        , viewCupHolder model
-        , viewIcon "damage" ""
-        , viewDamage model
-        , viewIcon "book" ""
-        , viewDiary model
-        ]
-
-
-viewGloveCompartment : Model -> Html Msg
-viewGloveCompartment model =
-    div [ classList [ ( "car-glove-compartment", True ) ] ]
+    div [ classList [ ( "car", True ) ], onClick (ChangePath Translation.pathCar) ]
         []
+
+
+viewCardCar : Model -> Html Msg
+viewCardCar model =
+    div [ classList [ ( "card-car", True ), ( "card", True ) ] ]
+        [ viewIconTextLink "hands" "icon--big" Translation.gloveCompartment Translation.pathGloveCompartment
+        , viewIconTextLink "trunk" "icon--big" Translation.trunk Translation.pathTrunk
+        , viewIconTextLink "drink" "icon--big" Translation.cupHolder Translation.pathCupHolder
+        , viewIconTextLink "damage" "icon--big" Translation.damage Translation.pathDamage
+        , viewIconTextLink "book" "icon--big" Translation.diary Translation.pathDiary
+        , viewCardLink
+        ]
+
+
+viewCardGloveCompartment : Model -> Html Msg
+viewCardGloveCompartment model =
+    div [ classList [ ( "card-glove-compartment", True ), ( "card", True ) ] ]
+        [ ul [ classList [ ( "list", True ) ] ]
+            (List.map (\item -> viewListItem item.description) model.mystery.car.gloveCompartmentItems)
+        ]
 
 
 viewTrunk : Model -> Html Msg
@@ -905,70 +957,3 @@ viewCard : Model -> Html Msg
 viewCard model =
     div [ classList [ ( "card", True ) ] ]
         []
-
-
-viewOverlay : Model -> Html Msg
-viewOverlay model =
-    case model.route of
-        RouteLanding ->
-            div [] []
-
-        RouteMystery ->
-            div [] [ text Translation.locationMystery ]
-
-        RouteDriver ->
-            div [] [ text Translation.locationDriver ]
-
-        RouteSmartphone ->
-            div [] [ text Translation.locationSmartphone ]
-
-        RouteContacts ->
-            div [] [ text Translation.locationContacts ]
-
-        RouteApps ->
-            div [] [ text Translation.locationApps ]
-
-        RouteMessages ->
-            div [] [ text Translation.locationMessages ]
-
-        RouteToDoList ->
-            div [] [ text Translation.locationToDoList ]
-
-        RouteBrowserHistory ->
-            div [] [ text Translation.locationBrowserHistory ]
-
-        RouteCallHistory ->
-            div [] [ text Translation.locationCallHistory ]
-
-        RouteWallet ->
-            div [] [ text Translation.locationWallet ]
-
-        RouteCreditCards ->
-            div [] [ text Translation.locationCreditCards ]
-
-        RouteKeys ->
-            div [] [ text Translation.locationKeys ]
-
-        RouteCar ->
-            div [] [ text Translation.locationCar ]
-
-        RouteGloveCompartment ->
-            div [] [ text Translation.locationGloveCompartment ]
-
-        RouteTrunk ->
-            div [] [ text Translation.locationTrunk ]
-
-        RouteCupHolder ->
-            div [] [ text Translation.locationCupHolder ]
-
-        RouteDamage ->
-            div [] [ text Translation.locationDamage ]
-
-        RouteDiary ->
-            div [] [ text Translation.locationDiary ]
-
-        RouteTags ->
-            div [] [ text Translation.locationTags ]
-
-        RouteNotFound ->
-            div [] [ text "Not found" ]

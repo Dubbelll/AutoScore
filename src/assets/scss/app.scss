@@ -17,12 +17,137 @@
     font-size: $font-size-heading;
 }
 
-body, #app, .app-container, .mystery
+/* GENERAL */
+/* GENERAL */
+/* GENERAL */
+body, #app, .container-app, .mystery
 {
     width: 100%;
     height: 100%;
 }
 
+.spritesheet
+{
+    display: none;
+}
+
+.icon
+{
+    width: $icon-size-default;
+    height: $icon-size-default;
+    fill: $color-text-primary;
+}
+
+.icon--big
+{
+    width: $icon-size-big;
+    height: $icon-size-big;
+    padding: $padding-minimal;
+}
+
+.icon--hover
+{
+    opacity: 0;
+}
+
+.text-icon
+{
+    font-size: $font-size-heading;
+    padding: $padding-minimal;
+}
+
+.link-fake
+{
+    cursor: pointer;
+}
+
+.list
+{
+    list-style: none;
+}
+
+.container-icon-text
+{
+    display: flex;
+    height: 7rem;
+    align-items: center;
+
+    &:hover, &:active
+    {
+        &>.icon--hover
+        {
+            opacity: 1;
+        }
+    }
+}
+
+.cards
+{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    width: 75%;
+    height: 75%;
+    transform: translateX(-50%) translateY(-50%);
+    z-index: $depth-card;
+}
+
+.card
+{
+    position: relative;
+    padding: $padding-default;
+    background-color: $color-background-tertiary;
+    border-radius: 0.5rem;
+}
+
+.card-link
+{
+    position: absolute;
+    top: 50%;
+    right: -16rem;
+    width: 17rem;
+    height: 2rem;
+    transform: translateY(-50%);
+    z-index: $depth-card;
+}
+
+.card-link-circle
+{
+    display: inline-block;
+    position: absolute;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
+    background-color: $color-object-primary;
+
+    &.card-link-circle--left
+    {
+        left: 0;
+    }
+
+    &.card-link-circle--right
+    {
+        right: 0;
+    }
+}
+
+.card-link-line
+{
+    display: inline-block;
+    position: absolute;
+    left: 1.5rem;
+    bottom: 0.625rem;
+    width: 14rem;
+    height: 0.75rem;
+    background-color: $color-object-primary;
+}
+
+/* CONTENT */
+/* CONTENT */
+/* CONTENT */
 .building
 {
     position: fixed;
@@ -50,24 +175,25 @@ body, #app, .app-container, .mystery
 
     &:hover 
     {
-        cursor: zoom-in;
+        @include cursor-search();
     }
 }
 
-.car-detail
+.card-car
 {
-    display: none;
+    margin-right: 15rem;
+    z-index: $depth-card;
+}
 
-    &.visible
-    {
-        display: block;
-    }
+.card-glove-compartment
+{
+    z-index: $depth-card-descendent;
 }
 
 .driver 
 {
     position: fixed;
-    top: 50rem;
+    bottom: 20rem;
     right: 25rem;
     width: 10rem;
     height: 20rem;
@@ -75,7 +201,8 @@ body, #app, .app-container, .mystery
     background-color: $color-person-primary;
     border-radius: 2.5rem;
 
-    &:hover {
-        cursor: zoom-in;
+    &:hover 
+    {
+        @include cursor-search();
     }
 }

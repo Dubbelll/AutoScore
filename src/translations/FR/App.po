@@ -119,3 +119,55 @@ msgstr "#/journal-intime"
 
 msgid "Translation.App.pathTags"
 msgstr "#/mots-cles"
+
+# Icon
+msgid "Translation.App.smartphone"
+msgstr "Smartphone"
+
+msgid "Translation.App.contacts"
+msgstr "Contacts"
+
+msgid "Translation.App.apps"
+msgstr "Apps"
+
+msgid "Translation.App.messages"
+msgstr "Messages"
+
+msgid "Translation.App.toDoList"
+msgstr "Liste de tâches"
+
+msgid "Translation.App.browserHistory"
+msgstr "Historique navigateur"
+
+msgid "Translation.App.callHistory"
+msgstr "Historique appels"
+
+msgid "Translation.App.wallet"
+msgstr "Portefeuille"
+
+msgid "Translation.App.creditCards"
+msgstr "Cartes crédit"
+
+msgid "Translation.App.keys"
+msgstr "Clés"
+
+msgid "Translation.App.car"
+msgstr "Voiture"
+
+msgid "Translation.App.gloveCompartment"
+msgstr "Boîte de gants"
+
+msgid "Translation.App.trunk"
+msgstr "Coffre"
+
+msgid "Translation.App.cupHolder"
+msgstr "Porte gobelet"
+
+msgid "Translation.App.damage"
+msgstr "Dégats"
+
+msgid "Translation.App.diary"
+msgstr "Journal intime"
+
+msgid "Translation.App.tags"
+msgstr "Mots clés"

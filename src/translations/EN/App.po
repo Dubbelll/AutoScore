@@ -119,3 +119,55 @@ msgstr "#/diary"
 
 msgid "Translation.App.pathTags"
 msgstr "#/tags"
+
+# Icon
+msgid "Translation.App.smartphone"
+msgstr "Smartphone"
+
+msgid "Translation.App.contacts"
+msgstr "Contacts"
+
+msgid "Translation.App.apps"
+msgstr "Apps"
+
+msgid "Translation.App.messages"
+msgstr "Messages"
+
+msgid "Translation.App.toDoList"
+msgstr "To do list"
+
+msgid "Translation.App.browserHistory"
+msgstr "Browser history"
+
+msgid "Translation.App.callHistory"
+msgstr "Call history"
+
+msgid "Translation.App.wallet"
+msgstr "Wallet"
+
+msgid "Translation.App.creditCards"
+msgstr "Credit cards"
+
+msgid "Translation.App.keys"
+msgstr "Keys"
+
+msgid "Translation.App.car"
+msgstr "Car"
+
+msgid "Translation.App.gloveCompartment"
+msgstr "Glove compartment"
+
+msgid "Translation.App.trunk"
+msgstr "Trunk"
+
+msgid "Translation.App.cupHolder"
+msgstr "Cup holder"
+
+msgid "Translation.App.damage"
+msgstr "Damage"
+
+msgid "Translation.App.diary"
+msgstr "Diary"
+
+msgid "Translation.App.tags"
+msgstr "Tags"

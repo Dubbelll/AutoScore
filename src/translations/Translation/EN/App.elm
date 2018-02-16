@@ -201,3 +201,88 @@ pathDiary =
 pathTags : String
 pathTags =
     "#/tags"
+
+
+smartphone : String
+smartphone =
+    "Smartphone"
+
+
+contacts : String
+contacts =
+    "Contacts"
+
+
+apps : String
+apps =
+    "Apps"
+
+
+messages : String
+messages =
+    "Messages"
+
+
+toDoList : String
+toDoList =
+    "To do list"
+
+
+browserHistory : String
+browserHistory =
+    "Browser history"
+
+
+callHistory : String
+callHistory =
+    "Call history"
+
+
+wallet : String
+wallet =
+    "Wallet"
+
+
+creditCards : String
+creditCards =
+    "Credit cards"
+
+
+keys : String
+keys =
+    "Keys"
+
+
+car : String
+car =
+    "Car"
+
+
+gloveCompartment : String
+gloveCompartment =
+    "Glove compartment"
+
+
+trunk : String
+trunk =
+    "Trunk"
+
+
+cupHolder : String
+cupHolder =
+    "Cup holder"
+
+
+damage : String
+damage =
+    "Damage"
+
+
+diary : String
+diary =
+    "Diary"
+
+
+tags : String
+tags =
+    "Tags"

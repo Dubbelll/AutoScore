@@ -13,9 +13,10 @@
         "optimize": "npm run optimize:js && npm run optimize:css",
         "svg:generate": "svg-sprite-generate -d src/assets/svg -o src/sprite/icons.svg",
         "sass:generate": "node-sass -q src/assets/scss/app.scss dist/app.css",
-        "config:development": "cp src/assets/config/development.js dist/ && mv dist/development.js dist/config.js",
-        "config:staging": "cp src/assets/config/staging.js dist/ && mv dist/staging.js dist/config.js",
-        "config:production": "cp src/assets/config/production.js dist/ && mv dist/production.js dist/config.js",
+        "config:development": "cp src/config/development.js dist/ && mv dist/development.js dist/config.js",
+        "config:staging": "cp src/config/staging.js dist/ && mv dist/staging.js dist/config.js",
+        "config:production": "cp src/config/production.js dist/ && mv dist/production.js dist/config.js",
+        "copy:initialize": "cp src/initialize/initialize.js dist/",
         "copy:html": "npm run copy:html:en && npm run copy:html:nl && npm run copy:html:fr",
         "copy:html:en": "cp src/index-EN.html dist/",
         "copy:html:nl": "cp src/index-NL.html dist/",
@@ -24,8 +25,8 @@
         "copy:translation:en": "cp src/translations/Translation/EN/App.elm src/app/Translation/App.elm",
         "copy:translation:nl": "cp src/translations/Translation/NL/App.elm src/app/Translation/App.elm",
         "copy:translation:fr": "cp src/translations/Translation/FR/App.elm src/app/Translation/App.elm",
-        "copy:development": "npm run copy:html && npm run copy:icons",
-        "copy:production": "npm run copy:html && npm run copy:icons",
+        "copy:development": "npm run copy:initialize && npm run copy:html && npm run copy:icons",
+        "copy:production": "npm run copy:initialize && npm run copy:html && npm run copy:icons",
         "elm:install": "elm-package install --yes",
         "elm:translate:en": "elm-i18n-generator --format PO --language EN --import src/translations/EN/App.po --importOutput src/translations && npm run copy:translation:en",
         "elm:translate:nl": "elm-i18n-generator --format PO --language NL --import src/translations/NL/App.po --importOutput src/translations && npm run copy:translation:nl",
@@ -54,20 +55,21 @@
         "test:fr": "npm run elm:translate:fr && elm-test",
         "install:staging": "npm run elm:install && npm run build:staging",
         "install:production": "npm run elm:install && npm run build:production",
-        "watch": "npm run watch:elm & npm run watch:translations & npm run watch:scss & npm run watch:assets",
+        "watch": "npm run watch:elm & npm run watch:initialize & npm run watch:translations & npm run watch:scss & npm run watch:html",
         "watch:elm": "onchange \"src/app/App.elm\"  -- npm run elm:development:en",
+        "watch:initialize": "onchange \"src/initialize/initialize.js\" -- npm run copy:initialize",
         "watch:translations": "onchange \"src/translations/**/*.po\" -- npm run build:development:en",
         "watch:scss": "onchange \"src/assets/scss/**/*.scss\" -- npm run sass:generate",
-        "watch:assets": "onchange \"src/*.html\" \"src/assets/sprite/icons.svg\" -- npm run copy:development",
+        "watch:html": "onchange \"src/*.html\" -- npm run copy:html",
         "server": "browser-sync start --config \"bs-config.js\"",
         "format": "elm-format"
     },
     "repository": {
         "type": "git",
-        "url": "https://gitlab.com/GeneriekBedrijf/CarCrashMystery"
+        "url": "https://gitlab.com/GeneriekBedrijf/GoAutoScore"
     },
     "keywords": [
-        "CarCrashMystery"
+        "GoAutoScore"
     ],
     "author": "Lode Lesage",
     "license": "ISC",

@@ -26,7 +26,7 @@ main =
 
 
 type alias Model =
-    { config : Config, route : Route, location : Location, imageSource : Image }
+    { config : Config, route : Route, location : Location, imageId : String, imageSource : Maybe Image }
 
 
 type alias Flags =
@@ -50,14 +50,12 @@ init flags location =
         config =
             { version = flags.version, baseURL = flags.baseURL }
 
-        imageSource =
-            Image "image-source" [] "" 0 0
-
         model =
             { config = config
             , route = currentRoute
             , location = location
-            , imageSource = imageSource
+            , imageId = "image-source"
+            , imageSource = Nothing
             }
     in
         ( model, Cmd.none )
@@ -113,19 +111,19 @@ update message model =
                 ( { model | route = newRoute, location = location }, Cmd.none )
 
         ImageSelected ->
-            ( model, PT.imageSelected model.imageSource.id )
+            ( model, PT.imageSelected model.imageId )
 
         ImageProcessed imageData ->
             let
                 newImage =
-                    { id = model.imageSource.id
+                    { id = model.imageId
                     , dataArray = imageData.dataArray
                     , dataBase64 = imageData.dataBase64
                     , width = imageData.width
                     , height = imageData.height
                     }
             in
-                ( { model | imageSource = newImage }, Cmd.none )
+                ( { model | imageSource = Just newImage }, Cmd.none )
 
 
 
@@ -144,4 +142,26 @@ subscriptions model =
 view : Model -> Html Msg
 view model =
     div [ classList [ ( "container-app", True ) ] ]
-        []
+        [ viewImageSource model ]
+
+
+viewImageSource : Model -> Html Msg
+viewImageSource model =
+    let
+        imagePreview =
+            case model.imageSource of
+                Just image ->
+                    viewImage image
+
+                Nothing ->
+                    text ""
+    in
+        div [ classList [ ( "container-image", True ) ] ]
+            [ input [ id model.imageId, type_ "file", on "change" (JD.succeed ImageSelected) ] []
+            , imagePreview
+            ]
+
+
+viewImage : Image -> Html Msg
+viewImage image =
+    img [ src image.dataBase64 ] []

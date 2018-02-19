@@ -1,10 +1,11 @@
 const element = document.getElementById("app");
-const canvas = document.getElementById("app");
+const canvas = document.getElementById("canvas");
 const flags =
     {
         version: CONFIG_API_VERSION,
         baseURL: CONFIG_API_BASE_URL
     };
+const context = canvas.getContext("2d");
 const app = Elm.App.embed(element, flags);
 
 app.ports.imageSelected.subscribe(function (id) {
@@ -18,16 +19,23 @@ app.ports.imageSelected.subscribe(function (id) {
     const image = new Image();
 
     reader.addEventListener("load", function () {
-        const fileBase64 = reader.result;
-        const imageData =
-            {
-                dataArray: [],
-                dataBase64: fileBase64,
-                width: 0,
-                height: 0
-            };
+        const imageBase64 = reader.result;
 
-        app.ports.processImage.send(imageData);
+        image.src = imageBase64;
+        image.addEventListener("load", function () {
+            context.drawImage(image, 0, 0);
+
+            const imageArray = context.getImageData(0, 0, image.width, image.height);
+            const imageData =
+                {
+                    dataArray: imageArray.data,
+                    dataBase64: imageBase64,
+                    width: image.width,
+                    height: image.height
+                };
+
+            app.ports.processImage.send(imageData);
+        }, false);
     }, false);
 
     reader.readAsDataURL(file);

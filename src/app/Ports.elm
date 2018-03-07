@@ -1,8 +1,10 @@
 port module Ports exposing (..)
 
+import Array exposing (Array)
+
 
 type alias ImageData =
-    { dataArray : List Int, dataBase64 : String, width : Int, height : Int }
+    { dataArray : Array Int, dataBase64 : String, width : Int, height : Int }
 
 
 port imageSelected : String -> Cmd msg

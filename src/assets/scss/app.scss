@@ -20,10 +20,15 @@
 /* GENERAL */
 /* GENERAL */
 /* GENERAL */
-body, #app, .container-app, .mystery
+body, #app, .container-app
 {
     width: 100%;
     height: 100%;
+}
+
+#canvas
+{
+    display: none;
 }
 
 .spritesheet
@@ -45,164 +50,133 @@ body, #app, .container-app, .mystery
     padding: $padding-minimal;
 }
 
-.icon--hover
+/* CONTENT */
+/* CONTENT */
+/* CONTENT */
+.container-image
 {
-    opacity: 0;
+    width: 100%;
+    height: 5%;
 }
 
-.text-icon
-{
-    font-size: $font-size-heading;
-    padding: $padding-minimal;
-}
-
-.link-fake
-{
-    cursor: pointer;
-}
-
-.list
-{
-    list-style: none;
-}
-
-.container-icon-text
+.container-board
 {
     display: flex;
-    height: 7rem;
-    align-items: center;
+    flex-direction: column;
+    position: absolute;
+    top: calc(5% + ((95% - 90rem) / 2));
+    left: calc((100% - 90rem) / 2);
+    width: 90rem;
+    height: 90rem;
+}
 
-    &:hover, &:active
+.container-board--19x19
+{
+    top: calc(5% + ((95% - (90rem - (90rem / 19))) / 2));
+    left: calc((100% - (90rem - (90rem / 19))) / 2);
+}
+
+.board-row
+{
+    display: flex;
+    flex-direction: row;
+    flex: 1;
+
+    &:not(:first-child):not(:last-child)
     {
-        &>.icon--hover
+        &>.board-column>.board-point
         {
-            opacity: 1;
+            top: -20%;
+        }
+    }
+
+    &:last-child
+    {
+        &>.board-column>.board-point
+        {
+            top: -40%;
+        }
+
+        &>.board-column>.board-connection--down
+        {
+            width: 0;
+            height: 0;
+        }
+
+        &>.board-column:nth-last-child(2)>.board-connection--right
+        {
+            width: 110%;
         }
     }
 }
 
-.cards
-{
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    width: 75%;
-    height: 75%;
-    transform: translateX(-50%) translateY(-50%);
-    z-index: $depth-card;
-}
-
-.card
+.board-column
 {
     position: relative;
-    padding: $padding-default;
-    background-color: $color-background-tertiary;
-    border-radius: 0.5rem;
+
+    &:not(:first-child):not(:last-child)
+    {
+        &>.board-point
+        {
+            left: -20%;
+        }
+    }
+
+    &:last-child
+    {
+        &>.board-point
+        {
+            left: -40%;
+        }
+
+        &>.board-connection--right
+        {
+            width: 0;
+            height: 0;
+        }
+    }
 }
 
-.card-link
+.board-column--19x19
 {
-    position: absolute;
-    top: 50%;
-    right: -16rem;
-    width: 17rem;
-    height: 2rem;
-    transform: translateY(-50%);
-    z-index: $depth-card;
+    flex: 1 1 calc(100% / 19);
 }
 
-.card-link-circle
+.board-column--13x13
+{
+    flex: 1 1 calc(100% / 13);
+}
+
+.board-column--9x9
+{
+    flex: 1 1 calc(100% / 9);
+}
+
+.board-point
 {
     display: inline-block;
     position: absolute;
-    width: 2rem;
-    height: 2rem;
-    border-radius: 50%;
-    background-color: $color-object-primary;
-
-    &.card-link-circle--left
-    {
-        left: 0;
-    }
-
-    &.card-link-circle--right
-    {
-        right: 0;
-    }
+    width: 50%;
+    height: 50%;
+    background-color: $color-accent-primary;
+    z-index: $depth-board-point;
 }
 
-.card-link-line
+.board-connection
 {
     display: inline-block;
     position: absolute;
-    left: 1.5rem;
-    bottom: 0.625rem;
-    width: 14rem;
-    height: 0.75rem;
     background-color: $color-object-primary;
-}
 
-/* CONTENT */
-/* CONTENT */
-/* CONTENT */
-.building
-{
-    position: fixed;
-    top: -65rem;
-    left: 25rem;
-    width: 50rem;
-    height: 100rem;
-    transform: rotate(-60deg);
-    background-color: $color-background-secondary;
-    border-radius: 1rem;
-    z-index: $depth-building;
-}
-
-.car
-{
-    position: fixed;
-    top: 0rem;
-    left: 35rem;
-    width: 20rem;
-    height: 40rem;
-    transform: rotate(30deg);
-    background-color: $color-object-primary;
-    border-radius: 5rem;
-    z-index: $depth-object;
-
-    &:hover 
+    &.board-connection--right
     {
-        @include cursor-search();
+        width: 100%;
+        height: 10%;
     }
-}
 
-.card-car
-{
-    margin-right: 15rem;
-    z-index: $depth-card;
-}
-
-.card-glove-compartment
-{
-    z-index: $depth-card-descendent;
-}
-
-.driver 
-{
-    position: fixed;
-    bottom: 20rem;
-    right: 25rem;
-    width: 10rem;
-    height: 20rem;
-    transform: rotate(-10deg);
-    background-color: $color-person-primary;
-    border-radius: 2.5rem;
-
-    &:hover 
+    &.board-connection--down
     {
-        @include cursor-search();
+        width: 10%;
+        height: 100%;
     }
 }

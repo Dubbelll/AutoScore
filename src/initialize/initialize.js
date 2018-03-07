@@ -23,12 +23,16 @@ app.ports.imageSelected.subscribe(function (id) {
 
         image.src = imageBase64;
         image.addEventListener("load", function () {
-            context.drawImage(image, 0, 0);
+            canvas.width = image.width;
+            canvas.height = image.height;
+            context.drawImage(image, 0, 0, image.width, image.height);
 
-            const imageArray = context.getImageData(0, 0, image.width, image.height);
+            const imageDataCanvas = context.getImageData(0, 0, image.width, image.height);
+            // Necessary to convert Uint8ClampedArray to regular array to pass through port
+            const imageArray = Array.prototype.slice.call(imageDataCanvas.data);
             const imageData =
                 {
-                    dataArray: imageArray.data,
+                    dataArray: imageArray,
                     dataBase64: imageBase64,
                     width: image.width,
                     height: image.height

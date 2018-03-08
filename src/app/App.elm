@@ -8,11 +8,13 @@ import UrlParser as UP
 import Json.Decode as JD
 import Ports as PT
 import Array exposing (Array)
+import Svg exposing (svg, use)
+import Svg.Attributes as SA exposing (class, xlinkHref)
 
 
 main : Program Flags Model Msg
 main =
-    Navigation.programWithFlags LocationChange { init = init, view = view, update = update, subscriptions = subscriptions }
+    Navigation.programWithFlags ChangeLocation { init = init, view = view, update = update, subscriptions = subscriptions }
 
 
 
@@ -23,11 +25,15 @@ type alias Model =
     { config : Config
     , route : Route
     , location : Location
+    , isShowingVideo : Bool
     , imageId : String
     , imageSource : Maybe Image
     , amountStones : Int
     , boardSizes : List BoardSize
     , boardSize : BoardSize
+    , stars19x19 : List Star
+    , stars13x13 : List Star
+    , stars9x9 : List Star
     , board : Board
     }
 
@@ -42,6 +48,15 @@ type alias Config =
 
 type alias Image =
     { dataArray : Array Int, dataBase64 : String, width : Int, height : Int }
+
+
+type TextDirection
+    = ToLeft
+    | ToRight
+
+
+type alias Star =
+    { x : Int, y : Int }
 
 
 type StoneColor
@@ -80,11 +95,15 @@ init flags location =
             { config = config
             , route = currentRoute
             , location = location
+            , isShowingVideo = False
             , imageId = "image-source"
             , imageSource = Nothing
             , amountStones = 284
             , boardSizes = [ Nineteen, Thirteen, Nine ]
             , boardSize = Nineteen
+            , stars19x19 = stars19x19
+            , stars13x13 = stars13x13
+            , stars9x9 = stars9x9
             , board = Array.empty
             }
     in
@@ -137,19 +156,73 @@ stringToBoardSize string =
             Nineteen
 
 
+stars19x19 : List Star
+stars19x19 =
+    [ Star 4 4
+    , Star 10 4
+    , Star 16 4
+    , Star 4 10
+    , Star 10 10
+    , Star 16 10
+    , Star 4 16
+    , Star 10 16
+    , Star 16 16
+    ]
+
+
+stars13x13 : List Star
+stars13x13 =
+    [ Star 4 4
+    , Star 10 4
+    , Star 7 7
+    , Star 4 10
+    , Star 10 10
+    ]
+
+
+stars9x9 : List Star
+stars9x9 =
+    [ Star 3 3
+    , Star 7 3
+    , Star 5 5
+    , Star 3 7
+    , Star 7 7
+    ]
+
+
+isStar : Model -> Int -> Int -> Bool
+isStar model x y =
+    case model.boardSize of
+        Nineteen ->
+            List.any (\z -> z == (Star x y)) model.stars19x19
+
+        Thirteen ->
+            List.any (\z -> z == (Star x y)) model.stars13x13
+
+        Nine ->
+            List.any (\z -> z == (Star x y)) model.stars9x9
+
+
 
 -- ROUTING
 
 
 type Route
     = RouteLanding
+    | RoutePhoto
+    | RouteCrop
+    | RouteScore
     | RouteNotFound
 
 
 matchers : UP.Parser (Route -> a) a
 matchers =
     UP.oneOf
-        [ UP.map RouteLanding UP.top ]
+        [ UP.map RouteLanding UP.top
+        , UP.map RoutePhoto (UP.s "photo")
+        , UP.map RouteCrop (UP.s "crop")
+        , UP.map RouteScore (UP.s "score")
+        ]
 
 
 parseLocation : Location -> Route
@@ -168,7 +241,9 @@ parseLocation location =
 
 type Msg
     = ChangePath String
-    | LocationChange Location
+    | ChangeLocation Location
+    | StartCamera
+    | TakePhoto
     | ImageSelected
     | ImageProcessed PT.ImageData
     | NewAmountStones String
@@ -181,15 +256,21 @@ update message model =
         ChangePath path ->
             ( model, Navigation.newUrl path )
 
-        LocationChange location ->
+        ChangeLocation location ->
             let
                 newRoute =
                     parseLocation location
             in
                 ( { model | route = newRoute, location = location }, Cmd.none )
 
+        StartCamera ->
+            ( model, PT.startCamera True )
+
+        TakePhoto ->
+            ( model, PT.takePhoto True )
+
         ImageSelected ->
-            ( model, PT.imageSelected model.imageId )
+            ( model, PT.fileSelected model.imageId )
 
         ImageProcessed imageData ->
             let
@@ -200,7 +281,7 @@ update message model =
                     , height = imageData.height
                     }
             in
-                ( { model | imageSource = Just newImage }, Cmd.none )
+                ( { model | imageSource = Just newImage }, Navigation.newUrl "#crop" )
 
         NewAmountStones amount ->
             let
@@ -233,13 +314,129 @@ subscriptions model =
 view : Model -> Html Msg
 view model =
     div [ classList [ ( "container-app", True ) ] ]
-        [ viewImageSource model
-        , viewBoard model
+        [ page model
+        , canvas [ id "canvas" ] []
         ]
 
 
-viewImageSource : Model -> Html Msg
-viewImageSource model =
+page : Model -> Html Msg
+page model =
+    case model.route of
+        RouteLanding ->
+            viewLanding model
+
+        RoutePhoto ->
+            viewPhoto model
+
+        RouteCrop ->
+            viewCrop model
+
+        RouteScore ->
+            viewScore model
+
+        RouteNotFound ->
+            div [] []
+
+
+
+-- VIEW GENERAL
+
+
+viewIcon : String -> List ( String, Bool ) -> Html Msg
+viewIcon name classes =
+    let
+        classList =
+            [ ( "icon", True ) ] ++ classes
+    in
+        svg [ SA.class (classString classList) ]
+            [ use [ xlinkHref ("icons.svg#" ++ name) ] [] ]
+
+
+viewIconText : String -> List ( String, Bool ) -> String -> TextDirection -> Html Msg
+viewIconText name classesExtra value direction =
+    let
+        classes =
+            [ ( "container-icon-text", True ), ( "link-fake", True ) ] ++ classesExtra
+
+        content =
+            case direction of
+                ToLeft ->
+                    [ span [ classList [ ( "text-icon", True ) ] ] [ text value ]
+                    , viewIcon name [ ( "icon--big", True ) ]
+                    ]
+
+                ToRight ->
+                    [ viewIcon name [ ( "icon--big", True ) ]
+                    , span [ classList [ ( "text-icon", True ) ] ] [ text value ]
+                    ]
+    in
+        span [ classList classes ]
+            content
+
+
+viewIconTextLink : String -> List ( String, Bool ) -> String -> TextDirection -> Msg -> Html Msg
+viewIconTextLink name classesExtra value direction msg =
+    let
+        classes =
+            [ ( "container-icon-text-link", True ), ( "link-fake", True ) ] ++ classesExtra
+
+        content =
+            case direction of
+                ToLeft ->
+                    [ span [ classList [ ( "text-icon", True ) ] ] [ text value ]
+                    , viewIcon name [ ( "icon--big", True ) ]
+                    ]
+
+                ToRight ->
+                    [ viewIcon name [ ( "icon--big", True ) ]
+                    , span [ classList [ ( "text-icon", True ) ] ] [ text value ]
+                    ]
+    in
+        span [ classList classes, onClick msg ]
+            content
+
+
+viewImage : Image -> Html Msg
+viewImage image =
+    img [ src image.dataBase64 ] []
+
+
+
+-- VIEW CONTENT
+
+
+viewLanding : Model -> Html Msg
+viewLanding model =
+    div [ classList [ ( "container-landing", True ) ] ]
+        [ div [ classList [ ( "container-link", True ), ( "flex-wrap-always", True ) ] ]
+            [ viewIconTextLink "camera" [] "Photo" ToRight (ChangePath "#photo") ]
+        , label [ for model.imageId, classList [ ( "container-input", True ), ( "flex-wrap-always", True ) ] ]
+            [ viewIconText "file" [] "File" ToRight
+            , input [ id model.imageId, type_ "file", on "change" (JD.succeed ImageSelected) ] []
+            ]
+        , label [ for "stones-amount", classList [ ( "container-input", True ), ( "flex-wrap-always", True ) ] ]
+            [ viewIconText "stones" [] "Number of stones" ToRight
+            , input [ id "stones-amount", type_ "number", onInput NewAmountStones, value (toString model.amountStones) ] []
+            ]
+        , div [ classList [ ( "container-select", True ), ( "flex-wrap-always", True ) ] ]
+            [ viewIconText "grid" [] "Board size" ToRight
+            , select [ on "change" (JD.map NewBoardSize targetValue) ]
+                (List.map (viewOptionBoardSize model) model.boardSizes)
+            ]
+        ]
+
+
+viewPhoto : Model -> Html Msg
+viewPhoto model =
+    div [ classList [ ( "container-photo", True ) ] ]
+        [ viewIconTextLink "camera" [ ( "top-center", True ) ] "Start camera" ToRight StartCamera
+        , viewIconTextLink "close" [ ( "top-right", True ) ] "Close" ToLeft (ChangePath "#")
+        , video [ id "video", onClick TakePhoto ] []
+        ]
+
+
+viewCrop : Model -> Html Msg
+viewCrop model =
     let
         imagePreview =
             case model.imageSource of
@@ -249,18 +446,16 @@ viewImageSource model =
                 Nothing ->
                     text ""
     in
-        div [ classList [ ( "container-image", True ) ] ]
-            [ input [ id model.imageId, type_ "file", on "change" (JD.succeed ImageSelected) ] []
-            , input [ type_ "number", onInput NewAmountStones, value (toString model.amountStones) ] []
-            , select [ on "change" (JD.map NewBoardSize targetValue) ]
-                (List.map (viewOptionBoardSize model) model.boardSizes)
-            , imagePreview
+        div [ classList [ ( "container-crop", True ) ] ]
+            [ imagePreview
             ]
 
 
-viewImage : Image -> Html Msg
-viewImage image =
-    img [ src image.dataBase64 ] []
+viewScore : Model -> Html Msg
+viewScore model =
+    div [ classList [ ( "container-score", True ) ] ]
+        [ viewBoard model
+        ]
 
 
 viewOptionBoardSize : Model -> BoardSize -> Html Msg
@@ -284,11 +479,11 @@ viewBoard model =
 viewBoardRow : Model -> Int -> Html Msg
 viewBoardRow model y =
     div [ classList [ ( "board-row", True ) ] ]
-        (List.map (viewBoardColumn model) (boardSizeToRange model.boardSize))
+        (List.map (viewBoardColumn model y) (boardSizeToRange model.boardSize))
 
 
-viewBoardColumn : Model -> Int -> Html Msg
-viewBoardColumn model x =
+viewBoardColumn : Model -> Int -> Int -> Html Msg
+viewBoardColumn model y x =
     div
         [ classList
             [ ( "board-column", True )
@@ -297,7 +492,30 @@ viewBoardColumn model x =
             , ( "board-column--9x9", model.boardSize == Nine )
             ]
         ]
-        [ span [ classList [ ( "board-point", True ) ] ] []
+        [ span [ classList [ ( "board-point", True ), ( "board-point--star", isStar model x y ) ] ] []
         , span [ classList [ ( "board-connection", True ), ( "board-connection--right", True ) ] ] []
         , span [ classList [ ( "board-connection", True ), ( "board-connection--down", True ) ] ] []
         ]
+
+
+
+-- VIEW HELPERS
+
+
+classToString : ( String, Bool ) -> String
+classToString tuple =
+    case Tuple.second tuple of
+        True ->
+            Tuple.first tuple
+
+        False ->
+            ""
+
+
+classString : List ( String, Bool ) -> String
+classString classes =
+    let
+        classList =
+            List.map classToString classes
+    in
+        String.join " " classList

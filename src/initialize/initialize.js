@@ -1,19 +1,19 @@
 const element = document.getElementById("app");
-const canvas = document.getElementById("canvas");
 const flags =
     {
         version: CONFIG_API_VERSION,
         baseURL: CONFIG_API_BASE_URL
     };
-const context = canvas.getContext("2d");
 const app = Elm.App.embed(element, flags);
 
-app.ports.imageSelected.subscribe(function (id) {
+app.ports.fileSelected.subscribe(function (id) {
     const element = document.getElementById(id);
     if (element === null || element.files.length === 0) {
         return;
     }
 
+    const canvas = document.getElementById("canvas");
+    const context = canvas.getContext("2d");
     const file = element.files[0];
     const reader = new FileReader();
     const image = new Image();
@@ -43,4 +43,44 @@ app.ports.imageSelected.subscribe(function (id) {
     }, false);
 
     reader.readAsDataURL(file);
+});
+
+app.ports.showVideo.subscribe(function (bool) {
+    const canvas = document.getElementById("canvas");
+    const video = document.getElementById("video");
+    const options = { video: { facingMode: "environment" }, audio: false };
+
+    navigator.mediaDevices.getUserMedia(options)
+        .then(function (stream) {
+            video.srcObject = stream;
+            video.play();
+        })
+        .catch(function (err) {
+            return;
+        });
+});
+
+app.ports.takePhoto.subscribe(function (bool) {
+    const canvas = document.getElementById("canvas");
+    const context = canvas.getContext("2d");
+    const video = document.getElementById("video");
+    const image = new Image();
+
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    context.drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
+
+    const imageBase64 = canvas.toDataURL("image/png");
+    const imageDataCanvas = context.getImageData(0, 0, video.videoWidth, video.videoHeight);
+    // Necessary to convert Uint8ClampedArray to regular array to pass through port
+    const imageArray = Array.prototype.slice.call(imageDataCanvas.data);
+    const imageData =
+        {
+            dataArray: imageArray,
+            dataBase64: imageBase64,
+            width: image.width,
+            height: image.height
+        };
+
+    app.ports.processImage.send(imageData);
 });

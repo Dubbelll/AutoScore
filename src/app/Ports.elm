@@ -7,7 +7,16 @@ type alias ImageData =
     { dataArray : Array Int, dataBase64 : String, width : Int, height : Int }
 
 
-port imageSelected : String -> Cmd msg
+port fileSelected : String -> Cmd msg
+
+
+port startCamera : Bool -> Cmd msg
+
+
+port stopCamera : Bool -> Cmd msg
+
+
+port takePhoto : Bool -> Cmd msg
 
 
 port processImage : (ImageData -> msg) -> Sub msg

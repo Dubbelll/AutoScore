@@ -12,16 +12,6 @@
  |
  */
 
-const proxy = require("http-proxy-middleware")
-const proxyAPI = proxy("/api", {
-    target: "http://localhost:8000",
-    pathRewrite: { "^/api/": "/" },
-    logLevel: "debug",
-    onProxyReq(proxyReq, req, res) {
-        proxyReq.setHeader("Authorization", "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiY2xpZW50X215c3RlcnkifQ.PzLybcYYAY4Fu8A4zOoBuHQ8GXZtqTTHGLXfOCtrBic")
-    }
-})
-
 module.exports = {
     "ui": {
         "port": 3001
@@ -43,8 +33,9 @@ module.exports = {
     },
     "proxy": false,
     "port": 3000,
-    "middleware": [proxyAPI],
+    "middleware": [],
     "serveStatic": [],
+    "https": true,
     "ghostMode": {
         "clicks": true,
         "scroll": true,

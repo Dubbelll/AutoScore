@@ -20,18 +20,13 @@
 /* GENERAL */
 /* GENERAL */
 /* GENERAL */
-body, #app, .container-app
+body, #app, .container-app, .container-landing, .container-photo, .container-crop, .container-score
 {
     width: 100%;
     height: 100%;
 }
 
 #canvas
-{
-    display: none;
-}
-
-.spritesheet
 {
     display: none;
 }
@@ -50,13 +45,89 @@ body, #app, .container-app
     padding: $padding-minimal;
 }
 
-/* CONTENT */
-/* CONTENT */
-/* CONTENT */
-.container-image
+.text-icon
 {
-    width: 100%;
-    height: 5%;
+    padding: $padding-minimal;
+    font-size: $font-size-heading;
+}
+
+.link-fake
+{
+    cursor: pointer;
+}
+
+.top-left
+{
+    position: absolute;
+    top: $positioning-default;
+    left: $positioning-default;
+}
+
+.top-center
+{
+    position: absolute;
+    top: $positioning-default;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.top-right
+{
+    position: absolute;
+    top: $positioning-default;
+    right: $positioning-default;
+}
+
+input[type="file"] {
+    display: none;
+}
+
+.flex-wrap-always
+{
+    flex: 0 0 100%;
+}
+
+.container-icon-text
+{
+    display: flex;
+    align-items: center;
+}
+
+.container-icon-text-link
+{
+    display: flex;
+    align-items: center;
+}
+
+/* CONTENT */
+/* CONTENT */
+/* CONTENT */
+.container-app
+{
+    overflow: hidden;
+}
+
+.container-landing
+{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.container-photo
+{
+    position: relative;
+    background-color: $color-background-primary;
+    z-index: $depth-video;
+}
+
+#video
+{
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translateX(-50%) translateY(-50%);
 }
 
 .container-board
@@ -64,7 +135,7 @@ body, #app, .container-app
     display: flex;
     flex-direction: column;
     position: absolute;
-    top: calc(5% + ((95% - 90rem) / 2));
+    top: calc((100% - 90rem) / 2);
     left: calc((100% - 90rem) / 2);
     width: 90rem;
     height: 90rem;
@@ -72,8 +143,20 @@ body, #app, .container-app
 
 .container-board--19x19
 {
-    top: calc(5% + ((95% - (90rem - (90rem / 19))) / 2));
+    top: calc((100% - (90rem - (90rem / 19))) / 2);
     left: calc((100% - (90rem - (90rem / 19))) / 2);
+}
+
+.container-board--13x13
+{
+    top: calc((100% - (90rem - (90rem / 13))) / 2);
+    left: calc((100% - (90rem - (90rem / 13))) / 2);
+}
+
+.container-board--9x9
+{
+    top: calc((100% - (90rem - (90rem / 9))) / 2);
+    left: calc((100% - (90rem - (90rem / 9))) / 2);
 }
 
 .board-row
@@ -158,8 +241,13 @@ body, #app, .container-app
     position: absolute;
     width: 50%;
     height: 50%;
-    background-color: $color-accent-primary;
+    cursor: pointer;
     z-index: $depth-board-point;
+
+    &.board-point--star
+    {
+        background-color: $color-object-primary;
+    }
 }
 
 .board-connection

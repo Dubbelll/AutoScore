@@ -17,6 +17,25 @@
     padding: 0;
 }
 
+/* MEDIA */
+/* MEDIA */
+/* MEDIA */
+@media screen and (orientation: landscape)
+{
+    .video
+    {
+        width: 100%;
+    }
+}
+
+@media screen and (orientation: portrait)
+{
+    .video
+    {
+        height: 100%;
+    }
+}
+
 /* GENERAL */
 /* GENERAL */
 /* GENERAL */
@@ -26,7 +45,7 @@ body, #app, .container-app, .container-landing, .container-photo, .container-cro
     height: 100%;
 }
 
-#canvas
+.spritesheet
 {
     display: none;
 }
@@ -42,6 +61,10 @@ body, #app, .container-app, .container-landing, .container-photo, .container-cro
 {
     width: $icon-size-big;
     height: $icon-size-big;
+    min-width: $icon-size-big;
+    min-height: $icon-size-big;
+    max-width: $icon-size-big;
+    max-height: $icon-size-big;
     padding: $padding-minimal;
 }
 
@@ -54,36 +77,6 @@ body, #app, .container-app, .container-landing, .container-photo, .container-cro
 .link-fake
 {
     cursor: pointer;
-}
-
-.top-left
-{
-    position: absolute;
-    top: $positioning-default;
-    left: $positioning-default;
-}
-
-.top-center
-{
-    position: absolute;
-    top: $positioning-default;
-    left: 50%;
-    transform: translateX(-50%);
-}
-
-.top-right
-{
-    position: absolute;
-    top: $positioning-default;
-    right: $positioning-default;
-}
-
-.center-center
-{
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translateX(-50%) translateY(-50%);
 }
 
 input[type="file"] {
@@ -119,6 +112,24 @@ input[type="file"] {
     display: block;
 }
 
+.close
+{
+    position: absolute;
+    top: $positioning-default;
+    right: $positioning-default;
+    z-index: $depth-overlay;
+
+    &.close--overlay
+    {
+        color: $color-text-secondary;
+
+        &>.icon 
+        {
+            fill: $color-text-secondary;
+        }
+    }
+}
+
 .container-icon-text
 {
     display: flex;
@@ -151,7 +162,26 @@ input[type="file"] {
 {
     position: relative;
     background-color: $color-background-primary;
-    z-index: $depth-video;
+}
+
+.camera
+{
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translateX(-50%) translateY(-50%); 
+
+    &.camera--info
+    {
+        display: none;
+        color: $color-text-secondary;
+        z-index: $depth-overlay;
+    
+        &>.icon 
+        {
+            fill: $color-text-secondary;
+        }
+    }
 }
 
 .video
@@ -161,10 +191,108 @@ input[type="file"] {
     top: 50%;
     left: 50%;
     transform: translateX(-50%) translateY(-50%);
+    z-index: $depth-source;
 
     &.video--playing
     {
         display: block;
+
+        &~.close
+        {
+            color: $color-text-secondary;
+
+            &>.icon 
+            {
+                fill: $color-text-secondary;
+            }
+        }
+
+        &~.camera--start
+        {
+            display: none;
+        }
+
+        &~.camera--info
+        {
+            display: flex;
+        }
+    }
+}
+
+.canvas
+{
+    display: none;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translateX(-50%) translateY(-50%);
+    z-index: $depth-source;
+
+    &.canvas--editable
+    {
+        display: block;
+    }
+}
+
+.crop
+{
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translateX(-50%) translateY(-50%); 
+
+    &.crop--info
+    {
+        color: $color-text-secondary;
+        z-index: $depth-overlay;
+    
+        &>.icon 
+        {
+            fill: $color-text-secondary;
+        }
+    }
+}
+
+.crop-selection
+{
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 50%;
+    height: 50%;
+    transform: translateX(-50%) translateY(-50%);
+    border: 1rem dashed $color-text-secondary;
+    z-index: $depth-overlay;
+}
+
+.selection-corner
+{
+    position: absolute;
+    width: 20%;
+    height: 20%;
+
+    &.selection-corner--top-right
+    {
+        top: -1rem;
+        right: -1rem;
+    }
+
+    &.selection-corner--bottom-right
+    {
+        right: -1rem;
+        bottom: -1rem;
+    }
+
+    &.selection-corner--bottom-left
+    {
+        bottom: -1rem;
+        left: -1rem;
+    }
+
+    &.selection-corner--top-left
+    {
+        top: -1rem;
+        left: -1rem;
     }
 }
 

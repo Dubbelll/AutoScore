@@ -70,12 +70,12 @@ app.ports.takePhoto.subscribe(function (bool) {
     const video = document.getElementById("video");
     const image = new Image();
 
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    context.drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    context.drawImage(video, 0, 0, window.innerWidth, window.innerHeight);
 
     const imageBase64 = canvas.toDataURL("image/png");
-    const imageDataCanvas = context.getImageData(0, 0, video.videoWidth, video.videoHeight);
+    const imageDataCanvas = context.getImageData(0, 0, window.innerWidth, window.innerHeight);
     // Necessary to convert Uint8ClampedArray to regular array to pass through port
     const imageArray = Array.prototype.slice.call(imageDataCanvas.data);
     const imageData =

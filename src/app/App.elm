@@ -31,6 +31,9 @@ type alias Model =
     , amountStones : Int
     , boardSizes : List BoardSize
     , boardSize : BoardSize
+    , isResizing : Bool
+    , isDragging : Bool
+    , cropPosition : Maybe ScreenPosition
     , stars19x19 : List Star
     , stars13x13 : List Star
     , stars9x9 : List Star
@@ -53,6 +56,10 @@ type alias Image =
 type TextDirection
     = ToLeft
     | ToRight
+
+
+type alias ScreenPosition =
+    { x : Int, y : Int }
 
 
 type alias Star =
@@ -101,6 +108,9 @@ init flags location =
             , amountStones = 284
             , boardSizes = [ Nineteen, Thirteen, Nine ]
             , boardSize = Nineteen
+            , isResizing = False
+            , isDragging = False
+            , cropPosition = Nothing
             , stars19x19 = stars19x19
             , stars13x13 = stars13x13
             , stars9x9 = stars9x9
@@ -204,6 +214,17 @@ isStar model x y =
 
 
 
+-- DECODERS
+
+
+decodeScreenPosition : JD.Decoder ScreenPosition
+decodeScreenPosition =
+    JD.map2 ScreenPosition
+        (JD.field "pageX" JD.int)
+        (JD.field "pageY" JD.int)
+
+
+
 -- ROUTING
 
 
@@ -248,6 +269,11 @@ type Msg
     | ImageProcessed PT.ImageData
     | NewAmountStones String
     | NewBoardSize String
+    | StartResizing
+    | StopResizing
+    | StartDragging ScreenPosition
+    | StopDragging ScreenPosition
+    | Dragged ScreenPosition
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -297,6 +323,26 @@ update message model =
             in
                 ( { model | boardSize = newBoardSize }, Cmd.none )
 
+        StartResizing ->
+            ( { model | isResizing = True }, Cmd.none )
+
+        StopResizing ->
+            ( { model | isResizing = False }, Cmd.none )
+
+        StartDragging position ->
+            ( { model | isDragging = True, cropPosition = Just position }, Cmd.none )
+
+        StopDragging position ->
+            ( { model | isDragging = False, cropPosition = Just position }, Cmd.none )
+
+        Dragged position ->
+            case model.isDragging of
+                True ->
+                    ( { model | cropPosition = Just position }, Cmd.none )
+
+                False ->
+                    ( model, Cmd.none )
+
 
 
 -- SUBSCRIPTIONS
@@ -315,7 +361,7 @@ view : Model -> Html Msg
 view model =
     div [ classList [ ( "container-app", True ) ] ]
         [ page model
-        , canvas [ id "canvas", classList [ ( "canvas", True ) ] ] []
+        , canvas [ id "canvas", classList [ ( "canvas", True ), ( "canvas--editable", model.route == RouteCrop ) ] ] []
         ]
 
 
@@ -343,13 +389,13 @@ page model =
 
 
 viewIcon : String -> List ( String, Bool ) -> Html Msg
-viewIcon name classes =
+viewIcon name classesExtra =
     let
-        classList =
-            [ ( "icon", True ) ] ++ classes
+        classes =
+            [ ( "icon", True ) ] ++ classesExtra
     in
-        svg [ SA.class (classString classList) ]
-            [ use [ xlinkHref ("icons.svg#" ++ name) ] [] ]
+        svg [ SA.class (classString classes) ]
+            [ use [ xlinkHref ("#" ++ name) ] [] ]
 
 
 viewIconText : String -> List ( String, Bool ) -> String -> TextDirection -> Bool -> Html Msg
@@ -442,30 +488,78 @@ viewLanding model =
 viewPhoto : Model -> Html Msg
 viewPhoto model =
     div [ classList [ ( "container-photo", True ) ] ]
-        [ ul [ classList [ ( "center-center", True ) ] ]
-            [ li [ classList [ ( "list-item", True ) ] ]
-                [ viewIconTextLink "camera" [] "Start camera" ToRight StartCamera ]
-            , li [ classList [ ( "list-item", True ) ] ]
-                [ viewIconText "info" [] "Click/tap anywhere on the video feed to take a photo" ToRight False ]
-            ]
-        , viewIconTextLink "close" [ ( "top-right", True ) ] "Close" ToLeft (ChangePath "#")
-        , video [ id "video", classList [ ( "video", True ) ], onClick TakePhoto ] []
+        [ video [ id "video", classList [ ( "video", True ) ], onClick TakePhoto ] []
+        , viewIconTextLink "close" [ ( "close", True ) ] "Close" ToLeft (ChangePath "#")
+        , viewIconTextLink
+            "camera"
+            [ ( "camera", True ), ( "camera--start", True ) ]
+            "Start camera"
+            ToRight
+            StartCamera
+        , viewIconText
+            "info"
+            [ ( "camera", True ), ( "camera--info", True ) ]
+            "Click/tap anywhere to take a photo"
+            ToRight
+            False
         ]
 
 
 viewCrop : Model -> Html Msg
 viewCrop model =
     let
-        imagePreview =
-            case model.imageSource of
-                Just image ->
-                    viewImage image
+        styles =
+            case model.cropPosition of
+                Just position ->
+                    [ ( "top", (toString position.y) ++ "px" ), ( "left", (toString position.x) ++ "px" ) ]
 
                 Nothing ->
-                    text ""
+                    []
     in
         div [ classList [ ( "container-crop", True ) ] ]
-            [ imagePreview
+            [ viewIconTextLink "close" [ ( "close", True ), ( "close--overlay", True ) ] "Close" ToLeft (ChangePath "#")
+            , viewIconText
+                "info"
+                [ ( "crop", True ), ( "crop--info", True ) ]
+                "Crop the image so only the board remains"
+                ToRight
+                False
+            , div
+                [ id "crop-selection"
+                , classList [ ( "crop-selection", True ) ]
+                , style styles
+                , on "mousedown" (JD.map StartDragging decodeScreenPosition)
+                , on "mouseup" (JD.map StopDragging decodeScreenPosition)
+                , on "mousemove" (JD.map Dragged decodeScreenPosition)
+                , on "touchstart" (JD.map StartDragging decodeScreenPosition)
+                , on "touchend" (JD.map StopDragging decodeScreenPosition)
+                , on "touchmove" (JD.map Dragged decodeScreenPosition)
+                ]
+                [ div
+                    [ classList [ ( "selection-corner", True ), ( "selection-corner--top-right", True ) ]
+                    , onMouseDown StartResizing
+                    , onMouseUp StopResizing
+                    ]
+                    []
+                , div
+                    [ classList [ ( "selection-corner", True ), ( "selection-corner--bottom-right", True ) ]
+                    , onMouseDown StartResizing
+                    , onMouseUp StopResizing
+                    ]
+                    []
+                , div
+                    [ classList [ ( "selection-corner", True ), ( "selection-corner--bottom-left", True ) ]
+                    , onMouseDown StartResizing
+                    , onMouseUp StopResizing
+                    ]
+                    []
+                , div
+                    [ classList [ ( "selection-corner", True ), ( "selection-corner--top-left", True ) ]
+                    , onMouseDown StartResizing
+                    , onMouseUp StopResizing
+                    ]
+                    []
+                ]
             ]
 
 

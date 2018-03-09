@@ -45,7 +45,7 @@ app.ports.fileSelected.subscribe(function (id) {
     reader.readAsDataURL(file);
 });
 
-app.ports.showVideo.subscribe(function (bool) {
+app.ports.startCamera.subscribe(function (bool) {
     const canvas = document.getElementById("canvas");
     const video = document.getElementById("video");
     const options = { video: { facingMode: "environment" }, audio: false };
@@ -58,6 +58,10 @@ app.ports.showVideo.subscribe(function (bool) {
         .catch(function (err) {
             return;
         });
+
+    video.addEventListener("canplay", function () {
+        video.classList.add("video--playing");
+    })
 });
 
 app.ports.takePhoto.subscribe(function (bool) {

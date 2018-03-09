@@ -6,15 +6,13 @@ $color-text-primary: #2F2F2F;
 $color-text-secondary: #FDFDFD;
 $color-object-primary: #2F2F2F;
 $color-accent-primary: #03A9F4;
+$color-shadow: lightgrey;
 
 /* Font */
 $font-family-default: "Nunito", sans-serif;
 $font-size-default: 1vmin;
 $font-size-title: 5rem;
-$font-size-icon-fake: 3.75rem;
 $font-size-heading: 2.5rem;
-$font-size-description: 2.25rem;
-$font-size-icon: 1.75rem;
 $font-size-body: 1.25rem;
 
 /* Line */
@@ -37,7 +35,7 @@ $border-width-default: 2px;
 
 /* Icons */
 $icon-size-default: 2.5rem;
-$icon-size-big: 5rem;
+$icon-size-big: 10rem;
 
 /* Depth */
 $depth-video: 10;

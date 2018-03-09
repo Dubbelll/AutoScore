@@ -3,8 +3,9 @@
 
 :root
 {
-    width: 100vw;
-    height: 100vh;
+    width: 100%;
+    height: 100%;
+    color: $color-text-primary;
     background-color: $color-background-primary;
     font-family: $font-family-default;
     font-size: $font-size-default;
@@ -14,7 +15,6 @@
 {
     margin: 0;
     padding: 0;
-    font-size: $font-size-heading;
 }
 
 /* GENERAL */
@@ -48,7 +48,7 @@ body, #app, .container-app, .container-landing, .container-photo, .container-cro
 .text-icon
 {
     padding: $padding-minimal;
-    font-size: $font-size-heading;
+    font-size: $font-size-title;
 }
 
 .link-fake
@@ -78,13 +78,45 @@ body, #app, .container-app, .container-landing, .container-photo, .container-cro
     right: $positioning-default;
 }
 
+.center-center
+{
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translateX(-50%) translateY(-50%);
+}
+
 input[type="file"] {
     display: none;
 }
 
-.flex-wrap-always
+.input
 {
-    flex: 0 0 100%;
+    position: relative;
+    left: 13rem;
+    width: calc(5 * #{$font-size-title});
+    max-width: calc(5 * #{$font-size-title});
+    padding: $padding-minimal 0;
+    margin-bottom: $margin-minimal;
+    border: none;
+    outline: none;
+    border-bottom: 0.3rem solid $color-text-primary;
+    color: $color-text-primary;
+    background-color: $color-background-primary;
+    box-shadow: 0 0.3rem $color-shadow;
+    font-family: $font-family-default;
+    font-size: $font-size-title;
+}
+
+.list-item
+{
+    list-style: none;
+    margin-bottom: $margin-minimal;
+}
+
+.visible
+{
+    display: block;
 }
 
 .container-icon-text
@@ -122,12 +154,18 @@ input[type="file"] {
     z-index: $depth-video;
 }
 
-#video
+.video
 {
+    display: none;
     position: absolute;
     top: 50%;
     left: 50%;
     transform: translateX(-50%) translateY(-50%);
+
+    &.video--playing
+    {
+        display: block;
+    }
 }
 
 .container-board

@@ -315,7 +315,7 @@ view : Model -> Html Msg
 view model =
     div [ classList [ ( "container-app", True ) ] ]
         [ page model
-        , canvas [ id "canvas" ] []
+        , canvas [ id "canvas", classList [ ( "canvas", True ) ] ] []
         ]
 
 
@@ -352,11 +352,11 @@ viewIcon name classes =
             [ use [ xlinkHref ("icons.svg#" ++ name) ] [] ]
 
 
-viewIconText : String -> List ( String, Bool ) -> String -> TextDirection -> Html Msg
-viewIconText name classesExtra value direction =
+viewIconText : String -> List ( String, Bool ) -> String -> TextDirection -> Bool -> Html Msg
+viewIconText name classesExtra value direction isClickable =
     let
         classes =
-            [ ( "container-icon-text", True ), ( "link-fake", True ) ] ++ classesExtra
+            [ ( "container-icon-text", True ), ( "link-fake", isClickable ) ] ++ classesExtra
 
         content =
             case direction of
@@ -408,20 +408,33 @@ viewImage image =
 viewLanding : Model -> Html Msg
 viewLanding model =
     div [ classList [ ( "container-landing", True ) ] ]
-        [ div [ classList [ ( "container-link", True ), ( "flex-wrap-always", True ) ] ]
-            [ viewIconTextLink "camera" [] "Photo" ToRight (ChangePath "#photo") ]
-        , label [ for model.imageId, classList [ ( "container-input", True ), ( "flex-wrap-always", True ) ] ]
-            [ viewIconText "file" [] "File" ToRight
-            , input [ id model.imageId, type_ "file", on "change" (JD.succeed ImageSelected) ] []
-            ]
-        , label [ for "stones-amount", classList [ ( "container-input", True ), ( "flex-wrap-always", True ) ] ]
-            [ viewIconText "stones" [] "Number of stones" ToRight
-            , input [ id "stones-amount", type_ "number", onInput NewAmountStones, value (toString model.amountStones) ] []
-            ]
-        , div [ classList [ ( "container-select", True ), ( "flex-wrap-always", True ) ] ]
-            [ viewIconText "grid" [] "Board size" ToRight
-            , select [ on "change" (JD.map NewBoardSize targetValue) ]
-                (List.map (viewOptionBoardSize model) model.boardSizes)
+        [ ul []
+            [ li [ classList [ ( "container-link", True ), ( "list-item", True ) ] ]
+                [ viewIconTextLink "camera" [] "Photo" ToRight (ChangePath "#photo") ]
+            , li [ classList [ ( "container-input", True ), ( "list-item", True ) ] ]
+                [ label [ for model.imageId ]
+                    [ viewIconText "file" [] "File" ToRight True
+                    , input [ id model.imageId, type_ "file", on "change" (JD.succeed ImageSelected) ] []
+                    ]
+                ]
+            , li [ classList [ ( "container-input", True ), ( "list-item", True ) ] ]
+                [ label [ for "stones-amount" ]
+                    [ viewIconText "stones" [] "Number of stones" ToRight False
+                    , input
+                        [ id "stones-amount"
+                        , classList [ ( "input", True ) ]
+                        , type_ "number"
+                        , onInput NewAmountStones
+                        , value (toString model.amountStones)
+                        ]
+                        []
+                    ]
+                ]
+            , li [ classList [ ( "container-select", True ), ( "list-item", True ) ] ]
+                [ viewIconText "grid" [] "Board size" ToRight False
+                , select [ classList [ ( "input", True ) ], on "change" (JD.map NewBoardSize targetValue) ]
+                    (List.map (viewOptionBoardSize model) model.boardSizes)
+                ]
             ]
         ]
 
@@ -429,9 +442,14 @@ viewLanding model =
 viewPhoto : Model -> Html Msg
 viewPhoto model =
     div [ classList [ ( "container-photo", True ) ] ]
-        [ viewIconTextLink "camera" [ ( "top-center", True ) ] "Start camera" ToRight StartCamera
+        [ ul [ classList [ ( "center-center", True ) ] ]
+            [ li [ classList [ ( "list-item", True ) ] ]
+                [ viewIconTextLink "camera" [] "Start camera" ToRight StartCamera ]
+            , li [ classList [ ( "list-item", True ) ] ]
+                [ viewIconText "info" [] "Click/tap anywhere on the video feed to take a photo" ToRight False ]
+            ]
         , viewIconTextLink "close" [ ( "top-right", True ) ] "Close" ToLeft (ChangePath "#")
-        , video [ id "video", onClick TakePhoto ] []
+        , video [ id "video", classList [ ( "video", True ) ], onClick TakePhoto ] []
         ]
 
 

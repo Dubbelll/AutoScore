@@ -33,7 +33,10 @@ type alias Model =
     , boardSize : BoardSize
     , isResizing : Bool
     , isDragging : Bool
+    , cropId : String
     , cropPosition : Maybe ScreenPosition
+    , cropResizeStart : Maybe ScreenPosition
+    , cropSize : Maybe ElementSize
     , stars19x19 : List Star
     , stars13x13 : List Star
     , stars9x9 : List Star
@@ -60,6 +63,14 @@ type TextDirection
 
 type alias ScreenPosition =
     { x : Int, y : Int }
+
+
+type alias ElementSize =
+    { width : Float, height : Float }
+
+
+type alias TouchScreenPositions =
+    { touches : Array ScreenPosition }
 
 
 type alias Star =
@@ -110,7 +121,10 @@ init flags location =
             , boardSize = Nineteen
             , isResizing = False
             , isDragging = False
+            , cropId = "crop-selection"
             , cropPosition = Nothing
+            , cropResizeStart = Nothing
+            , cropSize = Nothing
             , stars19x19 = stars19x19
             , stars13x13 = stars13x13
             , stars9x9 = stars9x9
@@ -224,6 +238,11 @@ decodeScreenPosition =
         (JD.field "pageY" JD.int)
 
 
+decodeTouchScreenPosition : JD.Decoder ScreenPosition
+decodeTouchScreenPosition =
+    JD.at [ "touches", "0" ] decodeScreenPosition
+
+
 
 -- ROUTING
 
@@ -269,11 +288,15 @@ type Msg
     | ImageProcessed PT.ImageData
     | NewAmountStones String
     | NewBoardSize String
-    | StartResizing
-    | StopResizing
+    | StartResizing ScreenPosition
+    | StopResizing ScreenPosition
+    | Resizing ScreenPosition
     | StartDragging ScreenPosition
     | StopDragging ScreenPosition
-    | Dragged ScreenPosition
+    | Dragging ScreenPosition
+    | StopInput
+    | CropPhoto
+    | ElementSizeSnapshotted PT.ElementSizeData
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -323,11 +346,48 @@ update message model =
             in
                 ( { model | boardSize = newBoardSize }, Cmd.none )
 
-        StartResizing ->
-            ( { model | isResizing = True }, Cmd.none )
+        StartResizing position ->
+            let
+                log =
+                    Debug.log "start" position
+            in
+                ( { model | isResizing = True, cropResizeStart = Just position }, Cmd.none )
 
-        StopResizing ->
+        StopResizing position ->
             ( { model | isResizing = False }, Cmd.none )
+
+        Resizing position ->
+            let
+                log =
+                    Debug.log "resizing" position
+            in
+                case model.isResizing of
+                    True ->
+                        case model.cropSize of
+                            Just size ->
+                                let
+                                    startPosition =
+                                        Maybe.withDefault (ScreenPosition 0 0) model.cropResizeStart
+
+                                    width =
+                                        size.width + toFloat (position.x - startPosition.x)
+
+                                    height =
+                                        size.height + toFloat (position.y - startPosition.y)
+
+                                    newSize =
+                                        ElementSize width height
+
+                                    log =
+                                        Debug.log "resizing" newSize
+                                in
+                                    ( { model | cropSize = Just newSize }, Cmd.none )
+
+                            Nothing ->
+                                ( model, PT.takeElementSizeSnapshot model.cropId )
+
+                    False ->
+                        ( model, Cmd.none )
 
         StartDragging position ->
             ( { model | isDragging = True, cropPosition = Just position }, Cmd.none )
@@ -335,13 +395,30 @@ update message model =
         StopDragging position ->
             ( { model | isDragging = False, cropPosition = Just position }, Cmd.none )
 
-        Dragged position ->
+        Dragging position ->
             case model.isDragging of
                 True ->
                     ( { model | cropPosition = Just position }, Cmd.none )
 
                 False ->
                     ( model, Cmd.none )
+
+        StopInput ->
+            let
+                log =
+                    Debug.log "stopping" True
+            in
+                ( { model | isResizing = False, isDragging = False }, Cmd.none )
+
+        CropPhoto ->
+            ( model, PT.cropPhoto True )
+
+        ElementSizeSnapshotted size ->
+            let
+                log =
+                    Debug.log "snapshotted" size
+            in
+                ( { model | cropSize = Just size }, Cmd.none )
 
 
 
@@ -350,7 +427,7 @@ update message model =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    PT.processImage ImageProcessed
+    Sub.batch [ PT.processImage ImageProcessed, PT.snapshotElementSize ElementSizeSnapshotted ]
 
 
 
@@ -448,6 +525,41 @@ viewImage image =
 
 
 
+-- VIEW PARTS
+
+
+attributesCrop : List (Html.Attribute Msg)
+attributesCrop =
+    [ classList [ ( "container-crop", True ) ]
+    ]
+
+
+attributesDragMiddle : List (Html.Attribute Msg)
+attributesDragMiddle =
+    [ classList [ ( "drag-area", True ), ( "drag-area--middle", True ) ]
+    , on "mouseup" (JD.succeed StopInput)
+    , onWithOptions "touchend" (Options False True) (JD.succeed StopInput)
+    ]
+
+
+attributesDragCorner : List (Html.Attribute Msg)
+attributesDragCorner =
+    [ classList [ ( "drag-area", True ), ( "drag-area--corner", True ) ]
+    , on "mousedown" (JD.map StartResizing decodeScreenPosition)
+    , on "mouseup" (JD.map StopResizing decodeScreenPosition)
+    , on "mousemove" (JD.map Resizing decodeScreenPosition)
+    , onWithOptions "touchstart" (Options False True) (JD.map StartResizing decodeTouchScreenPosition)
+    , onWithOptions "touchend" (Options False True) (JD.map StopResizing decodeTouchScreenPosition)
+    , onWithOptions "touchmove" (Options False True) (JD.map Resizing decodeTouchScreenPosition)
+    ]
+
+
+buttonClose : Bool -> Html Msg
+buttonClose isOverlay =
+    viewIconTextLink "close" [ ( "close", True ), ( "close--overlay", isOverlay ) ] "Close" ToLeft (ChangePath "#")
+
+
+
 -- VIEW CONTENT
 
 
@@ -489,7 +601,7 @@ viewPhoto : Model -> Html Msg
 viewPhoto model =
     div [ classList [ ( "container-photo", True ) ] ]
         [ video [ id "video", classList [ ( "video", True ) ], onClick TakePhoto ] []
-        , viewIconTextLink "close" [ ( "close", True ) ] "Close" ToLeft (ChangePath "#")
+        , buttonClose False
         , viewIconTextLink
             "camera"
             [ ( "camera", True ), ( "camera--start", True ) ]
@@ -508,59 +620,67 @@ viewPhoto model =
 viewCrop : Model -> Html Msg
 viewCrop model =
     let
-        styles =
+        newPosition =
             case model.cropPosition of
                 Just position ->
                     [ ( "top", (toString position.y) ++ "px" ), ( "left", (toString position.x) ++ "px" ) ]
 
                 Nothing ->
                     []
+
+        newSize =
+            case model.cropSize of
+                Just size ->
+                    [ ( "width", (toString size.width) ++ "px" ), ( "height", (toString size.height) ++ "px" ) ]
+
+                Nothing ->
+                    []
+
+        styles =
+            newPosition ++ newSize
+
+        content =
+            case model.imageSource of
+                Just image ->
+                    [ buttonClose True
+                    , viewIconText
+                        "info"
+                        [ ( "crop", True ), ( "crop--overlay", True ) ]
+                        "Crop the image so only the board remains"
+                        ToRight
+                        False
+                    , div
+                        [ id "crop-selection"
+                        , classList [ ( "crop-selection", True ) ]
+                        , style styles
+                        ]
+                        [ div
+                            attributesDragMiddle
+                            []
+                        , div
+                            attributesDragCorner
+                            []
+                        ]
+                    , viewIconTextLink
+                        "crop"
+                        [ ( "crop", True ), ( "crop--overlay", True ), ( "crop--start", True ) ]
+                        "Crop"
+                        ToRight
+                        CropPhoto
+                    ]
+
+                Nothing ->
+                    [ buttonClose False
+                    , viewIconText
+                        "info"
+                        [ ( "crop", True ) ]
+                        "Nothing to crop"
+                        ToRight
+                        False
+                    ]
     in
-        div [ classList [ ( "container-crop", True ) ] ]
-            [ viewIconTextLink "close" [ ( "close", True ), ( "close--overlay", True ) ] "Close" ToLeft (ChangePath "#")
-            , viewIconText
-                "info"
-                [ ( "crop", True ), ( "crop--info", True ) ]
-                "Crop the image so only the board remains"
-                ToRight
-                False
-            , div
-                [ id "crop-selection"
-                , classList [ ( "crop-selection", True ) ]
-                , style styles
-                , on "mousedown" (JD.map StartDragging decodeScreenPosition)
-                , on "mouseup" (JD.map StopDragging decodeScreenPosition)
-                , on "mousemove" (JD.map Dragged decodeScreenPosition)
-                , on "touchstart" (JD.map StartDragging decodeScreenPosition)
-                , on "touchend" (JD.map StopDragging decodeScreenPosition)
-                , on "touchmove" (JD.map Dragged decodeScreenPosition)
-                ]
-                [ div
-                    [ classList [ ( "selection-corner", True ), ( "selection-corner--top-right", True ) ]
-                    , onMouseDown StartResizing
-                    , onMouseUp StopResizing
-                    ]
-                    []
-                , div
-                    [ classList [ ( "selection-corner", True ), ( "selection-corner--bottom-right", True ) ]
-                    , onMouseDown StartResizing
-                    , onMouseUp StopResizing
-                    ]
-                    []
-                , div
-                    [ classList [ ( "selection-corner", True ), ( "selection-corner--bottom-left", True ) ]
-                    , onMouseDown StartResizing
-                    , onMouseUp StopResizing
-                    ]
-                    []
-                , div
-                    [ classList [ ( "selection-corner", True ), ( "selection-corner--top-left", True ) ]
-                    , onMouseDown StartResizing
-                    , onMouseUp StopResizing
-                    ]
-                    []
-                ]
-            ]
+        div attributesCrop
+            content
 
 
 viewScore : Model -> Html Msg

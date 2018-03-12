@@ -88,3 +88,30 @@ app.ports.takePhoto.subscribe(function (bool) {
 
     app.ports.processImage.send(imageData);
 });
+
+app.ports.cropPhoto.subscribe(function (bool) {
+    const element = document.getElementById("crop-selection");
+
+    element.addEventListener("touchstart", function (event) {
+        console.log("touchstart");
+    });
+
+    element.addEventListener("touchend", function (event) {
+        console.log("touchend");
+    });
+
+    element.addEventListener("touchmove", function (event) {
+        console.log("touchmove");
+    });
+});
+
+app.ports.takeElementSizeSnapshot.subscribe(function (id) {
+    const element = document.getElementById(id);
+
+    const elementSizeData = {
+        width: element.offsetWidth,
+        height: element.offsetHeight
+    };
+
+    app.ports.snapshotElementSize.send(elementSizeData);
+});

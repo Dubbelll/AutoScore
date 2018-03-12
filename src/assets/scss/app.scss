@@ -239,9 +239,9 @@ input[type="file"] {
     position: absolute;
     top: 50%;
     left: 50%;
-    transform: translateX(-50%) translateY(-50%); 
+    transform: translateX(-50%) translateY(-50%);
 
-    &.crop--info
+    &.crop--overlay
     {
         color: $color-text-secondary;
         z-index: $depth-overlay;
@@ -250,6 +250,13 @@ input[type="file"] {
         {
             fill: $color-text-secondary;
         }
+    }
+
+    &.crop--start
+    {
+        top: auto;
+        bottom: 10rem;
+        transform: translateX(-50%); 
     }
 }
 
@@ -265,34 +272,24 @@ input[type="file"] {
     z-index: $depth-overlay;
 }
 
-.selection-corner
+.drag-area
 {
     position: absolute;
-    width: 20%;
-    height: 20%;
 
-    &.selection-corner--top-right
-    {
-        top: -1rem;
-        right: -1rem;
-    }
-
-    &.selection-corner--bottom-right
-    {
-        right: -1rem;
-        bottom: -1rem;
-    }
-
-    &.selection-corner--bottom-left
-    {
-        bottom: -1rem;
-        left: -1rem;
-    }
-
-    &.selection-corner--top-left
+    &.drag-area--middle
     {
         top: -1rem;
         left: -1rem;
+        width: 75%;
+        height: 75%;
+    }
+
+    &.drag-area--corner
+    {
+        right: -1rem;
+        bottom: -1rem;
+        width: 25%;
+        height: 25%;
     }
 }
 

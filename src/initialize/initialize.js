@@ -6,6 +6,15 @@ const flags =
     };
 const app = Elm.App.embed(element, flags);
 
+app.ports.takeWindowSizeSnapshot.subscribe(function (bool) {
+    const windowSizeData = {
+        width: window.innerWidth,
+        height: window.innerHeight
+    };
+
+    app.ports.snapshotWindowSize.send(windowSizeData);
+});
+
 app.ports.fileSelected.subscribe(function (id) {
     const element = document.getElementById(id);
     if (element === null || element.files.length === 0) {
@@ -89,29 +98,23 @@ app.ports.takePhoto.subscribe(function (bool) {
     app.ports.processImage.send(imageData);
 });
 
-app.ports.cropPhoto.subscribe(function (bool) {
-    const element = document.getElementById("crop-selection");
+app.ports.cropPhoto.subscribe(function (crop) {
+    const element = document.getElementById(crop.id);
+    const canvas = document.getElementById("canvas");
+    const context = canvas.getContext("2d");
 
-    element.addEventListener("touchstart", function (event) {
-        console.log("touchstart");
-    });
+    const pixelDataCanvas = context.getImageData(crop.x, crop.y, crop.width, crop.height);
+    // Necessary to convert Uint8ClampedArray to regular array to pass through port
+    const pixelData = Array.prototype.slice.call(pixelDataCanvas.data);
 
-    element.addEventListener("touchend", function (event) {
-        console.log("touchend");
-    });
-
-    element.addEventListener("touchmove", function (event) {
-        console.log("touchmove");
-    });
+    app.ports.processPixels.send(pixelData);
 });
 
-app.ports.takeElementSizeSnapshot.subscribe(function (id) {
-    const element = document.getElementById(id);
+app.ports.drawPixels.subscribe(function (pixels) {
+    const canvas = document.getElementById("canvas");
+    const context = canvas.getContext("2d");
 
-    const elementSizeData = {
-        width: element.offsetWidth,
-        height: element.offsetHeight
-    };
-
-    app.ports.snapshotElementSize.send(elementSizeData);
+    const pixelData = context.createImageData(pixels.width, pixels.height);
+    pixelData.data = pixels.pixels;
+    context.putImageData(pixelData, 0, 0);
 });

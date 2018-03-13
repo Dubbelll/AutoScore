@@ -10,6 +10,7 @@ import Ports as PT
 import Array exposing (Array)
 import Svg exposing (svg, use)
 import Svg.Attributes as SA exposing (class, xlinkHref)
+import Dict exposing (Dict)
 
 
 main : Program Flags Model Msg
@@ -25,7 +26,7 @@ type alias Model =
     { config : Config
     , route : Route
     , location : Location
-    , isShowingVideo : Bool
+    , rem : Float
     , imageId : String
     , imageSource : Maybe Image
     , amountStones : Int
@@ -37,6 +38,8 @@ type alias Model =
     , cropPosition : Maybe ScreenPosition
     , cropResizeStart : Maybe ScreenPosition
     , cropSize : Maybe ElementSize
+    , pixelsSource : Maybe Pixels
+    , pixelsProcessed : Maybe (Dict Int Pixels)
     , stars19x19 : List Star
     , stars13x13 : List Star
     , stars9x9 : List Star
@@ -52,6 +55,10 @@ type alias Config =
     { version : String, baseURL : String }
 
 
+type alias WindowSize =
+    { width : Float, height : Float }
+
+
 type alias Image =
     { dataArray : Array Int, dataBase64 : String, width : Int, height : Int }
 
@@ -65,12 +72,24 @@ type alias ScreenPosition =
     { x : Int, y : Int }
 
 
-type alias ElementSize =
-    { width : Float, height : Float }
-
-
 type alias TouchScreenPositions =
     { touches : Array ScreenPosition }
+
+
+type alias ElementSize =
+    { width : Float, height : Float, maxWidth : Float, maxHeight : Float }
+
+
+type alias Pixels =
+    Array Int
+
+
+type alias PixelMap =
+    Dict Int Pixels
+
+
+type alias CanvasPixels =
+    { width : Float, height : Float, pixels : Pixels }
 
 
 type alias Star =
@@ -113,7 +132,7 @@ init flags location =
             { config = config
             , route = currentRoute
             , location = location
-            , isShowingVideo = False
+            , rem = 0
             , imageId = "image-source"
             , imageSource = Nothing
             , amountStones = 284
@@ -125,17 +144,80 @@ init flags location =
             , cropPosition = Nothing
             , cropResizeStart = Nothing
             , cropSize = Nothing
+            , pixelsSource = Nothing
+            , pixelsProcessed = Nothing
             , stars19x19 = stars19x19
             , stars13x13 = stars13x13
             , stars9x9 = stars9x9
             , board = Array.empty
             }
     in
-        ( model, Cmd.none )
+        ( model, PT.takeWindowSizeSnapshot True )
 
 
 
 -- MODEL HELPERS
+
+
+groupPixels : PixelMap -> Pixels -> Int -> PixelMap
+groupPixels dict pixels index =
+    let
+        value =
+            Maybe.withDefault 0 (Array.get index pixels)
+    in
+        case index % 4 of
+            0 ->
+                let
+                    newDict =
+                        Dict.insert index (Array.fromList [ value ]) dict
+                in
+                    groupPixels newDict pixels (index + 1)
+
+            _ ->
+                let
+                    group =
+                        Maybe.withDefault Array.empty (Dict.get (index - (index % 4)) dict)
+
+                    newDict =
+                        Dict.insert index (Array.push value group) dict
+                in
+                    if (index + 1) < (Array.length pixels) then
+                        groupPixels newDict pixels (index + 1)
+                    else
+                        let
+                            log =
+                                Debug.log "grouped" index
+                        in
+                            newDict
+
+
+pixelsToPixelMap : Pixels -> PixelMap
+pixelsToPixelMap pixels =
+    groupPixels Dict.empty pixels 0
+
+
+ungroupPixels : Pixels -> PixelMap -> Int -> Pixels
+ungroupPixels list pixels index =
+    let
+        group =
+            Maybe.withDefault Array.empty (Dict.get index pixels)
+
+        newList =
+            Array.append list group
+    in
+        if (index + 1) < (Dict.size pixels) then
+            ungroupPixels newList pixels (index + 1)
+        else
+            let
+                log =
+                    Debug.log "ungrouped" index
+            in
+                newList
+
+
+pixelMapToPixels : PixelMap -> Pixels
+pixelMapToPixels pixels =
+    ungroupPixels Array.empty pixels 0
 
 
 boardSizeToString : BoardSize -> String
@@ -244,6 +326,37 @@ decodeTouchScreenPosition =
 
 
 
+-- PIXEL PROCESSING
+
+
+averageRGB : Int -> Pixels -> Pixels
+averageRGB index pixels =
+    let
+        red =
+            Maybe.withDefault 0 (Array.get 0 pixels)
+
+        green =
+            Maybe.withDefault 0 (Array.get 1 pixels)
+
+        blue =
+            Maybe.withDefault 0 (Array.get 2 pixels)
+
+        alpha =
+            Maybe.withDefault 0 (Array.get 3 pixels)
+
+        average =
+            round (toFloat (red + green + blue) / 3)
+    in
+        Array.fromList [ average, average, average, alpha ]
+
+
+greyscale : PixelMap -> Pixels
+greyscale pixels =
+    Dict.map averageRGB pixels
+        |> pixelMapToPixels
+
+
+
 -- ROUTING
 
 
@@ -251,6 +364,7 @@ type Route
     = RouteLanding
     | RoutePhoto
     | RouteCrop
+    | RouteProcessing
     | RouteScore
     | RouteNotFound
 
@@ -261,6 +375,7 @@ matchers =
         [ UP.map RouteLanding UP.top
         , UP.map RoutePhoto (UP.s "photo")
         , UP.map RouteCrop (UP.s "crop")
+        , UP.map RouteProcessing (UP.s "processing")
         , UP.map RouteScore (UP.s "score")
         ]
 
@@ -282,6 +397,7 @@ parseLocation location =
 type Msg
     = ChangePath String
     | ChangeLocation Location
+    | WindowSizeSnapshotted PT.WindowSizeData
     | StartCamera
     | TakePhoto
     | ImageSelected
@@ -289,14 +405,12 @@ type Msg
     | NewAmountStones String
     | NewBoardSize String
     | StartResizing ScreenPosition
-    | StopResizing ScreenPosition
     | Resizing ScreenPosition
     | StartDragging ScreenPosition
-    | StopDragging ScreenPosition
     | Dragging ScreenPosition
     | StopInput
     | CropPhoto
-    | ElementSizeSnapshotted PT.ElementSizeData
+    | PixelsProcessed PT.PixelsData
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -310,7 +424,45 @@ update message model =
                 newRoute =
                     parseLocation location
             in
-                ( { model | route = newRoute, location = location }, Cmd.none )
+                ( { model
+                    | route = newRoute
+                    , location = location
+                  }
+                , Cmd.none
+                )
+
+        WindowSizeSnapshotted size ->
+            let
+                newRem =
+                    (Basics.min size.width size.height) / 100
+
+                width =
+                    --size.width / 2
+                    900.0
+
+                height =
+                    --size.height / 2
+                    903.0
+
+                x =
+                    ((size.width / 2) - (width / 2)) - newRem
+
+                y =
+                    ((size.height / 2) - (height / 2)) - newRem
+
+                maxWidth =
+                    size.width - x
+
+                maxHeight =
+                    size.height - y
+
+                newCropPosition =
+                    ScreenPosition (round x) (round y)
+
+                newCropSize =
+                    ElementSize width height maxWidth maxHeight
+            in
+                ( { model | rem = newRem, cropPosition = Just newCropPosition, cropSize = Just newCropSize }, Cmd.none )
 
         StartCamera ->
             ( model, PT.startCamera True )
@@ -321,16 +473,8 @@ update message model =
         ImageSelected ->
             ( model, PT.fileSelected model.imageId )
 
-        ImageProcessed imageData ->
-            let
-                newImage =
-                    { dataArray = imageData.dataArray
-                    , dataBase64 = imageData.dataBase64
-                    , width = imageData.width
-                    , height = imageData.height
-                    }
-            in
-                ( { model | imageSource = Just newImage }, Navigation.newUrl "#crop" )
+        ImageProcessed image ->
+            ( { model | imageSource = Just image }, Navigation.newUrl "#crop" )
 
         NewAmountStones amount ->
             let
@@ -347,53 +491,36 @@ update message model =
                 ( { model | boardSize = newBoardSize }, Cmd.none )
 
         StartResizing position ->
-            let
-                log =
-                    Debug.log "start" position
-            in
-                ( { model | isResizing = True, cropResizeStart = Just position }, Cmd.none )
-
-        StopResizing position ->
-            ( { model | isResizing = False }, Cmd.none )
+            ( { model | isResizing = True, cropResizeStart = Just position }, Cmd.none )
 
         Resizing position ->
-            let
-                log =
-                    Debug.log "resizing" position
-            in
-                case model.isResizing of
-                    True ->
-                        case model.cropSize of
-                            Just size ->
-                                let
-                                    startPosition =
-                                        Maybe.withDefault (ScreenPosition 0 0) model.cropResizeStart
+            case model.isResizing of
+                True ->
+                    case model.cropSize of
+                        Just size ->
+                            let
+                                startPosition =
+                                    Maybe.withDefault (ScreenPosition 0 0) model.cropResizeStart
 
-                                    width =
-                                        size.width + toFloat (position.x - startPosition.x)
+                                newWidth =
+                                    size.width + (toFloat (position.x - startPosition.x) / 10)
 
-                                    height =
-                                        size.height + toFloat (position.y - startPosition.y)
+                                newHeight =
+                                    size.height + (toFloat (position.y - startPosition.y) / 10)
 
-                                    newSize =
-                                        ElementSize width height
+                                newSize =
+                                    { size | width = newWidth, height = newHeight }
+                            in
+                                ( { model | cropSize = Just newSize }, Cmd.none )
 
-                                    log =
-                                        Debug.log "resizing" newSize
-                                in
-                                    ( { model | cropSize = Just newSize }, Cmd.none )
+                        Nothing ->
+                            ( model, Cmd.none )
 
-                            Nothing ->
-                                ( model, PT.takeElementSizeSnapshot model.cropId )
-
-                    False ->
-                        ( model, Cmd.none )
+                False ->
+                    ( model, Cmd.none )
 
         StartDragging position ->
             ( { model | isDragging = True, cropPosition = Just position }, Cmd.none )
-
-        StopDragging position ->
-            ( { model | isDragging = False, cropPosition = Just position }, Cmd.none )
 
         Dragging position ->
             case model.isDragging of
@@ -404,21 +531,46 @@ update message model =
                     ( model, Cmd.none )
 
         StopInput ->
-            let
-                log =
-                    Debug.log "stopping" True
-            in
-                ( { model | isResizing = False, isDragging = False }, Cmd.none )
+            ( { model | isResizing = False, isDragging = False }, Cmd.none )
 
         CropPhoto ->
-            ( model, PT.cropPhoto True )
-
-        ElementSizeSnapshotted size ->
             let
-                log =
-                    Debug.log "snapshotted" size
+                cropPosition =
+                    case model.cropPosition of
+                        Just position ->
+                            position
+
+                        Nothing ->
+                            ScreenPosition 0 0
+
+                cropSize =
+                    case model.cropSize of
+                        Just size ->
+                            size
+
+                        Nothing ->
+                            ElementSize 0 0 0 0
             in
-                ( { model | cropSize = Just size }, Cmd.none )
+                ( model
+                , PT.cropPhoto
+                    (PT.CropData
+                        model.cropId
+                        cropPosition.x
+                        cropPosition.y
+                        cropSize.width
+                        cropSize.height
+                    )
+                )
+
+        PixelsProcessed pixels ->
+            let
+                processedPixels =
+                    pixelsToPixelMap pixels
+
+                canvasPixels =
+                    CanvasPixels 0 0 (greyscale processedPixels)
+            in
+                ( { model | pixelsSource = Just pixels, pixelsProcessed = Just processedPixels }, PT.drawPixels canvasPixels )
 
 
 
@@ -427,7 +579,11 @@ update message model =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    Sub.batch [ PT.processImage ImageProcessed, PT.snapshotElementSize ElementSizeSnapshotted ]
+    Sub.batch
+        [ PT.snapshotWindowSize WindowSizeSnapshotted
+        , PT.processImage ImageProcessed
+        , PT.processPixels PixelsProcessed
+        ]
 
 
 
@@ -438,7 +594,11 @@ view : Model -> Html Msg
 view model =
     div [ classList [ ( "container-app", True ) ] ]
         [ page model
-        , canvas [ id "canvas", classList [ ( "canvas", True ), ( "canvas--editable", model.route == RouteCrop ) ] ] []
+        , canvas
+            [ id "canvas"
+            , classList [ ( "canvas", True ), ( "canvas--visible", model.route == RouteCrop ) ]
+            ]
+            []
         ]
 
 
@@ -453,6 +613,9 @@ page model =
 
         RouteCrop ->
             viewCrop model
+
+        RouteProcessing ->
+            viewProcessing model
 
         RouteScore ->
             viewScore model
@@ -528,17 +691,13 @@ viewImage image =
 -- VIEW PARTS
 
 
-attributesCrop : List (Html.Attribute Msg)
-attributesCrop =
-    [ classList [ ( "container-crop", True ) ]
-    ]
-
-
 attributesDragMiddle : List (Html.Attribute Msg)
 attributesDragMiddle =
     [ classList [ ( "drag-area", True ), ( "drag-area--middle", True ) ]
-    , on "mouseup" (JD.succeed StopInput)
-    , onWithOptions "touchend" (Options False True) (JD.succeed StopInput)
+    , on "mousedown" (JD.map StartDragging decodeScreenPosition)
+    , on "mousemove" (JD.map Dragging decodeScreenPosition)
+    , onWithOptions "touchstart" (Options False True) (JD.map StartDragging decodeTouchScreenPosition)
+    , onWithOptions "touchmove" (Options False True) (JD.map Dragging decodeTouchScreenPosition)
     ]
 
 
@@ -546,10 +705,8 @@ attributesDragCorner : List (Html.Attribute Msg)
 attributesDragCorner =
     [ classList [ ( "drag-area", True ), ( "drag-area--corner", True ) ]
     , on "mousedown" (JD.map StartResizing decodeScreenPosition)
-    , on "mouseup" (JD.map StopResizing decodeScreenPosition)
     , on "mousemove" (JD.map Resizing decodeScreenPosition)
     , onWithOptions "touchstart" (Options False True) (JD.map StartResizing decodeTouchScreenPosition)
-    , onWithOptions "touchend" (Options False True) (JD.map StopResizing decodeTouchScreenPosition)
     , onWithOptions "touchmove" (Options False True) (JD.map Resizing decodeTouchScreenPosition)
     ]
 
@@ -631,7 +788,11 @@ viewCrop model =
         newSize =
             case model.cropSize of
                 Just size ->
-                    [ ( "width", (toString size.width) ++ "px" ), ( "height", (toString size.height) ++ "px" ) ]
+                    [ ( "width", (toString size.width) ++ "px" )
+                    , ( "height", (toString size.height) ++ "px" )
+                    , ( "max-width", (toString size.maxWidth) ++ "px" )
+                    , ( "max-height", (toString size.maxHeight) ++ "px" )
+                    ]
 
                 Nothing ->
                     []
@@ -679,7 +840,34 @@ viewCrop model =
                         False
                     ]
     in
-        div attributesCrop
+        div
+            [ classList [ ( "container-crop", True ) ]
+            , on "mouseup" (JD.succeed StopInput)
+            , onWithOptions "touchend" (Options False True) (JD.succeed StopInput)
+            ]
+            content
+
+
+viewProcessing : Model -> Html Msg
+viewProcessing model =
+    let
+        content =
+            case model.pixelsSource of
+                Just pixels ->
+                    [ buttonClose True
+                    ]
+
+                Nothing ->
+                    [ buttonClose False
+                    , viewIconText
+                        "info"
+                        [ ( "crop", True ) ]
+                        "Nothing to process"
+                        ToRight
+                        False
+                    ]
+    in
+        div [ classList [ ( "container-processing", True ) ] ]
             content
 
 

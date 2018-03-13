@@ -72,6 +72,7 @@ body, #app, .container-app, .container-landing, .container-photo, .container-cro
 {
     padding: $padding-minimal;
     font-size: $font-size-title;
+    user-select: none;
 }
 
 .link-fake
@@ -228,7 +229,7 @@ input[type="file"] {
     transform: translateX(-50%) translateY(-50%);
     z-index: $depth-source;
 
-    &.canvas--editable
+    &.canvas--visible
     {
         display: block;
     }
@@ -257,19 +258,24 @@ input[type="file"] {
         top: auto;
         bottom: 10rem;
         transform: translateX(-50%); 
+        z-index: $depth-crop;
     }
 }
 
 .crop-selection
 {
     position: absolute;
-    top: 50%;
+    /* top: 50%;
     left: 50%;
     width: 50%;
     height: 50%;
-    transform: translateX(-50%) translateY(-50%);
+    min-width: 50%;
+    min-height: 50%;
+    transform: translateX(-50%) translateY(-50%); */
+    width: 900px;
+    height: 903px;
     border: 1rem dashed $color-text-secondary;
-    z-index: $depth-overlay;
+    z-index: $depth-crop;
 }
 
 .drag-area

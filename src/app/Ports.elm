@@ -55,10 +55,16 @@ port drawPixels : CanvasPixelsData -> Cmd msg
 -- SUBSCRIPTION
 
 
-port snapshotWindowSize : (WindowSizeData -> msg) -> Sub msg
+port windowSizeSnapshotted : (WindowSizeData -> msg) -> Sub msg
 
 
-port processImage : (ImageData -> msg) -> Sub msg
+port cameraStarted : (Bool -> msg) -> Sub msg
 
 
-port processPixels : (PixelsData -> msg) -> Sub msg
+port cameraStopped : (Bool -> msg) -> Sub msg
+
+
+port imageProcessed : (ImageData -> msg) -> Sub msg
+
+
+port pixelsProcessed : (PixelsData -> msg) -> Sub msg

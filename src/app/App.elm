@@ -26,12 +26,15 @@ type alias Model =
     { config : Config
     , route : Route
     , location : Location
+    , isLoading : Bool
+    , loadingMessage : Maybe String
     , rem : Float
     , imageId : String
     , imageSource : Maybe Image
     , amountStones : Int
     , boardSizes : List BoardSize
     , boardSize : BoardSize
+    , isVideoPlaying : Bool
     , isResizing : Bool
     , isDragging : Bool
     , cropId : String
@@ -132,12 +135,15 @@ init flags location =
             { config = config
             , route = currentRoute
             , location = location
+            , isLoading = False
+            , loadingMessage = Nothing
             , rem = 0
             , imageId = "image-source"
             , imageSource = Nothing
             , amountStones = 284
             , boardSizes = [ Nineteen, Thirteen, Nine ]
             , boardSize = Nineteen
+            , isVideoPlaying = False
             , isResizing = False
             , isDragging = False
             , cropId = "crop-selection"
@@ -399,6 +405,8 @@ type Msg
     | ChangeLocation Location
     | WindowSizeSnapshotted PT.WindowSizeData
     | StartCamera
+    | CameraStarted Bool
+    | CameraStopped Bool
     | TakePhoto
     | ImageSelected
     | ImageProcessed PT.ImageData
@@ -423,12 +431,18 @@ update message model =
             let
                 newRoute =
                     parseLocation location
+
+                newCommand =
+                    if model.route == RoutePhoto && model.isVideoPlaying then
+                        PT.stopCamera True
+                    else
+                        Cmd.none
             in
                 ( { model
                     | route = newRoute
                     , location = location
                   }
-                , Cmd.none
+                , newCommand
                 )
 
         WindowSizeSnapshotted size ->
@@ -465,7 +479,13 @@ update message model =
                 ( { model | rem = newRem, cropPosition = Just newCropPosition, cropSize = Just newCropSize }, Cmd.none )
 
         StartCamera ->
-            ( model, PT.startCamera True )
+            ( { model | isLoading = True, loadingMessage = Just "Starting camera" }, PT.startCamera True )
+
+        CameraStarted isPlaying ->
+            ( { model | isVideoPlaying = isPlaying, isLoading = False, loadingMessage = Nothing }, Cmd.none )
+
+        CameraStopped isPlaying ->
+            ( { model | isVideoPlaying = isPlaying }, Cmd.none )
 
         TakePhoto ->
             ( model, PT.takePhoto True )
@@ -580,9 +600,11 @@ update message model =
 subscriptions : Model -> Sub Msg
 subscriptions model =
     Sub.batch
-        [ PT.snapshotWindowSize WindowSizeSnapshotted
-        , PT.processImage ImageProcessed
-        , PT.processPixels PixelsProcessed
+        [ PT.windowSizeSnapshotted WindowSizeSnapshotted
+        , PT.cameraStarted CameraStarted
+        , PT.cameraStopped CameraStopped
+        , PT.imageProcessed ImageProcessed
+        , PT.pixelsProcessed PixelsProcessed
         ]
 
 
@@ -599,6 +621,15 @@ view model =
             , classList [ ( "canvas", True ), ( "canvas--visible", model.route == RouteCrop ) ]
             ]
             []
+        , div [ classList [ ( "loading", True ), ( "loading--visible", model.isLoading ) ] ]
+            [ div [ classList [ ( "loading-animation", True ) ] ]
+                [ span [ classList [ ( "stone", True ), ( "stone--black", True ) ] ] []
+                , span [ classList [ ( "stone", True ), ( "stone--white", True ) ] ] []
+                ]
+            , div [ classList [ ( "loading-message", True ) ] ]
+                [ text (Maybe.withDefault "Loading" model.loadingMessage)
+                ]
+            ]
         ]
 
 
@@ -757,7 +788,7 @@ viewLanding model =
 viewPhoto : Model -> Html Msg
 viewPhoto model =
     div [ classList [ ( "container-photo", True ) ] ]
-        [ video [ id "video", classList [ ( "video", True ) ], onClick TakePhoto ] []
+        [ video [ id "video", classList [ ( "video", True ), ( "video--playing", model.isVideoPlaying ) ], onClick TakePhoto ] []
         , buttonClose False
         , viewIconTextLink
             "camera"

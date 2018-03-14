@@ -12,7 +12,7 @@ app.ports.takeWindowSizeSnapshot.subscribe(function (bool) {
         height: window.innerHeight
     };
 
-    app.ports.snapshotWindowSize.send(windowSizeData);
+    app.ports.windowSizeSnapshotted.send(windowSizeData);
 });
 
 app.ports.fileSelected.subscribe(function (id) {
@@ -47,7 +47,7 @@ app.ports.fileSelected.subscribe(function (id) {
                     height: image.height
                 };
 
-            app.ports.processImage.send(imageData);
+            app.ports.imageProcessed.send(imageData);
         }, false);
     }, false);
 
@@ -69,8 +69,16 @@ app.ports.startCamera.subscribe(function (bool) {
         });
 
     video.addEventListener("canplay", function () {
-        video.classList.add("video--playing");
-    })
+        app.ports.cameraStarted.send(true);
+    });
+});
+
+app.ports.stopCamera.subscribe(function (bool) {
+    const video = document.getElementById("video");
+
+    video.pause();
+
+    app.ports.cameraStopped.send(false);
 });
 
 app.ports.takePhoto.subscribe(function (bool) {
@@ -95,7 +103,7 @@ app.ports.takePhoto.subscribe(function (bool) {
             height: image.height
         };
 
-    app.ports.processImage.send(imageData);
+    app.ports.imageProcessed.send(imageData);
 });
 
 app.ports.cropPhoto.subscribe(function (crop) {
@@ -107,7 +115,7 @@ app.ports.cropPhoto.subscribe(function (crop) {
     // Necessary to convert Uint8ClampedArray to regular array to pass through port
     const pixelData = Array.prototype.slice.call(pixelDataCanvas.data);
 
-    app.ports.processPixels.send(pixelData);
+    app.ports.pixelsProcessed.send(pixelData);
 });
 
 app.ports.drawPixels.subscribe(function (pixels) {

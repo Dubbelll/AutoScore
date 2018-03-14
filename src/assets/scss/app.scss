@@ -113,6 +113,113 @@ input[type="file"] {
     display: block;
 }
 
+.container-icon-text
+{
+    display: flex;
+    align-items: center;
+}
+
+.container-icon-text-link
+{
+    display: flex;
+    align-items: center;
+}
+
+/* SHARED CONTENT */
+/* SHARED CONTENT */
+/* SHARED CONTENT */
+.loading
+{
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: $color-accent-primary;
+    z-index: $depth-loading;
+
+    &.loading--visible
+    {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+}
+
+.loading-message
+{
+    position: absolute;
+    bottom: $positioning-default;
+    font-size: $font-size-title;
+}
+
+.stone
+{
+    display: inline-block;
+    width: $icon-size-big;
+    height: $icon-size-big;
+    border-radius: 50%;
+
+    &.stone--black
+    {
+        animation: 5s infinite stoneBlack;
+        margin-right: calc(#{$icon-size-big} / 2);
+        background-color: $color-text-primary;
+
+        @keyframes stoneBlack {
+            0% {
+                transform: translateX(0) translateY(0);
+            }
+
+            25% {
+                transform: translateX(100%) translateY(-100%);
+            }
+
+            50% {
+                transform: translateX(200%) translateY(0);
+            }
+
+            75% {
+                transform: translateX(100%) translateY(100%);
+            }
+
+            100% {
+                transform: translateX(0) translateY(0);
+            }
+        }
+    }
+
+    &.stone--white
+    {
+        animation: 5s infinite stoneWhite;
+        margin-left: calc(#{$icon-size-big} / 2);
+        background-color: $color-text-secondary;
+
+        @keyframes stoneWhite {
+            0% {
+                transform: translateX(0) translateY(0);
+            }
+
+            25% {
+                transform: translateX(-100%) translateY(100%);
+            }
+
+            50% {
+                transform: translateX(-200%) translateY(0);
+            }
+
+            75% {
+                transform: translateX(-100%) translateY(-100%);
+            }
+
+            100% {
+                transform: translateX(0) translateY(0);
+            }
+        }
+    }
+}
+
 .close
 {
     position: absolute;
@@ -129,18 +236,6 @@ input[type="file"] {
             fill: $color-text-secondary;
         }
     }
-}
-
-.container-icon-text
-{
-    display: flex;
-    align-items: center;
-}
-
-.container-icon-text-link
-{
-    display: flex;
-    align-items: center;
 }
 
 /* CONTENT */

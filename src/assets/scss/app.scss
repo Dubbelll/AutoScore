@@ -39,7 +39,7 @@
 /* GENERAL */
 /* GENERAL */
 /* GENERAL */
-body, #app, .container-app, .container-landing, .container-photo, .container-crop, .container-score
+body, #app, .container-app, .container-landing, .container-photo, .container-crop, .container-processing, .container-score
 {
     width: 100%;
     height: 100%;
@@ -220,6 +220,21 @@ input[type="file"] {
     }
 }
 
+.canvas
+{
+    display: none;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translateX(-50%) translateY(-50%);
+    z-index: $depth-source;
+
+    &.canvas--visible
+    {
+        display: block;
+    }
+}
+
 .close
 {
     position: absolute;
@@ -272,6 +287,7 @@ input[type="file"] {
         display: none;
         color: $color-text-secondary;
         z-index: $depth-overlay;
+        @include animation-fade-out();
     
         &>.icon 
         {
@@ -315,21 +331,6 @@ input[type="file"] {
     }
 }
 
-.canvas
-{
-    display: none;
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translateX(-50%) translateY(-50%);
-    z-index: $depth-source;
-
-    &.canvas--visible
-    {
-        display: block;
-    }
-}
-
 .crop
 {
     position: absolute;
@@ -347,50 +348,40 @@ input[type="file"] {
             fill: $color-text-secondary;
         }
     }
+    
+
+    &.crop--info {
+        @include animation-fade-out();
+    }
 
     &.crop--start
     {
         top: auto;
-        bottom: 10rem;
+        bottom: $positioning-default;
         transform: translateX(-50%); 
         z-index: $depth-crop;
     }
 }
 
-.crop-selection
+.detections
 {
     position: absolute;
-    /* top: 50%;
-    left: 50%;
-    width: 50%;
-    height: 50%;
-    min-width: 50%;
-    min-height: 50%;
-    transform: translateX(-50%) translateY(-50%); */
-    width: 900px;
-    height: 903px;
-    border: 1rem dashed $color-text-secondary;
-    z-index: $depth-crop;
+    overflow: hidden;
+    z-index: $depth-detections;
 }
 
-.drag-area
+.detection
 {
     position: absolute;
 
-    &.drag-area--middle
+    &.detection--black
     {
-        top: -1rem;
-        left: -1rem;
-        width: 75%;
-        height: 75%;
+        border: 0.3rem solid $color-object-primary;
     }
 
-    &.drag-area--corner
+    &.detection--white
     {
-        right: -1rem;
-        bottom: -1rem;
-        width: 25%;
-        height: 25%;
+        border: 0.3rem solid $color-object-secondary;
     }
 }
 

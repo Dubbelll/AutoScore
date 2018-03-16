@@ -376,12 +376,12 @@ input[type="file"] {
 
     &.detection--black
     {
-        border: 0.3rem solid $color-object-primary;
+        border: 0.3rem solid blue;
     }
 
     &.detection--white
     {
-        border: 0.3rem solid $color-object-secondary;
+        border: 0.3rem solid red;
     }
 }
 

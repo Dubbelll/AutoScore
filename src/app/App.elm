@@ -275,6 +275,12 @@ update message model =
                 newRoute =
                     parseLocation location
 
+                newModel =
+                    if newRoute == RouteProcessing then
+                        { model | route = newRoute, location = location, detections = Array.empty }
+                    else
+                        { model | route = newRoute, location = location }
+
                 commandOldRoute =
                     if model.route == RoutePhoto && model.isVideoPlaying then
                         PT.stopCamera True
@@ -295,12 +301,7 @@ update message model =
                 newCommands =
                     Cmd.batch [ commandOldRoute, commandNewRoute ]
             in
-                ( { model
-                    | route = newRoute
-                    , location = location
-                  }
-                , newCommands
-                )
+                ( newModel, newCommands )
 
         StartCamera ->
             ( { model | isLoading = True, loadingMessage = Just "Starting camera" }, PT.startCamera True )

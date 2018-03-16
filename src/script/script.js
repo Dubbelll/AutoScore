@@ -6,9 +6,8 @@ const flags =
     };
 const app = Elm.App.embed(element, flags);
 const state = {
-    source: {
+    input: {
         image: new Image(),
-        pixels: [],
         width: 0,
         height: 0
     },
@@ -30,20 +29,47 @@ app.ports.useFile.subscribe(function (id) {
 
     reader.addEventListener("load", function () {
         image.addEventListener("load", function () {
-            canvas.width = image.width;
-            canvas.height = image.height;
-            context.drawImage(image, 0, 0, image.width, image.height);
+            let width = image.width;
+            let height = image.height;
+            let aspectRatio = 1;
 
-            const imageDataCanvas = context.getImageData(0, 0, image.width, image.height);
+            if (image.width > image.height) {
+                aspectRatio = image.width / image.height;
+
+                if (image.width > window.innerWidth) {
+                    width = window.innerWidth;
+                    height = Math.round(width / aspectRatio);
+                }
+            }
+            else if (image.height > image.width) {
+                aspectRatio = image.height / image.width;
+
+                if (image.height > window.innerHeight) {
+                    height = window.innerHeight;
+                    width = Math.round(height / aspectRatio);
+                }
+            }
+            else {
+                aspectRatio = 1;
+
+                if (image.width > window.innerWidth && image.height > window.innerHeight) {
+                    width = Math.min(window.innerWidth, window.innerHeight);
+                    height = width;
+                }
+            }
+
+            canvas.width = width;
+            canvas.height = height;
+            context.drawImage(image, 0, 0, width, height);
+
             const imageData =
                 {
                     image: image,
-                    pixels: imageDataCanvas.data,
-                    width: image.width,
-                    height: image.height
+                    width: width,
+                    height: height
                 };
 
-            state.source = imageData;
+            state.input = imageData;
             app.ports.inputSuccessful.send(true);
         });
         image.src = reader.result;
@@ -90,16 +116,14 @@ app.ports.takePhoto.subscribe(function (bool) {
     context.drawImage(video, 0, 0, window.innerWidth, window.innerHeight);
 
     image.addEventListener("load", function () {
-        const imageDataCanvas = context.getImageData(0, 0, window.innerWidth, window.innerHeight);
         const imageData =
             {
                 image: image,
-                pixels: imageDataCanvas.data,
                 width: image.width,
                 height: image.height
             };
 
-        state.source = imageData;
+        state.input = imageData;
         app.ports.inputSuccessful.send(true);
     });
     image.src = canvas.toDataURL("image/png");
@@ -107,14 +131,11 @@ app.ports.takePhoto.subscribe(function (bool) {
 
 app.ports.startCropping.subscribe(function (bool) {
     const canvas = document.getElementById("canvas-input");
-    /* const width = state.source.image.width / 2;
-    const height = state.source.image.height / 2;
-    const crop = new ImageCropper(canvas, width - (width / 2), height - (height / 2), width, height, false); */
-    const width = state.source.image.width;
-    const height = state.source.image.height;
-    const crop = new ImageCropper(canvas, 0, 0, width, height, false);
+    const width = state.input.width / 2;
+    const height = state.input.height / 2;
+    const crop = new ImageCropper(canvas, width - (width / 2), height - (height / 2), width, height, false);
 
-    crop.setImage(state.source.image);
+    crop.setImage(state.input.image);
 
     state.crop = crop;
 });
@@ -142,8 +163,9 @@ app.ports.cropPhoto.subscribe(function (bool) {
 });
 
 app.ports.startProcessing.subscribe(function (bool) {
-    const thresholdBlack = 50;
-    const thresholdWhite = 180;
+    const thresholdBlack = 32.5;
+    const thresholdWhite = 150;
+
     tracking.ColorTracker.registerColor("black", function (r, g, b) {
         return r <= thresholdBlack && g <= thresholdBlack && b <= thresholdBlack;
     });
@@ -153,6 +175,7 @@ app.ports.startProcessing.subscribe(function (bool) {
     });
 
     const tracker = new tracking.ColorTracker(["black", "white"]);
+    tracker.setMinDimension(15);
 
     tracker.on("track", function (event) {
         if (event.data.length === 0) {

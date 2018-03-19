@@ -70,7 +70,7 @@ body, #app, .container-app, .container-landing, .container-photo, .container-cro
 
 .text-icon
 {
-    padding: $padding-minimal;
+    padding: $padding-default;
     font-size: $font-size-title;
     user-select: none;
 }
@@ -106,11 +106,6 @@ input[type="file"] {
 {
     list-style: none;
     margin-bottom: $margin-minimal;
-}
-
-.visible
-{
-    display: block;
 }
 
 .container-icon-text
@@ -235,6 +230,19 @@ input[type="file"] {
     }
 }
 
+.overlay
+{
+    color: $color-text-primary;
+    background-color: $color-background-primary;
+    border-radius: $border-radius-default;
+    z-index: $depth-overlay-ui;
+
+    &>.icon 
+    {
+        fill: $color-text-primary;
+    }
+}
+
 .close
 {
     position: absolute;
@@ -244,12 +252,7 @@ input[type="file"] {
 
     &.close--overlay
     {
-        color: $color-text-secondary;
-
-        &>.icon 
-        {
-            fill: $color-text-secondary;
-        }
+        @extend .overlay;
     }
 }
 
@@ -280,19 +283,17 @@ input[type="file"] {
     position: absolute;
     top: 50%;
     left: 50%;
-    transform: translateX(-50%) translateY(-50%); 
+    transform: translateX(-50%) translateY(-50%);
+
+    &.camera--overlay
+    {
+        @extend .overlay;
+    }
 
     &.camera--info
     {
-        display: none;
-        color: $color-text-secondary;
-        z-index: $depth-overlay;
+        display: flex;
         @include animation-fade-out();
-    
-        &>.icon 
-        {
-            fill: $color-text-secondary;
-        }
     }
 }
 
@@ -305,29 +306,9 @@ input[type="file"] {
     transform: translateX(-50%) translateY(-50%);
     z-index: $depth-source;
 
-    &.video--playing
+    &.video--visible
     {
         display: block;
-
-        &~.close
-        {
-            color: $color-text-secondary;
-
-            &>.icon 
-            {
-                fill: $color-text-secondary;
-            }
-        }
-
-        &~.camera--start
-        {
-            display: none;
-        }
-
-        &~.camera--info
-        {
-            display: flex;
-        }
     }
 }
 
@@ -340,13 +321,7 @@ input[type="file"] {
 
     &.crop--overlay
     {
-        color: $color-text-secondary;
-        z-index: $depth-overlay;
-    
-        &>.icon 
-        {
-            fill: $color-text-secondary;
-        }
+        @extend .overlay;
     }
     
 
@@ -359,7 +334,7 @@ input[type="file"] {
         top: auto;
         bottom: $positioning-default;
         transform: translateX(-50%); 
-        z-index: $depth-crop;
+        z-index: $depth-overlay-ui;
     }
 }
 
@@ -367,7 +342,7 @@ input[type="file"] {
 {
     position: absolute;
     overflow: hidden;
-    z-index: $depth-detections;
+    z-index: $depth-overlay-detections;
 }
 
 .detection
@@ -376,12 +351,37 @@ input[type="file"] {
 
     &.detection--black
     {
-        border: 0.3rem solid blue;
+        border: 0.3rem solid red;
     }
 
     &.detection--white
     {
-        border: 0.3rem solid red;
+        border: 0.3rem solid blue;
+    }
+}
+
+.score
+{
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translateX(-50%) translateY(-50%);
+
+    &.score--overlay
+    {
+        @extend .overlay;
+    }
+
+    &.score--info {
+        @include animation-fade-out();
+    }
+
+    &.score--start
+    {
+        top: auto;
+        bottom: $positioning-default;
+        transform: translateX(-50%); 
+        z-index: $depth-overlay-ui;
     }
 }
 
@@ -502,6 +502,7 @@ input[type="file"] {
     &.board-point--star
     {
         background-color: $color-object-primary;
+        border-radius: 50%;
     }
 }
 

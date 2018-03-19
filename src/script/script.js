@@ -182,9 +182,10 @@ app.ports.startProcessing.subscribe(function (bool) {
             return;
         } else {
             event.data.map(function (detection) {
-                console.log(detection);
                 app.ports.stoneDetected.send(detection);
             });
+
+            app.ports.processingSuccessful.send(true);
         }
     });
 

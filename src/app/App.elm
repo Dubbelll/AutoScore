@@ -209,6 +209,181 @@ isStar model x y =
             List.any (\z -> z == (Star x y)) model.stars9x9
 
 
+median : List Int -> Float
+median numbers =
+    let
+        isEven =
+            (List.length numbers) % 2 == 0
+
+        sizeHalf =
+            (List.length numbers) // 2
+
+        firstHalf =
+            List.take sizeHalf numbers
+
+        secondHalf =
+            List.drop sizeHalf numbers
+    in
+        case isEven of
+            True ->
+                let
+                    lastOfFirst =
+                        List.drop (sizeHalf - 1) firstHalf
+                            |> List.head
+                            |> Maybe.withDefault 0
+                            |> toFloat
+
+                    firstOfLast =
+                        List.take 1 secondHalf
+                            |> List.head
+                            |> Maybe.withDefault 0
+                            |> toFloat
+                in
+                    (lastOfFirst + firstOfLast) / 2
+
+            False ->
+                List.take 1 secondHalf
+                    |> List.head
+                    |> Maybe.withDefault 0
+                    |> toFloat
+
+
+interquartileRange : List Int -> Float
+interquartileRange numbers =
+    let
+        isEven =
+            (List.length numbers) % 2 == 0
+
+        sizeHalf =
+            (List.length numbers) // 2
+
+        firstHalf =
+            List.take sizeHalf numbers
+
+        secondHalf =
+            case isEven of
+                True ->
+                    List.drop sizeHalf numbers
+
+                False ->
+                    List.drop (sizeHalf + 1) numbers
+
+        q1 =
+            median firstHalf
+
+        q3 =
+            median secondHalf
+    in
+        q3 - q1
+
+
+furthestFrom : Float -> Int -> Int -> Int
+furthestFrom from a b =
+    case abs ((toFloat a) - from) > abs ((toFloat b) - from) of
+        True ->
+            a
+
+        False ->
+            b
+
+
+removeOutliers : List Int -> List Int
+removeOutliers numbers =
+    case List.head numbers of
+        Just first ->
+            let
+                average =
+                    (toFloat (List.sum numbers)) / (toFloat (List.length numbers))
+
+                furthestFromAverage =
+                    List.foldl (furthestFrom average) first numbers
+
+                maxDistance =
+                    (interquartileRange numbers) * 1.5
+            in
+                case (abs ((toFloat furthestFromAverage) - average)) > maxDistance of
+                    True ->
+                        removeOutliers (List.filter (\x -> x /= furthestFromAverage) numbers)
+
+                    False ->
+                        numbers
+
+        Nothing ->
+            numbers
+
+
+averageStoneWidth : List PT.Detection -> Float
+averageStoneWidth detections =
+    let
+        sortedWidths =
+            List.map .width detections
+                |> List.sort
+
+        singleStoneWidths =
+            removeOutliers sortedWidths
+    in
+        (toFloat (List.sum singleStoneWidths)) / (toFloat (List.length singleStoneWidths))
+
+
+averageStoneHeight : List PT.Detection -> Float
+averageStoneHeight detections =
+    let
+        sortedHeights =
+            List.map .height detections
+                |> List.sort
+
+        singleStoneHeights =
+            removeOutliers sortedHeights
+    in
+        (toFloat (List.sum singleStoneHeights)) / (toFloat (List.length singleStoneHeights))
+
+
+xEdge : List PT.Detection -> (List Int -> Maybe Int) -> Int
+xEdge detections minOrMax =
+    List.map .x detections
+        |> minOrMax
+        |> Maybe.withDefault 0
+
+
+yEdge : List PT.Detection -> (List Int -> Maybe Int) -> Int
+yEdge detections minOrMax =
+    List.map .y detections
+        |> minOrMax
+        |> Maybe.withDefault 0
+
+
+detectionToStone : PT.Detection -> Int -> Int -> Int -> Int -> Array Stone
+detectionToStone detection xMin xMax yMin yMax =
+    Array.empty
+
+
+detectionsToStones : Array PT.Detection -> Board
+detectionsToStones detectionsArray =
+    let
+        detections =
+            Array.toList detectionsArray
+
+        averageWidth =
+            averageStoneWidth detections
+
+        averageHeight =
+            averageStoneHeight detections
+
+        xMin =
+            xEdge detections List.minimum
+
+        xMax =
+            xEdge detections List.maximum
+
+        yMin =
+            yEdge detections List.minimum
+
+        yMax =
+            yEdge detections List.maximum
+    in
+        Array.empty
+
+
 
 -- ROUTING
 
@@ -262,6 +437,7 @@ type Msg
     | CroppingSuccessful PT.Crop
     | StoneDetected PT.Detection
     | ProcessingSuccessful Bool
+    | DetectionsToStones
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -349,7 +525,14 @@ update message model =
                 ( { model | detections = newDetections }, Cmd.none )
 
         ProcessingSuccessful isSuccessful ->
-            ( { model | isProcessingSuccessful = isSuccessful }, Navigation.newUrl "#score" )
+            let
+                newBoard =
+                    detectionsToStones model.detections
+            in
+                ( { model | isProcessingSuccessful = isSuccessful, board = newBoard }, Cmd.none )
+
+        DetectionsToStones ->
+            ( model, Cmd.none )
 
 
 
@@ -384,6 +567,12 @@ view model =
         , canvas
             [ id "canvas-output"
             , classList [ ( "canvas", True ), ( "canvas--visible", model.route == RouteProcessing ) ]
+            ]
+            []
+        , video
+            [ id "video"
+            , classList [ ( "video", True ), ( "video--visible", model.isVideoPlaying ) ]
+            , onClick TakePhoto
             ]
             []
         , div [ classList [ ( "loading", True ), ( "loading--visible", model.isLoading ) ] ]
@@ -528,28 +717,37 @@ viewOptionBoardSize model boardSize =
 
 viewPhoto : Model -> Html Msg
 viewPhoto model =
-    div [ classList [ ( "container-photo", True ) ] ]
-        [ video [ id "video", classList [ ( "video", True ), ( "video--playing", model.isVideoPlaying ) ], onClick TakePhoto ] []
-        , buttonClose False
-        , viewIconTextLink
-            "camera"
-            [ ( "camera", True ), ( "camera--start", True ) ]
-            "Start camera"
-            ToRight
-            StartCamera
-        , viewIconText
-            "info"
-            [ ( "camera", True ), ( "camera--info", True ) ]
-            "Click/tap anywhere to take a photo"
-            ToRight
-            False
-        ]
+    let
+        overlay =
+            case model.isVideoPlaying of
+                True ->
+                    [ buttonClose True
+                    , viewIconText
+                        "info"
+                        [ ( "camera", True ), ( "camera--overlay", True ), ( "camera--info", True ) ]
+                        "Tap/click anywhere to take a photo"
+                        ToRight
+                        False
+                    ]
+
+                False ->
+                    [ buttonClose False
+                    , viewIconTextLink
+                        "camera"
+                        [ ( "camera", True ), ( "camera--start", True ) ]
+                        "Start camera"
+                        ToRight
+                        StartCamera
+                    ]
+    in
+        div [ classList [ ( "container-photo", True ) ] ]
+            overlay
 
 
 viewCrop : Model -> Html Msg
 viewCrop model =
     let
-        content =
+        overlay =
             case model.isInputSuccessful of
                 True ->
                     [ buttonClose True
@@ -578,15 +776,14 @@ viewCrop model =
                     ]
     in
         div
-            [ classList [ ( "container-crop", True ) ]
-            ]
-            content
+            [ classList [ ( "container-crop", True ) ] ]
+            overlay
 
 
 viewProcessing : Model -> Html Msg
 viewProcessing model =
     let
-        content =
+        overlay =
             case model.isCroppingSuccessful of
                 True ->
                     [ buttonClose True
@@ -603,6 +800,18 @@ viewProcessing model =
                             (viewDetection model)
                             (Array.toList model.detections)
                         )
+                    , viewIconText
+                        "info"
+                        [ ( "score", True ), ( "score--overlay", True ), ( "score--info", True ) ]
+                        "This is how I detected the stones on the board. You can make corrections in the next step"
+                        ToRight
+                        False
+                    , viewIconTextLink
+                        "score"
+                        [ ( "score", True ), ( "score--overlay", True ), ( "score--start", True ) ]
+                        "Score"
+                        ToRight
+                        DetectionsToStones
                     ]
 
                 False ->
@@ -616,7 +825,7 @@ viewProcessing model =
                     ]
     in
         div [ classList [ ( "container-processing", True ) ] ]
-            content
+            overlay
 
 
 viewDetection : Model -> PT.Detection -> Html Msg

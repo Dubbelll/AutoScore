@@ -32,6 +32,7 @@ $margin-minimal: 1rem;
 
 /* Border */
 $border-width-default: 2px;
+$border-radius-default: 1rem;
 
 /* Icons */
 $icon-size-default: 2.5rem;
@@ -39,8 +40,8 @@ $icon-size-big: 10rem;
 
 /* Depth */
 $depth-loading: 30;
-$depth-crop: 20;
-$depth-detections: 20;
+$depth-overlay-ui: 25;
+$depth-overlay-detections: 20;
 $depth-overlay: 15;
 $depth-source: 10;
 $depth-board-point: 5;

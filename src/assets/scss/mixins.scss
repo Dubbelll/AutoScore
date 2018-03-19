@@ -6,7 +6,7 @@
 
 @mixin animation-fade-out()
 {
-    animation: fadeOut 1s 1 1s forwards;
+    animation: fadeOut 1s 1 2.5s forwards;
 
     @keyframes fadeOut {
         from {

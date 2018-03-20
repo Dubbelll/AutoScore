@@ -56,8 +56,30 @@ type TextDirection
     | ToRight
 
 
+type alias DetectionMeta =
+    { averageWidth : Int
+    , averageHeight : Int
+    , minimumWidth : Int
+    , minimumHeight : Int
+    , xMin : Int
+    , xMax : Int
+    , yMin : Int
+    , yMax : Int
+    }
+
+
 type alias Star =
     { x : Int, y : Int }
+
+
+type alias StoneMatrix =
+    { startX : Int
+    , startY : Int
+    , currentX : Int
+    , currentY : Int
+    , endX : Int
+    , endY : Int
+    }
 
 
 type StoneColor
@@ -352,9 +374,85 @@ yEdge detections minOrMax =
         |> Maybe.withDefault 0
 
 
-detectionToStone : PT.Detection -> Int -> Int -> Int -> Int -> Array Stone
-detectionToStone detection xMin xMax yMin yMax =
-    Array.empty
+detectionColorToStoneColor : String -> StoneColor
+detectionColorToStoneColor color =
+    case color of
+        "black" ->
+            Black
+
+        "white" ->
+            White
+
+        _ ->
+            Black
+
+
+stoneMatrixToStones : StoneMatrix -> StoneColor -> Array Stone -> Array Stone
+stoneMatrixToStones matrix color stones =
+    let
+        newStones =
+            Array.push (Stone matrix.currentX matrix.currentY 4 color) stones
+
+        newX =
+            case matrix.currentX + 1 > matrix.endX of
+                True ->
+                    matrix.startX
+
+                False ->
+                    matrix.currentX + 1
+
+        newY =
+            case matrix.currentX + 1 > matrix.endX of
+                True ->
+                    matrix.currentY + 1
+
+                False ->
+                    matrix.currentY
+
+        newMatrix =
+            { matrix | currentX = newX, currentY = newY }
+    in
+        case newY > matrix.endY of
+            True ->
+                let
+                    log =
+                        Debug.log "matrix" newStones
+                in
+                    newStones
+
+            False ->
+                stoneMatrixToStones newMatrix color newStones
+
+
+detectionToStones : DetectionMeta -> PT.Detection -> List Stone
+detectionToStones meta detection =
+    let
+        startX =
+            1 + ((detection.x - meta.xMin) // meta.averageWidth)
+
+        startY =
+            1 + ((detection.y - meta.yMin) // meta.averageHeight)
+
+        endX =
+            if detection.width < meta.averageWidth && detection.width >= meta.minimumWidth then
+                startX
+            else
+                detection.width // meta.averageWidth
+
+        endY =
+            if detection.height < meta.averageHeight && detection.height >= meta.minimumHeight then
+                startY
+            else
+                detection.height // meta.averageHeight
+
+        matrix =
+            StoneMatrix startX startY startX startY endX endY
+
+        color =
+            detectionColorToStoneColor detection.color
+    in
+        stoneMatrixToStones matrix color Array.empty
+            |> Array.toList
 
 
 detectionsToStones : Array PT.Detection -> Board
@@ -369,6 +467,12 @@ detectionsToStones detectionsArray =
         averageHeight =
             averageStoneHeight detections
 
+        minimumWidth =
+            averageWidth * 0.6
+
+        minimumHeight =
+            averageHeight * 0.6
+
         xMin =
             xEdge detections List.minimum
 
@@ -380,8 +484,21 @@ detectionsToStones detectionsArray =
 
         yMax =
             yEdge detections List.maximum
+
+        meta =
+            DetectionMeta
+                (round averageWidth)
+                (round averageHeight)
+                (round minimumWidth)
+                (round minimumHeight)
+                xMin
+                xMax
+                yMin
+                yMax
     in
-        Array.empty
+        List.map (detectionToStones meta) detections
+            |> List.concat
+            |> Array.fromList
 
 
 

@@ -62,9 +62,7 @@ type alias DetectionMeta =
     , minimumWidth : Int
     , minimumHeight : Int
     , xMin : Int
-    , xMax : Int
     , yMin : Int
-    , yMax : Int
     }
 
 
@@ -182,53 +180,6 @@ stringToBoardSize string =
 
         _ ->
             Nineteen
-
-
-stars19x19 : List Star
-stars19x19 =
-    [ Star 4 4
-    , Star 10 4
-    , Star 16 4
-    , Star 4 10
-    , Star 10 10
-    , Star 16 10
-    , Star 4 16
-    , Star 10 16
-    , Star 16 16
-    ]
-
-
-stars13x13 : List Star
-stars13x13 =
-    [ Star 4 4
-    , Star 10 4
-    , Star 7 7
-    , Star 4 10
-    , Star 10 10
-    ]
-
-
-stars9x9 : List Star
-stars9x9 =
-    [ Star 3 3
-    , Star 7 3
-    , Star 5 5
-    , Star 3 7
-    , Star 7 7
-    ]
-
-
-isStar : Model -> Int -> Int -> Bool
-isStar model x y =
-    case model.boardSize of
-        Nineteen ->
-            List.any (\z -> z == (Star x y)) model.stars19x19
-
-        Thirteen ->
-            List.any (\z -> z == (Star x y)) model.stars13x13
-
-        Nine ->
-            List.any (\z -> z == (Star x y)) model.stars9x9
 
 
 median : List Int -> Float
@@ -360,17 +311,21 @@ averageStoneHeight detections =
         (toFloat (List.sum singleStoneHeights)) / (toFloat (List.length singleStoneHeights))
 
 
-xEdge : List PT.Detection -> (List Int -> Maybe Int) -> Int
-xEdge detections minOrMax =
+xMinimum : List PT.Detection -> Float -> Int
+xMinimum detections minimumWidth =
     List.map .x detections
-        |> minOrMax
+        |> List.sort
+        |> List.filter (\x -> x <= (ceiling minimumWidth))
+        |> List.maximum
         |> Maybe.withDefault 0
 
 
-yEdge : List PT.Detection -> (List Int -> Maybe Int) -> Int
-yEdge detections minOrMax =
+yMinimum : List PT.Detection -> Float -> Int
+yMinimum detections minimumHeight =
     List.map .y detections
-        |> minOrMax
+        |> List.sort
+        |> List.filter (\x -> x <= (ceiling minimumHeight))
+        |> List.maximum
         |> Maybe.withDefault 0
 
 
@@ -414,11 +369,7 @@ stoneMatrixToStones matrix color stones =
     in
         case newY > matrix.endY of
             True ->
-                let
-                    log =
-                        Debug.log "matrix" newStones
-                in
-                    newStones
+                newStones
 
             False ->
                 stoneMatrixToStones newMatrix color newStones
@@ -428,22 +379,36 @@ detectionToStones : DetectionMeta -> PT.Detection -> List Stone
 detectionToStones meta detection =
     let
         startX =
-            1 + ((detection.x - meta.xMin) // meta.averageWidth)
+            toFloat (detection.x - meta.xMin - (meta.averageWidth - detection.width))
+                / toFloat meta.averageWidth
+                |> floor
+                |> Basics.max 1
+                |> Basics.min 19
 
         startY =
-            1 + ((detection.y - meta.yMin) // meta.averageHeight)
+            toFloat (detection.y - meta.yMin - (meta.averageHeight - detection.height))
+                / toFloat meta.averageHeight
+                |> floor
+                |> Basics.max 1
+                |> Basics.min 19
 
         endX =
             if detection.width < meta.averageWidth && detection.width >= meta.minimumWidth then
                 startX
             else
-                detection.width // meta.averageWidth
+                toFloat detection.width
+                    / toFloat meta.averageWidth
+                    |> floor
+                    |> Basics.min 19
 
         endY =
             if detection.height < meta.averageHeight && detection.height >= meta.minimumHeight then
                 startY
             else
-                detection.height // meta.averageHeight
+                toFloat detection.height
+                    / toFloat meta.averageHeight
+                    |> floor
+                    |> Basics.min 19
 
         matrix =
             StoneMatrix startX startY startX startY endX endY
@@ -474,31 +439,80 @@ detectionsToStones detectionsArray =
             averageHeight * 0.6
 
         xMin =
-            xEdge detections List.minimum
-
-        xMax =
-            xEdge detections List.maximum
+            xMinimum detections minimumWidth
 
         yMin =
-            yEdge detections List.minimum
-
-        yMax =
-            yEdge detections List.maximum
+            yMinimum detections minimumHeight
 
         meta =
             DetectionMeta
-                (round averageWidth)
-                (round averageHeight)
-                (round minimumWidth)
-                (round minimumHeight)
+                (ceiling averageWidth)
+                (ceiling averageHeight)
+                (ceiling minimumWidth)
+                (ceiling minimumHeight)
                 xMin
-                xMax
                 yMin
-                yMax
+
+        log =
+            Debug.log "meta" meta
     in
         List.map (detectionToStones meta) detections
             |> List.concat
             |> Array.fromList
+
+
+stonesForPosition : Model -> Int -> Int -> List Stone
+stonesForPosition model x y =
+    model.board
+        |> Array.toList
+        |> List.filter (\z -> z.x == x && z.y == y)
+
+
+stars19x19 : List Star
+stars19x19 =
+    [ Star 4 4
+    , Star 10 4
+    , Star 16 4
+    , Star 4 10
+    , Star 10 10
+    , Star 16 10
+    , Star 4 16
+    , Star 10 16
+    , Star 16 16
+    ]
+
+
+stars13x13 : List Star
+stars13x13 =
+    [ Star 4 4
+    , Star 10 4
+    , Star 7 7
+    , Star 4 10
+    , Star 10 10
+    ]
+
+
+stars9x9 : List Star
+stars9x9 =
+    [ Star 3 3
+    , Star 7 3
+    , Star 5 5
+    , Star 3 7
+    , Star 7 7
+    ]
+
+
+isStar : Model -> Int -> Int -> Bool
+isStar model x y =
+    case model.boardSize of
+        Nineteen ->
+            List.any (\z -> z == (Star x y)) model.stars19x19
+
+        Thirteen ->
+            List.any (\z -> z == (Star x y)) model.stars13x13
+
+        Nine ->
+            List.any (\z -> z == (Star x y)) model.stars9x9
 
 
 
@@ -554,7 +568,6 @@ type Msg
     | CroppingSuccessful PT.Crop
     | StoneDetected PT.Detection
     | ProcessingSuccessful Bool
-    | DetectionsToStones
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -645,11 +658,11 @@ update message model =
             let
                 newBoard =
                     detectionsToStones model.detections
+
+                log =
+                    Debug.log "board" newBoard
             in
                 ( { model | isProcessingSuccessful = isSuccessful, board = newBoard }, Cmd.none )
-
-        DetectionsToStones ->
-            ( model, Cmd.none )
 
 
 
@@ -928,7 +941,7 @@ viewProcessing model =
                         [ ( "score", True ), ( "score--overlay", True ), ( "score--start", True ) ]
                         "Score"
                         ToRight
-                        DetectionsToStones
+                        (ChangePath "#score")
                     ]
 
                 False ->
@@ -967,7 +980,17 @@ viewScore : Model -> Html Msg
 viewScore model =
     div
         [ classList [ ( "container-score", True ) ] ]
-        [ viewBoard model
+        [ buttonClose True
+        , viewBoard model
+        , div
+            [ classList
+                [ ( "container-board-surface", True )
+                , ( "container-board-surface--19x19", model.boardSize == Nineteen )
+                , ( "container-board-surface--13x13", model.boardSize == Thirteen )
+                , ( "container-board-surface--13x13", model.boardSize == Nine )
+                ]
+            ]
+            []
         ]
 
 
@@ -992,18 +1015,43 @@ viewBoardRow model y =
 
 viewBoardColumn : Model -> Int -> Int -> Html Msg
 viewBoardColumn model y x =
-    div
-        [ classList
-            [ ( "board-column", True )
-            , ( "board-column--19x19", model.boardSize == Nineteen )
-            , ( "board-column--13x13", model.boardSize == Thirteen )
-            , ( "board-column--9x9", model.boardSize == Nine )
+    let
+        stones =
+            stonesForPosition model x y
+
+        isStone =
+            List.length stones > 0
+
+        isBlack =
+            List.length stones == 1 && List.any (\x -> x.color == Black) stones
+
+        isWhite =
+            List.length stones == 1 && List.any (\x -> x.color == White) stones
+
+        isConflict =
+            List.length stones > 1
+    in
+        div
+            [ classList
+                [ ( "board-column", True )
+                , ( "board-column--19x19", model.boardSize == Nineteen )
+                , ( "board-column--13x13", model.boardSize == Thirteen )
+                , ( "board-column--9x9", model.boardSize == Nine )
+                ]
             ]
-        ]
-        [ span [ classList [ ( "board-point", True ), ( "board-point--star", isStar model x y ) ] ] []
-        , span [ classList [ ( "board-connection", True ), ( "board-connection--right", True ) ] ] []
-        , span [ classList [ ( "board-connection", True ), ( "board-connection--down", True ) ] ] []
-        ]
+            [ span
+                [ classList
+                    [ ( "board-stone", isStone )
+                    , ( "board-stone--black", isBlack )
+                    , ( "board-stone--white", isWhite )
+                    , ( "board-stone--conflict", isConflict )
+                    ]
+                ]
+                []
+            , span [ classList [ ( "board-point", True ), ( "board-point--star", isStar model x y ) ] ] []
+            , span [ classList [ ( "board-connection", True ), ( "board-connection--right", True ) ] ] []
+            , span [ classList [ ( "board-connection", True ), ( "board-connection--down", True ) ] ] []
+            ]
 
 
 

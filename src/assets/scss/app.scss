@@ -17,25 +17,6 @@
     padding: 0;
 }
 
-/* MEDIA */
-/* MEDIA */
-/* MEDIA */
-@media screen and (orientation: landscape)
-{
-    .video
-    {
-        width: 100%;
-    }
-}
-
-@media screen and (orientation: portrait)
-{
-    .video
-    {
-        height: 100%;
-    }
-}
-
 /* GENERAL */
 /* GENERAL */
 /* GENERAL */
@@ -390,10 +371,9 @@ input[type="file"] {
     display: flex;
     flex-direction: column;
     position: absolute;
-    top: calc((100% - 90rem) / 2);
-    left: calc((100% - 90rem) / 2);
     width: 90rem;
     height: 90rem;
+    z-index: $depth-overlay;
 }
 
 .container-board--19x19
@@ -414,11 +394,44 @@ input[type="file"] {
     left: calc((100% - (90rem - (90rem / 9))) / 2);
 }
 
+.container-board-surface
+{
+    display: flex;
+    flex-direction: column;
+    position: absolute;
+    width: 90rem;
+    height: 90rem;
+    background-color: $color-background-secondary;
+}
+
+.container-board-surface--19x19
+{
+    top: calc((100% - 89.5rem) / 2);
+    left: calc((100% - 89.5rem) / 2);
+}
+
+.container-board-surface--13x13
+{
+    top: calc((100% - 89.5rem) / 2);
+    left: calc((100% - 89.5rem) / 2);
+}
+
+.container-board-surface--9x9
+{
+    top: calc((100% - 89.5rem) / 2);
+    left: calc((100% - 89.5rem) / 2);
+}
+
 .board-row
 {
     display: flex;
     flex-direction: row;
     flex: 1;
+
+    &>.board-column>.board-stone
+    {
+            top: -32.5%;
+    }
 
     &:not(:first-child):not(:last-child)
     {
@@ -452,6 +465,11 @@ input[type="file"] {
 {
     position: relative;
 
+    &>.board-stone
+    {
+        left: -32.5%;
+    }
+
     &:not(:first-child):not(:last-child)
     {
         &>.board-point
@@ -461,7 +479,7 @@ input[type="file"] {
     }
 
     &:last-child
-    {
+    {   
         &>.board-point
         {
             left: -40%;
@@ -488,6 +506,32 @@ input[type="file"] {
 .board-column--9x9
 {
     flex: 1 1 calc(100% / 9);
+}
+
+.board-stone 
+{
+    display: inline-block;
+    position: absolute;
+    width: 75%;
+    height: 75%;
+    border-radius: 50%;
+    cursor: pointer;
+    z-index: $depth-board-stone;
+
+    &.board-stone--black
+    {
+        background-color: $color-object-primary;
+    }
+
+    &.board-stone--white
+    {
+        background-color: $color-object-secondary;
+    }
+
+    &.board-stone--conflict
+    {
+        background-color: $color-object-tertiary;
+    }
 }
 
 .board-point

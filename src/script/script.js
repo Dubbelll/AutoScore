@@ -1,9 +1,8 @@
 const element = document.getElementById("app");
-const flags =
-    {
-        version: CONFIG_API_VERSION,
-        baseURL: CONFIG_API_BASE_URL
-    };
+const flags = {
+    version: CONFIG_API_VERSION,
+    baseURL: CONFIG_API_BASE_URL
+};
 const app = Elm.App.embed(element, flags);
 const state = {
     input: {
@@ -11,9 +10,20 @@ const state = {
         width: 0,
         height: 0
     },
-    processed: [],
     crop: {}
 };
+
+function setViewportMinimum() {
+    document.documentElement.style.fontSize = (Math.min(window.innerWidth, window.innerHeight) * 0.01) + "px";
+};
+
+window.addEventListener("load", function () {
+    setViewportMinimum();
+});
+
+window.addEventListener("resize", function () {
+    setViewportMinimum();
+});
 
 app.ports.useFile.subscribe(function (id) {
     const element = document.getElementById(id);
@@ -93,6 +103,21 @@ app.ports.startCamera.subscribe(function (bool) {
         });
 
     video.addEventListener("canplay", function () {
+        let width = 0;
+        let height = 0;
+        if (window.innerWidth > window.innerHeight) {
+            height = window.innerHeight;
+            width = video.videoWidth / (video.videoHeight / height);
+        }
+        else {
+            width = window.innerWidth;
+            height = video.videoHeight / (video.videoWidth / width);
+        }
+        canvas.width = width;
+        canvas.height = height;
+        video.width = width;
+        video.height = height;
+
         app.ports.cameraStarted.send(true);
     });
 });
@@ -111,9 +136,7 @@ app.ports.takePhoto.subscribe(function (bool) {
     const video = document.getElementById("video");
     const image = new Image();
 
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-    context.drawImage(video, 0, 0, window.innerWidth, window.innerHeight);
+    context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
     image.addEventListener("load", function () {
         const imageData =

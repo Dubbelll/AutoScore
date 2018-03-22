@@ -33,6 +33,12 @@ port startCropping : Bool -> Cmd msg
 port cropPhoto : Bool -> Cmd msg
 
 
+port startPickingColors : Bool -> Cmd msg
+
+
+port pickColors : Bool -> Cmd msg
+
+
 port startProcessing : Bool -> Cmd msg
 
 
@@ -50,6 +56,9 @@ port inputSuccessful : (Bool -> msg) -> Sub msg
 
 
 port croppingSuccessful : (Crop -> msg) -> Sub msg
+
+
+port colorPickingSuccessful : (Bool -> msg) -> Sub msg
 
 
 port stoneDetected : (Detection -> msg) -> Sub msg

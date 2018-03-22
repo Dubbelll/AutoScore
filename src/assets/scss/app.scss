@@ -438,6 +438,11 @@ input[type="file"] {
         &>.board-column>.board-point
         {
             top: -20%;
+
+            &.board-point--star
+            {
+                top: -12.5%;
+            }
         }
     }
 
@@ -475,6 +480,11 @@ input[type="file"] {
         &>.board-point
         {
             left: -20%;
+
+            &.board-point--star
+            {
+                left: -12.5%;
+            }
         }
     }
 
@@ -545,6 +555,8 @@ input[type="file"] {
 
     &.board-point--star
     {
+        width: 35%;
+        height: 35%;
         background-color: $color-object-primary;
         border-radius: 50%;
     }

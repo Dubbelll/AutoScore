@@ -185,8 +185,134 @@ app.ports.cropPhoto.subscribe(function (bool) {
     image.src = cropped.src;
 });
 
+app.ports.startPickingColors.subscribe(function (bool) {
+    const canvasBlack = document.getElementById("canvas-color-black");
+    const canvasWhite = document.getElementById("canvas-color-white");
+});
+
+app.ports.pickColors.subscribe(function (bool) {
+    const canvas = document.getElementById("canvas-output");
+    const context = canvas.getContext("2d");
+    const cropped = state.crop.getCroppedImage();
+    const image = new Image();
+
+    image.addEventListener("load", function () {
+        canvas.width = image.width;
+        canvas.height = image.height;
+        context.drawImage(image, 0, 0);
+
+        const crop = {
+            x: Math.round((window.innerWidth - image.width) / 2),
+            y: Math.round((window.innerHeight - image.height) / 2),
+            width: image.width,
+            height: image.height
+        }
+        app.ports.croppingSuccessful.send(crop);
+    });
+    image.src = cropped.src;
+});
+
 app.ports.startProcessing.subscribe(function (bool) {
+    const canvas = document.getElementById("canvas-output");
+    const context = canvas.getContext("2d");
+    const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
+
+    console.log("processing size: " + canvas.width + " x " + canvas.height);
+
     const thresholdBlack = 32.5;
+    const thresholdWhite = 150;
+
+    function isMatch(matches, size, x, y) {
+        return matches.filter(function (match) {
+            return (x >= match.x && x <= match.x + size)
+                && (y >= match.y && y <= match.y + size);
+        }).length > 0;
+    }
+
+    function averageColors(pixels) {
+        let reds = 0;
+        let greens = 0;
+        let blues = 0;
+
+        for (let i = 0; i < pixels.length; i += 4) {
+            reds += pixels[i];
+            greens += pixels[i + 1];
+            blues += pixels[i + 2];
+        }
+
+        const averages = {
+            r: reds / pixels.length,
+            g: greens / pixels.length,
+            b: blues / pixels.length
+        };
+
+        return averages;
+    }
+
+    function isBlack(r, g, b) {
+        return r <= thresholdBlack
+            && g <= thresholdBlack
+            && b <= thresholdBlack;
+    }
+
+    function isWhite(r, g, b) {
+        return r >= thresholdWhite
+            && g >= thresholdWhite
+            && b >= thresholdWhite;
+    }
+
+    function isMostlyBlack(averages) {
+        return averages.r <= thresholdBlack
+            && averages.g <= thresholdBlack
+            && averages.b <= thresholdBlack;
+    }
+
+    function isMostlyWhite(averages) {
+        return averages.r >= thresholdWhite
+            && averages.g >= thresholdWhite
+            && averages.b >= thresholdWhite;
+    }
+
+    const size = 25;
+    const matches = [];
+    for (let y = 0; y < canvas.height; y++) {
+        for (let x = 0; x < canvas.width; x++) {
+            const i = (y * canvas.width + x) * 4;
+            const black = isBlack(pixels[i], pixels[i + 1], pixels[i + 2]);
+            const white = isWhite(pixels[i], pixels[i + 1], pixels[i + 2]);
+
+            if (black) {
+                context.fillStyle = "#F44336";
+                context.fillRect(x, y, 3, 3);
+            }
+            if (white) {
+                context.fillStyle = "#03A9F4";
+                context.fillRect(x, y, 3, 3);
+            }
+
+            /* if (!hasMatched) {
+                const vector = context.getImageData(x, y, size, size).data;
+                const averages = averageColors(vector);
+                const isBlack = isMostlyBlack(averages);
+                const isWhite = isMostlyWhite(averages);
+
+                if (isBlack) {
+                    context.fillStyle = "#F44336";
+                    context.fillRect(x, y, 3, 3);
+                    matches.push({ x: x, y: y, color: "black" });
+                }
+                if (isWhite) {
+                    context.fillStyle = "#03A9F4";
+                    context.fillRect(x, y, 3, 3);
+                    matches.push({ x: x, y: y, color: "white" });
+                }
+            } */
+        }
+    }
+    console.log(matches);
+
+
+    /* const thresholdBlack = 32.5;
     const thresholdWhite = 150;
 
     tracking.ColorTracker.registerColor("black", function (r, g, b) {
@@ -212,5 +338,5 @@ app.ports.startProcessing.subscribe(function (bool) {
         }
     });
 
-    tracking.track("#canvas-output", tracker);
+    tracking.track("#canvas-output", tracker); */
 });

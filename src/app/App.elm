@@ -34,6 +34,7 @@ type alias Model =
     , isInputSuccessful : Bool
     , isCroppingSuccessful : Bool
     , crop : PT.Crop
+    , isColorPickingSuccessful : Bool
     , detections : Array PT.Detection
     , isProcessingSuccessful : Bool
     , stars19x19 : List Star
@@ -61,8 +62,10 @@ type alias DetectionMeta =
     , averageHeight : Int
     , minimumWidth : Int
     , minimumHeight : Int
-    , xMin : Int
-    , yMin : Int
+    , minimumX : Int
+    , minimumY : Int
+    , maximumX : Int
+    , maximumY : Int
     }
 
 
@@ -125,6 +128,7 @@ init flags location =
             , isInputSuccessful = False
             , isCroppingSuccessful = False
             , crop = PT.Crop 0 0 0 0
+            , isColorPickingSuccessful = False
             , detections = Array.empty
             , isProcessingSuccessful = False
             , stars19x19 = stars19x19
@@ -311,22 +315,42 @@ averageStoneHeight detections =
         (toFloat (List.sum singleStoneHeights)) / (toFloat (List.length singleStoneHeights))
 
 
-xMinimum : List PT.Detection -> Float -> Int
-xMinimum detections minimumWidth =
+minimumBoardX : List PT.Detection -> Int -> Int
+minimumBoardX detections averageWidth =
     List.map .x detections
         |> List.sort
-        |> List.filter (\x -> x <= (ceiling minimumWidth))
+        |> List.filter (\x -> x <= averageWidth)
         |> List.maximum
         |> Maybe.withDefault 0
 
 
-yMinimum : List PT.Detection -> Float -> Int
-yMinimum detections minimumHeight =
+maximumBoardX : List PT.Detection -> Int -> Int -> Int -> Int
+maximumBoardX detections averageWidth minimumX boardWidth =
+    List.map .x detections
+        |> List.sort
+        |> List.reverse
+        |> List.filter (\x -> (boardWidth - (x + minimumX)) <= averageWidth)
+        |> List.minimum
+        |> Maybe.withDefault -1
+
+
+minimumBoardY : List PT.Detection -> Int -> Int
+minimumBoardY detections averageHeight =
     List.map .y detections
         |> List.sort
-        |> List.filter (\x -> x <= (ceiling minimumHeight))
+        |> List.filter (\y -> y <= averageHeight)
         |> List.maximum
         |> Maybe.withDefault 0
+
+
+maximumBoardY : List PT.Detection -> Int -> Int -> Int -> Int
+maximumBoardY detections averageHeight minimumY boardHeight =
+    List.map .y detections
+        |> List.sort
+        |> List.reverse
+        |> List.filter (\y -> (boardHeight - (y + minimumY)) <= averageHeight)
+        |> List.minimum
+        |> Maybe.withDefault -1
 
 
 detectionColorToStoneColor : String -> StoneColor
@@ -379,14 +403,14 @@ detectionToStones : DetectionMeta -> PT.Detection -> List Stone
 detectionToStones meta detection =
     let
         startX =
-            toFloat (detection.x - meta.xMin - (meta.averageWidth - detection.width))
+            toFloat (detection.x - meta.minimumX - (meta.averageWidth - detection.width))
                 / toFloat meta.averageWidth
                 |> floor
                 |> Basics.max 1
                 |> Basics.min 19
 
         startY =
-            toFloat (detection.y - meta.yMin - (meta.averageHeight - detection.height))
+            toFloat (detection.y - meta.minimumY - (meta.averageHeight - detection.height))
                 / toFloat meta.averageHeight
                 |> floor
                 |> Basics.max 1
@@ -420,38 +444,47 @@ detectionToStones meta detection =
             |> Array.toList
 
 
-detectionsToStones : Array PT.Detection -> Board
-detectionsToStones detectionsArray =
+detectionsToStones : List PT.Detection -> PT.Crop -> Board
+detectionsToStones detections crop =
     let
-        detections =
-            Array.toList detectionsArray
-
         averageWidth =
-            averageStoneWidth detections
+            ceiling <| averageStoneWidth detections
 
         averageHeight =
-            averageStoneHeight detections
+            ceiling <| averageStoneHeight detections
 
         minimumWidth =
-            averageWidth * 0.6
+            List.map .width detections
+                |> List.minimum
+                |> Maybe.withDefault (ceiling (toFloat averageWidth * 0.6))
 
         minimumHeight =
-            averageHeight * 0.6
+            List.map .width detections
+                |> List.minimum
+                |> Maybe.withDefault (ceiling (toFloat averageWidth * 0.6))
 
-        xMin =
-            xMinimum detections minimumWidth
+        minimumX =
+            minimumBoardX detections averageWidth
 
-        yMin =
-            yMinimum detections minimumHeight
+        minimumY =
+            minimumBoardY detections averageHeight
+
+        maximumX =
+            maximumBoardX detections averageWidth minimumX crop.width
+
+        maximumY =
+            maximumBoardY detections averageHeight minimumY crop.height
 
         meta =
             DetectionMeta
-                (ceiling averageWidth)
-                (ceiling averageHeight)
-                (ceiling minimumWidth)
-                (ceiling minimumHeight)
-                xMin
-                yMin
+                averageWidth
+                averageHeight
+                minimumWidth
+                minimumHeight
+                minimumX
+                minimumY
+                maximumX
+                maximumY
 
         log =
             Debug.log "meta" meta
@@ -523,6 +556,7 @@ type Route
     = RouteLanding
     | RoutePhoto
     | RouteCrop
+    | RouteColor
     | RouteProcessing
     | RouteScore
     | RouteNotFound
@@ -534,6 +568,7 @@ matchers =
         [ UP.map RouteLanding UP.top
         , UP.map RoutePhoto (UP.s "photo")
         , UP.map RouteCrop (UP.s "crop")
+        , UP.map RouteColor (UP.s "color")
         , UP.map RouteProcessing (UP.s "processing")
         , UP.map RouteScore (UP.s "score")
         ]
@@ -566,6 +601,8 @@ type Msg
     | InputSuccessful Bool
     | CropPhoto
     | CroppingSuccessful PT.Crop
+    | PickColors
+    | ColorPickingSuccessful Bool
     | StoneDetected PT.Detection
     | ProcessingSuccessful Bool
 
@@ -597,6 +634,9 @@ update message model =
                     case newRoute of
                         RouteCrop ->
                             PT.startCropping True
+
+                        RouteColor ->
+                            PT.startPickingColors True
 
                         RouteProcessing ->
                             PT.startProcessing True
@@ -645,7 +685,13 @@ update message model =
             ( model, PT.cropPhoto True )
 
         CroppingSuccessful newCrop ->
-            ( { model | isCroppingSuccessful = True, crop = newCrop }, Navigation.newUrl "#processing" )
+            ( { model | isCroppingSuccessful = True, crop = newCrop }, Navigation.newUrl "#color" )
+
+        PickColors ->
+            ( model, PT.pickColors True )
+
+        ColorPickingSuccessful isSuccessful ->
+            ( { model | isColorPickingSuccessful = isSuccessful }, Navigation.newUrl "#processing" )
 
         StoneDetected detection ->
             let
@@ -657,10 +703,7 @@ update message model =
         ProcessingSuccessful isSuccessful ->
             let
                 newBoard =
-                    detectionsToStones model.detections
-
-                log =
-                    Debug.log "board" newBoard
+                    detectionsToStones (Array.toList model.detections) model.crop
             in
                 ( { model | isProcessingSuccessful = isSuccessful, board = newBoard }, Cmd.none )
 
@@ -699,6 +742,16 @@ view model =
             , classList [ ( "canvas", True ), ( "canvas--visible", model.route == RouteProcessing ) ]
             ]
             []
+        , canvas
+            [ id "canvas-color-black"
+            , classList [ ( "canvas", True ), ( "canvas--visible", model.route == RouteColor ) ]
+            ]
+            []
+        , canvas
+            [ id "canvas-color-white"
+            , classList [ ( "canvas", True ), ( "canvas--visible", model.route == RouteColor ) ]
+            ]
+            []
         , video
             [ id "video"
             , classList [ ( "video", True ), ( "video--visible", model.isVideoPlaying ) ]
@@ -728,6 +781,9 @@ page model =
 
         RouteCrop ->
             viewCrop model
+
+        RouteColor ->
+            div [] []
 
         RouteProcessing ->
             viewProcessing model
@@ -885,6 +941,42 @@ viewCrop model =
                         "info"
                         [ ( "crop", True ), ( "crop--overlay", True ), ( "crop--info", True ) ]
                         "Crop the image so only the board remains"
+                        ToRight
+                        False
+                    , viewIconTextLink
+                        "crop"
+                        [ ( "crop", True ), ( "crop--overlay", True ), ( "crop--start", True ) ]
+                        "Crop"
+                        ToRight
+                        CropPhoto
+                    ]
+
+                False ->
+                    [ buttonClose False
+                    , viewIconText
+                        "info"
+                        [ ( "crop", True ) ]
+                        "Nothing to crop"
+                        ToRight
+                        False
+                    ]
+    in
+        div
+            [ classList [ ( "container-crop", True ) ] ]
+            overlay
+
+
+viewColor : Model -> Html Msg
+viewColor model =
+    let
+        overlay =
+            case model.isCroppingSuccessful of
+                True ->
+                    [ buttonClose True
+                    , viewIconText
+                        "info"
+                        [ ( "crop", True ), ( "crop--overlay", True ), ( "crop--info", True ) ]
+                        "Select the darkest white and lightest black stones"
                         ToRight
                         False
                     , viewIconTextLink

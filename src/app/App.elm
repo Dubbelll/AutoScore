@@ -749,57 +749,17 @@ view : Model -> Html Msg
 view model =
     div [ classList [ ( "container-app", True ) ] ]
         [ page model
-        , canvas
-            [ id "canvas-input"
-            , classList [ ( "canvas", True ), ( "canvas--visible", model.route == RouteCrop ) ]
-            ]
-            []
-        , canvas
-            [ id "canvas-color-black"
-            , classList [ ( "canvas", True ), ( "canvas--visible", model.route == RouteBlack ) ]
-            ]
-            []
-        , canvas
-            [ id "canvas-color-white"
-            , classList [ ( "canvas", True ), ( "canvas--visible", model.route == RouteWhite ) ]
-            ]
-            []
-        , canvas
-            [ id "canvas-output"
-            , classList [ ( "canvas", True ), ( "canvas--visible", model.route == RouteProcessing ) ]
-            ]
-            []
+        , viewCanvas model "canvas-input" (model.isInputSuccessful && model.route == RouteCrop)
+        , viewCanvas model "canvas-color-black" (model.isCroppingSuccessful && model.route == RouteBlack)
+        , viewCanvas model "canvas-color-white" (model.isPickingBlackSuccessful && model.route == RouteWhite)
+        , viewCanvas model "canvas-output" (model.isPickingWhiteSuccessful && model.route == RouteProcessing)
+        , viewCropFrame model "crop-input" "crop-frame--rectangle" (model.isInputSuccessful && model.route == RouteCrop)
+        , viewCropFrame model "crop-color-black" "crop-frame--circle" (model.isCroppingSuccessful && model.route == RouteBlack)
+        , viewCropFrame model "crop-color-white" "crop-frame--circle" (model.isPickingBlackSuccessful && model.route == RouteWhite)
         , video
             [ id "video"
             , classList [ ( "video", True ), ( "video--visible", model.isVideoPlaying ) ]
             , onClick TakePhoto
-            ]
-            []
-        , div
-            [ id "crop-input"
-            , classList
-                [ ( "crop-frame", True )
-                , ( "crop-frame--rectangle", True )
-                , ( "crop-frame--visible", model.route == RouteCrop )
-                ]
-            ]
-            []
-        , div
-            [ id "crop-color-black"
-            , classList
-                [ ( "crop-frame", True )
-                , ( "crop-frame--circle", True )
-                , ( "crop-frame--visible", model.route == RouteBlack )
-                ]
-            ]
-            []
-        , div
-            [ id "crop-color-white"
-            , classList
-                [ ( "crop-frame", True )
-                , ( "crop-frame--circle", True )
-                , ( "crop-frame--visible", model.route == RouteWhite )
-                ]
             ]
             []
         , div [ classList [ ( "loading", True ), ( "loading--visible", model.isLoading ) ] ]
@@ -844,6 +804,44 @@ page model =
 
 
 -- VIEW GENERAL
+
+
+viewCanvas : Model -> String -> Bool -> Html Msg
+viewCanvas model identifier isVisible =
+    canvas
+        [ id identifier
+        , classList [ ( "canvas", True ), ( "canvas--visible", isVisible ) ]
+        ]
+        []
+
+
+viewCropFrame : Model -> String -> String -> Bool -> Html Msg
+viewCropFrame model identifier shape isVisible =
+    div [ classList [ ( "container-crop-frame", True ), ( "container-crop-frame--visible", isVisible ) ] ]
+        [ div
+            [ id (identifier ++ "-fader")
+            , classList
+                [ ( "crop-frame-fader", True ) ]
+            ]
+            []
+        , div
+            [ id (identifier ++ "-boundary")
+            , classList
+                [ ( "crop-frame-boundary", True ) ]
+            ]
+            [ div
+                [ id identifier
+                , classList
+                    [ ( "crop-frame", True )
+                    , ( shape, True )
+                    ]
+                ]
+                [ img [ id (identifier ++ "-image"), classList [ ( "crop-frame--image", True ) ] ] []
+                , div [ id (identifier ++ "-move"), classList [ ( "crop-frame--move", True ) ] ] []
+                , div [ id (identifier ++ "-resize"), classList [ ( "crop-frame--resize", True ) ] ] []
+                ]
+            ]
+        ]
 
 
 viewIcon : String -> List ( String, Bool ) -> Html Msg

@@ -25,13 +25,15 @@ const state = {
         width: 0,
         height: 0
     },
+    isDragging: false,
+    isResizing: false,
+    movementStartX: 0,
+    movementStartY: 0,
+    movementStartTop: 0,
+    movementStartLeft: 0,
     cropInput: {},
     cropBlack: {},
     cropWhite: {}
-};
-
-function setViewportMinimum() {
-    document.documentElement.style.fontSize = (Math.min(window.innerWidth, window.innerHeight) * 0.01) + "px";
 };
 
 window.addEventListener("load", function () {
@@ -41,6 +43,68 @@ window.addEventListener("load", function () {
 window.addEventListener("resize", function () {
     setViewportMinimum();
 });
+
+window.addEventListener("mouseup", function () {
+    state.isDragging = false;
+    state.isResizing = false;
+})
+
+function setViewportMinimum() {
+    document.documentElement.style.fontSize = (Math.min(window.innerWidth, window.innerHeight) * 0.01) + "px";
+};
+
+function numberToPixels(number) {
+    return "" + number + "px";
+}
+
+function pixelsToNumber(pixels) {
+    return parseFloat(pixels.split("px")[0]);
+}
+
+function initializeDrag(startX, startY, crop) {
+    state.isDragging = true;
+    state.movementStartX = startX;
+    state.movementStartY = startY;
+    state.movementStartTop = pixelsToNumber(crop.style.top);
+    state.movementStartLeft = pixelsToNumber(crop.style.left);
+}
+
+function drag(currentX, currentY, crop, image, border) {
+    if (state.isDragging) {
+        const newTop = state.movementStartTop + (currentY - state.movementStartY);
+        const newLeft = state.movementStartLeft + (currentX - state.movementStartX);
+        const maxTop = state.input.height - pixelsToNumber(crop.style.height) - (border * 2);
+        const maxLeft = state.input.width - pixelsToNumber(crop.style.width) - (border * 2);
+        const newBoundedTop = Math.max(0, Math.min(maxTop, newTop));
+        const newBoundedLeft = Math.max(0, Math.min(maxLeft, newLeft));
+        crop.style.top = numberToPixels(newBoundedTop);
+        crop.style.left = numberToPixels(newBoundedLeft);
+        image.style.top = numberToPixels(- (newBoundedTop + border));
+        image.style.left = numberToPixels(- (newBoundedLeft + border));
+    }
+}
+
+function addEventListenersForDragging(crop, image, area, border) {
+    area.addEventListener("mousedown", function (event) {
+        initializeDrag(event.pageX, event.pageY, crop);
+
+        event.preventDefault();
+    });
+
+    area.addEventListener("mousemove", function (event) {
+        drag(event.pageX, event.pageY, crop, image, border);
+    });
+
+    area.addEventListener("touchstart", function (event) {
+        initializeDrag(event.targetTouches[0].pageX, event.targetTouches[0].pageY, crop);
+
+        event.preventDefault();
+    });
+
+    area.addEventListener("touchmove", function (event) {
+        drag(event.targetTouches[0].pageX, event.targetTouches[0].pageY, crop, image, border);
+    });
+}
 
 app.ports.useFile.subscribe(function (id) {
     const element = document.getElementById(id);
@@ -171,13 +235,46 @@ app.ports.takePhoto.subscribe(function (bool) {
 
 app.ports.startCropping.subscribe(function (bool) {
     const canvas = document.getElementById("canvas-input");
-    const width = state.input.width / 2;
-    const height = state.input.height / 2;
-    const crop = new ImageCropper(canvas, width - (width / 2), height - (height / 2), width, height, false);
+    const fader = document.getElementById("crop-input-fader");
+    const boundary = document.getElementById("crop-input-boundary");
+    const crop = document.getElementById("crop-input");
+    const image = document.getElementById("crop-input-image");
+    const move = document.getElementById("crop-input-move");
+    const resize = document.getElementById("crop-input-resize");
+    const border = pixelsToNumber(document.documentElement.style.fontSize) * 0.3;
+    const widthInput = numberToPixels(state.input.width);
+    const widthCrop = numberToPixels(state.input.width / 2);
+    const heightInput = numberToPixels(state.input.height);
+    const heightCrop = numberToPixels(state.input.height / 2);
+    const topCrop = numberToPixels((state.input.height / 2) / 2);
+    const topImage = numberToPixels(- ((state.input.height / 2) / 2) - border);
+    const leftCrop = numberToPixels((state.input.width / 2) / 2);
+    const leftImage = numberToPixels(- ((state.input.width / 2) / 2) - border);
+    const resizeSize = numberToPixels((Math.min(state.input.width, state.input.height) / 2) * 0.2);
 
-    crop.setImage(state.input.image);
+    fader.style.width = widthInput;
+    fader.style.height = heightInput;
 
-    state.cropInput = crop;
+    boundary.style.width = widthInput;
+    boundary.style.height = heightInput;
+
+    crop.style.width = widthCrop;
+    crop.style.height = heightCrop;
+    crop.style.top = topCrop;
+    crop.style.left = leftCrop;
+
+    image.addEventListener("load", function () {
+        image.style.width = widthInput;
+        image.style.height = heightInput;
+        image.style.top = topImage;
+        image.style.left = leftImage;
+    });
+    image.src = canvas.toDataURL("image/png");
+
+    resize.style.width = resizeSize;
+    resize.style.height = resizeSize;
+
+    addEventListenersForDragging(crop, image, move, border);
 });
 
 app.ports.cropPhoto.subscribe(function (bool) {

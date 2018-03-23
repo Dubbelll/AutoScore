@@ -211,8 +211,6 @@ input[type="file"] {
     position: absolute;
     top: 50%;
     left: 50%;
-    max-width: 100%;
-    max-height: 100%;
     transform: translateX(-50%) translateY(-50%);
     z-index: $depth-source;
 
@@ -222,24 +220,77 @@ input[type="file"] {
     }
 }
 
-.crop-frame
+.container-crop-frame
 {
     display: none;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: $depth-crop;
+
+    &.container-crop-frame--visible
+    {
+        display: block;
+    }
+}
+
+.crop-frame-fader
+{
     position: absolute;
     top: 50%;
     left: 50%;
     transform: translateX(-50%) translateY(-50%);
+    opacity: 0.75;
+    background-color: $color-object-primary;
+    z-index: $depth-fader;
+}
+
+.crop-frame-boundary
+{
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translateX(-50%) translateY(-50%);
+    z-index: $depth-crop;
+}
+
+.crop-frame
+{
+    position: absolute;
     border: 0.3rem solid $color-crop;
-    z-index: $depth-overlay;
+    overflow: hidden;
+    user-select: none;
+    z-index: $depth-crop;
 
     &.crop-frame--circle
     {
         border-radius: 50%;
     }
 
-    &.crop-frame--visible
+    &>.crop-frame--image
     {
-        display: block;
+        position: absolute;
+    }
+
+    &>.crop-frame--move
+    {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+
+    }
+
+    &>.crop-frame--resize
+    {
+        position: absolute;
+        bottom: 0;
+        right: 0;
+        background-color: $color-crop;
+        z-index: 1;
     }
 }
 

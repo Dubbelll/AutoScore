@@ -34,7 +34,8 @@ type alias Model =
     , isInputSuccessful : Bool
     , isCroppingSuccessful : Bool
     , crop : PT.Crop
-    , isColorPickingSuccessful : Bool
+    , isPickingBlackSuccessful : Bool
+    , isPickingWhiteSuccessful : Bool
     , detections : Array PT.Detection
     , isProcessingSuccessful : Bool
     , stars19x19 : List Star
@@ -128,7 +129,8 @@ init flags location =
             , isInputSuccessful = False
             , isCroppingSuccessful = False
             , crop = PT.Crop 0 0 0 0
-            , isColorPickingSuccessful = False
+            , isPickingBlackSuccessful = False
+            , isPickingWhiteSuccessful = False
             , detections = Array.empty
             , isProcessingSuccessful = False
             , stars19x19 = stars19x19
@@ -556,7 +558,8 @@ type Route
     = RouteLanding
     | RoutePhoto
     | RouteCrop
-    | RouteColor
+    | RouteBlack
+    | RouteWhite
     | RouteProcessing
     | RouteScore
     | RouteNotFound
@@ -568,7 +571,8 @@ matchers =
         [ UP.map RouteLanding UP.top
         , UP.map RoutePhoto (UP.s "photo")
         , UP.map RouteCrop (UP.s "crop")
-        , UP.map RouteColor (UP.s "color")
+        , UP.map RouteBlack (UP.s "black")
+        , UP.map RouteWhite (UP.s "white")
         , UP.map RouteProcessing (UP.s "processing")
         , UP.map RouteScore (UP.s "score")
         ]
@@ -601,8 +605,10 @@ type Msg
     | InputSuccessful Bool
     | CropPhoto
     | CroppingSuccessful PT.Crop
-    | PickColors
-    | ColorPickingSuccessful Bool
+    | PickBlack
+    | PickingBlackSuccessful Bool
+    | PickWhite
+    | PickingWhiteSuccessful Bool
     | StoneDetected PT.Detection
     | ProcessingSuccessful Bool
 
@@ -635,8 +641,11 @@ update message model =
                         RouteCrop ->
                             PT.startCropping True
 
-                        RouteColor ->
-                            PT.startPickingColors True
+                        RouteBlack ->
+                            PT.startPickingBlack True
+
+                        RouteWhite ->
+                            PT.startPickingWhite True
 
                         RouteProcessing ->
                             PT.startProcessing True
@@ -685,13 +694,19 @@ update message model =
             ( model, PT.cropPhoto True )
 
         CroppingSuccessful newCrop ->
-            ( { model | isCroppingSuccessful = True, crop = newCrop }, Navigation.newUrl "#color" )
+            ( { model | isCroppingSuccessful = True, crop = newCrop }, Navigation.newUrl "#black" )
 
-        PickColors ->
-            ( model, PT.pickColors True )
+        PickBlack ->
+            ( model, PT.pickBlack True )
 
-        ColorPickingSuccessful isSuccessful ->
-            ( { model | isColorPickingSuccessful = isSuccessful }, Navigation.newUrl "#processing" )
+        PickingBlackSuccessful isSuccessful ->
+            ( { model | isPickingBlackSuccessful = isSuccessful }, Navigation.newUrl "#white" )
+
+        PickWhite ->
+            ( model, PT.pickWhite True )
+
+        PickingWhiteSuccessful isSuccessful ->
+            ( { model | isPickingWhiteSuccessful = isSuccessful }, Navigation.newUrl "#processing" )
 
         StoneDetected detection ->
             let
@@ -719,6 +734,8 @@ subscriptions model =
         , PT.cameraStopped CameraStopped
         , PT.inputSuccessful InputSuccessful
         , PT.croppingSuccessful CroppingSuccessful
+        , PT.pickingBlackSuccessful PickingBlackSuccessful
+        , PT.pickingWhiteSuccessful PickingWhiteSuccessful
         , PT.stoneDetected StoneDetected
         , PT.processingSuccessful ProcessingSuccessful
         ]
@@ -738,24 +755,51 @@ view model =
             ]
             []
         , canvas
-            [ id "canvas-output"
-            , classList [ ( "canvas", True ), ( "canvas--visible", model.route == RouteProcessing ) ]
-            ]
-            []
-        , canvas
             [ id "canvas-color-black"
-            , classList [ ( "canvas", True ), ( "canvas--visible", model.route == RouteColor ) ]
+            , classList [ ( "canvas", True ), ( "canvas--visible", model.route == RouteBlack ) ]
             ]
             []
         , canvas
             [ id "canvas-color-white"
-            , classList [ ( "canvas", True ), ( "canvas--visible", model.route == RouteColor ) ]
+            , classList [ ( "canvas", True ), ( "canvas--visible", model.route == RouteWhite ) ]
+            ]
+            []
+        , canvas
+            [ id "canvas-output"
+            , classList [ ( "canvas", True ), ( "canvas--visible", model.route == RouteProcessing ) ]
             ]
             []
         , video
             [ id "video"
             , classList [ ( "video", True ), ( "video--visible", model.isVideoPlaying ) ]
             , onClick TakePhoto
+            ]
+            []
+        , div
+            [ id "crop-input"
+            , classList
+                [ ( "crop-frame", True )
+                , ( "crop-frame--rectangle", True )
+                , ( "crop-frame--visible", model.route == RouteCrop )
+                ]
+            ]
+            []
+        , div
+            [ id "crop-color-black"
+            , classList
+                [ ( "crop-frame", True )
+                , ( "crop-frame--circle", True )
+                , ( "crop-frame--visible", model.route == RouteBlack )
+                ]
+            ]
+            []
+        , div
+            [ id "crop-color-white"
+            , classList
+                [ ( "crop-frame", True )
+                , ( "crop-frame--circle", True )
+                , ( "crop-frame--visible", model.route == RouteWhite )
+                ]
             ]
             []
         , div [ classList [ ( "loading", True ), ( "loading--visible", model.isLoading ) ] ]
@@ -782,8 +826,11 @@ page model =
         RouteCrop ->
             viewCrop model
 
-        RouteColor ->
-            div [] []
+        RouteBlack ->
+            viewBlack model
+
+        RouteWhite ->
+            viewWhite model
 
         RouteProcessing ->
             viewProcessing model
@@ -966,8 +1013,8 @@ viewCrop model =
             overlay
 
 
-viewColor : Model -> Html Msg
-viewColor model =
+viewBlack : Model -> Html Msg
+viewBlack model =
     let
         overlay =
             case model.isCroppingSuccessful of
@@ -975,30 +1022,66 @@ viewColor model =
                     [ buttonClose True
                     , viewIconText
                         "info"
-                        [ ( "crop", True ), ( "crop--overlay", True ), ( "crop--info", True ) ]
-                        "Select the darkest white and lightest black stones"
+                        [ ( "color", True ), ( "color--overlay", True ), ( "color--info--black", True ) ]
+                        "Select the lightest black stone"
                         ToRight
                         False
                     , viewIconTextLink
-                        "crop"
-                        [ ( "crop", True ), ( "crop--overlay", True ), ( "crop--start", True ) ]
-                        "Crop"
+                        "color"
+                        [ ( "color", True ), ( "color--overlay", True ), ( "color--start", True ) ]
+                        "Pick"
                         ToRight
-                        CropPhoto
+                        PickBlack
                     ]
 
                 False ->
                     [ buttonClose False
                     , viewIconText
                         "info"
-                        [ ( "crop", True ) ]
-                        "Nothing to crop"
+                        [ ( "color", True ) ]
+                        "Nothing to pick"
                         ToRight
                         False
                     ]
     in
         div
-            [ classList [ ( "container-crop", True ) ] ]
+            [ classList [ ( "container-color-black", True ) ] ]
+            overlay
+
+
+viewWhite : Model -> Html Msg
+viewWhite model =
+    let
+        overlay =
+            case model.isPickingBlackSuccessful of
+                True ->
+                    [ buttonClose True
+                    , viewIconText
+                        "info"
+                        [ ( "color", True ), ( "color--overlay", True ), ( "color--info--white", True ) ]
+                        "Select the darkest white stone"
+                        ToRight
+                        False
+                    , viewIconTextLink
+                        "color"
+                        [ ( "color", True ), ( "color--overlay", True ), ( "color--start", True ) ]
+                        "Pick"
+                        ToRight
+                        PickWhite
+                    ]
+
+                False ->
+                    [ buttonClose False
+                    , viewIconText
+                        "info"
+                        [ ( "color", True ) ]
+                        "Nothing to pick"
+                        ToRight
+                        False
+                    ]
+    in
+        div
+            [ classList [ ( "container-color-white", True ) ] ]
             overlay
 
 

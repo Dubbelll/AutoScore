@@ -4,11 +4,11 @@
     text-decoration: none;
 }
 
-@mixin animation-fade-out()
+@mixin animation-fade-out($name)
 {
-    animation: fadeOut 1s 1 2.5s forwards;
+    animation: $name 1s 1 2.5s forwards;
 
-    @keyframes fadeOut {
+    @keyframes #{$name} {
         from {
             opacity: 1;
         }

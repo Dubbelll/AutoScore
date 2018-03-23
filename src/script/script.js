@@ -10,7 +10,24 @@ const state = {
         width: 0,
         height: 0
     },
-    crop: {}
+    cropped: {
+        image: new Image(),
+        width: 0,
+        height: 0
+    },
+    black: {
+        image: new Image(),
+        width: 0,
+        height: 0
+    },
+    white: {
+        image: new Image(),
+        width: 0,
+        height: 0
+    },
+    cropInput: {},
+    cropBlack: {},
+    cropWhite: {}
 };
 
 function setViewportMinimum() {
@@ -160,46 +177,28 @@ app.ports.startCropping.subscribe(function (bool) {
 
     crop.setImage(state.input.image);
 
-    state.crop = crop;
+    state.cropInput = crop;
 });
 
 app.ports.cropPhoto.subscribe(function (bool) {
-    const canvas = document.getElementById("canvas-output");
-    const context = canvas.getContext("2d");
-    const cropped = state.crop.getCroppedImage();
-    const image = new Image();
-
-    image.addEventListener("load", function () {
-        canvas.width = image.width;
-        canvas.height = image.height;
-        context.drawImage(image, 0, 0);
-
-        const crop = {
-            x: Math.round((window.innerWidth - image.width) / 2),
-            y: Math.round((window.innerHeight - image.height) / 2),
-            width: image.width,
-            height: image.height
-        }
-        app.ports.croppingSuccessful.send(crop);
-    });
-    image.src = cropped.src;
-});
-
-app.ports.startPickingColors.subscribe(function (bool) {
     const canvasBlack = document.getElementById("canvas-color-black");
     const canvasWhite = document.getElementById("canvas-color-white");
-});
-
-app.ports.pickColors.subscribe(function (bool) {
-    const canvas = document.getElementById("canvas-output");
-    const context = canvas.getContext("2d");
-    const cropped = state.crop.getCroppedImage();
+    const canvasOutput = document.getElementById("canvas-output");
+    const contextBlack = canvasBlack.getContext("2d");
+    const contextWhite = canvasWhite.getContext("2d");
+    const contextOutput = canvasOutput.getContext("2d");
     const image = new Image();
 
     image.addEventListener("load", function () {
-        canvas.width = image.width;
-        canvas.height = image.height;
-        context.drawImage(image, 0, 0);
+        canvasBlack.width = image.width;
+        canvasWhite.width = image.width;
+        canvasBlack.height = image.height;
+        canvasWhite.height = image.height;
+        canvasOutput.width = image.width;
+        canvasOutput.height = image.height;
+        contextBlack.drawImage(image, 0, 0);
+        contextWhite.drawImage(image, 0, 0);
+        contextOutput.drawImage(image, 0, 0);
 
         const crop = {
             x: Math.round((window.innerWidth - image.width) / 2),
@@ -207,9 +206,77 @@ app.ports.pickColors.subscribe(function (bool) {
             width: image.width,
             height: image.height
         }
+
+        const cropData = {
+            image: image,
+            width: image.width,
+            height: image.height
+        };
+
+        state.cropped = cropData;
         app.ports.croppingSuccessful.send(crop);
     });
-    image.src = cropped.src;
+    image.src = state.cropInput.getCroppedImage().src;
+});
+
+app.ports.startPickingBlack.subscribe(function (bool) {
+    const canvas = document.getElementById("canvas-color-black");
+
+    const width = state.cropped.width / 8;
+    const height = state.cropped.height / 8;
+    const crop = new ImageCropper(canvas, width - (width / 2), height - (height / 2), width, height, false);
+
+    crop.setImage(state.cropped.image);
+
+    state.cropBlack = crop;
+});
+
+app.ports.pickBlack.subscribe(function (bool) {
+    const canvas = document.getElementById("canvas-color-black");
+    const context = canvas.getContext("2d");
+    const image = new Image();
+
+    image.addEventListener("load", function () {
+        const cropData = {
+            image: image,
+            width: image.width,
+            height: image.height
+        };
+
+        state.black = cropData;
+        app.ports.pickingBlackSuccessful.send(true);
+    });
+    image.src = state.cropBlack.getCroppedImage().src;
+});
+
+app.ports.startPickingWhite.subscribe(function (bool) {
+    const canvas = document.getElementById("canvas-color-white");
+
+    const width = state.cropped.width / 8;
+    const height = state.cropped.height / 8;
+    const crop = new ImageCropper(canvas, width - (width / 2), height - (height / 2), width, height, false);
+
+    crop.setImage(state.cropped.image);
+
+    state.cropWhite = crop;
+});
+
+app.ports.pickWhite.subscribe(function (bool) {
+    const canvas = document.getElementById("canvas-color-white");
+    const context = canvas.getContext("2d");
+    const image = new Image();
+
+    image.addEventListener("load", function () {
+        const cropData = {
+            image: image,
+            width: image.width,
+            height: image.height
+        };
+
+        state.white = cropData;
+        app.ports.pickingWhiteSuccessful.send(true);
+    });
+    image.src = state.cropWhite.getCroppedImage().src;
 });
 
 app.ports.startProcessing.subscribe(function (bool) {

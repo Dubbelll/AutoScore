@@ -33,7 +33,6 @@ type alias Model =
     , isVideoPlaying : Bool
     , isInputSuccessful : Bool
     , isCroppingSuccessful : Bool
-    , crop : PT.Crop
     , isPickingBlackSuccessful : Bool
     , isPickingWhiteSuccessful : Bool
     , detections : Array PT.Detection
@@ -56,6 +55,11 @@ type alias Config =
 type TextDirection
     = ToLeft
     | ToRight
+
+
+type CropShape
+    = Rectangle
+    | Circle
 
 
 type alias DetectionMeta =
@@ -128,7 +132,6 @@ init flags location =
             , isVideoPlaying = False
             , isInputSuccessful = False
             , isCroppingSuccessful = False
-            , crop = PT.Crop 0 0 0 0
             , isPickingBlackSuccessful = False
             , isPickingWhiteSuccessful = False
             , detections = Array.empty
@@ -446,8 +449,8 @@ detectionToStones meta detection =
             |> Array.toList
 
 
-detectionsToStones : List PT.Detection -> PT.Crop -> Board
-detectionsToStones detections crop =
+detectionsToStones : List PT.Detection -> Board
+detectionsToStones detections =
     let
         averageWidth =
             ceiling <| averageStoneWidth detections
@@ -472,10 +475,10 @@ detectionsToStones detections crop =
             minimumBoardY detections averageHeight
 
         maximumX =
-            maximumBoardX detections averageWidth minimumX crop.width
+            maximumBoardX detections averageWidth minimumX 0
 
         maximumY =
-            maximumBoardY detections averageHeight minimumY crop.height
+            maximumBoardY detections averageHeight minimumY 0
 
         meta =
             DetectionMeta
@@ -604,7 +607,7 @@ type Msg
     | TakePhoto
     | InputSuccessful Bool
     | CropPhoto
-    | CroppingSuccessful PT.Crop
+    | CroppingSuccessful Bool
     | PickBlack
     | PickingBlackSuccessful Bool
     | PickWhite
@@ -693,8 +696,8 @@ update message model =
         CropPhoto ->
             ( model, PT.cropPhoto True )
 
-        CroppingSuccessful newCrop ->
-            ( { model | isCroppingSuccessful = True, crop = newCrop }, Navigation.newUrl "#black" )
+        CroppingSuccessful isSuccessful ->
+            ( { model | isCroppingSuccessful = isSuccessful }, Navigation.newUrl "#black" )
 
         PickBlack ->
             ( model, PT.pickBlack True )
@@ -718,7 +721,7 @@ update message model =
         ProcessingSuccessful isSuccessful ->
             let
                 newBoard =
-                    detectionsToStones (Array.toList model.detections) model.crop
+                    detectionsToStones (Array.toList model.detections)
             in
                 ( { model | isProcessingSuccessful = isSuccessful, board = newBoard }, Cmd.none )
 
@@ -749,13 +752,13 @@ view : Model -> Html Msg
 view model =
     div [ classList [ ( "container-app", True ) ] ]
         [ page model
-        , viewCanvas model "canvas-input" (model.isInputSuccessful && model.route == RouteCrop)
-        , viewCanvas model "canvas-color-black" (model.isCroppingSuccessful && model.route == RouteBlack)
-        , viewCanvas model "canvas-color-white" (model.isPickingBlackSuccessful && model.route == RouteWhite)
-        , viewCanvas model "canvas-output" (model.isPickingWhiteSuccessful && model.route == RouteProcessing)
-        , viewCropFrame model "crop-input" "crop-frame--rectangle" (model.isInputSuccessful && model.route == RouteCrop)
-        , viewCropFrame model "crop-color-black" "crop-frame--circle" (model.isCroppingSuccessful && model.route == RouteBlack)
-        , viewCropFrame model "crop-color-white" "crop-frame--circle" (model.isPickingBlackSuccessful && model.route == RouteWhite)
+        , viewCanvas "canvas-input" (model.isInputSuccessful && model.route == RouteCrop)
+        , viewCanvas "canvas-color-black" (model.isCroppingSuccessful && model.route == RouteBlack)
+        , viewCanvas "canvas-color-white" (model.isPickingBlackSuccessful && model.route == RouteWhite)
+        , viewCanvas "canvas-output" (model.isPickingWhiteSuccessful && model.route == RouteProcessing)
+        , viewCropFrame "crop-input" Rectangle (model.isInputSuccessful && model.route == RouteCrop)
+        , viewCropFrame "crop-color-black" Circle (model.isCroppingSuccessful && model.route == RouteBlack)
+        , viewCropFrame "crop-color-white" Circle (model.isPickingBlackSuccessful && model.route == RouteWhite)
         , video
             [ id "video"
             , classList [ ( "video", True ), ( "video--visible", model.isVideoPlaying ) ]
@@ -806,8 +809,8 @@ page model =
 -- VIEW GENERAL
 
 
-viewCanvas : Model -> String -> Bool -> Html Msg
-viewCanvas model identifier isVisible =
+viewCanvas : String -> Bool -> Html Msg
+viewCanvas identifier isVisible =
     canvas
         [ id identifier
         , classList [ ( "canvas", True ), ( "canvas--visible", isVisible ) ]
@@ -815,33 +818,53 @@ viewCanvas model identifier isVisible =
         []
 
 
-viewCropFrame : Model -> String -> String -> Bool -> Html Msg
-viewCropFrame model identifier shape isVisible =
-    div [ classList [ ( "container-crop-frame", True ), ( "container-crop-frame--visible", isVisible ) ] ]
-        [ div
-            [ id (identifier ++ "-fader")
-            , classList
-                [ ( "crop-frame-fader", True ) ]
-            ]
-            []
-        , div
-            [ id (identifier ++ "-boundary")
-            , classList
-                [ ( "crop-frame-boundary", True ) ]
-            ]
-            [ div
-                [ id identifier
-                , classList
-                    [ ( "crop-frame", True )
-                    , ( shape, True )
+viewCropFrame : String -> CropShape -> Bool -> Html Msg
+viewCropFrame identifier shape isVisible =
+    let
+        content =
+            case shape of
+                Rectangle ->
+                    [ div
+                        [ id identifier
+                        , classList
+                            [ ( "crop-frame", True )
+                            , ( "crop-frame--rectangle", True )
+                            ]
+                        ]
+                        [ img [ id (identifier ++ "-image"), classList [ ( "crop-frame--image", True ) ] ] []
+                        , div [ id (identifier ++ "-move"), classList [ ( "crop-frame--move", True ) ] ] []
+                        , div [ id (identifier ++ "-resize"), classList [ ( "crop-frame--resize", True ) ] ] []
+                        ]
                     ]
+
+                Circle ->
+                    [ div
+                        [ id identifier
+                        , classList
+                            [ ( "crop-frame", True )
+                            , ( "crop-frame--circle", True )
+                            ]
+                        ]
+                        [ img [ id (identifier ++ "-image"), classList [ ( "crop-frame--image", True ) ] ] []
+                        , div [ id (identifier ++ "-move"), classList [ ( "crop-frame--move", True ) ] ] []
+                        ]
+                    , input [ id (identifier ++ "-slider"), classList [ ( "crop-frame-slider", True ) ], type_ "range" ] []
+                    ]
+    in
+        div [ classList [ ( "container-crop-frame", True ), ( "container-crop-frame--visible", isVisible ) ] ]
+            [ div
+                [ id (identifier ++ "-fader")
+                , classList
+                    [ ( "crop-frame-fader", True ) ]
                 ]
-                [ img [ id (identifier ++ "-image"), classList [ ( "crop-frame--image", True ) ] ] []
-                , div [ id (identifier ++ "-move"), classList [ ( "crop-frame--move", True ) ] ] []
-                , div [ id (identifier ++ "-resize"), classList [ ( "crop-frame--resize", True ) ] ] []
+                []
+            , div
+                [ id (identifier ++ "-boundary")
+                , classList
+                    [ ( "crop-frame-boundary", True ) ]
                 ]
+                content
             ]
-        ]
 
 
 viewIcon : String -> List ( String, Bool ) -> Html Msg
@@ -1093,10 +1116,10 @@ viewProcessing model =
                     , div
                         [ classList [ ( "detections", True ) ]
                         , style
-                            [ ( "top", intToPixels model.crop.y )
-                            , ( "left", intToPixels model.crop.x )
-                            , ( "width", intToPixels model.crop.width )
-                            , ( "height", intToPixels model.crop.height )
+                            [ ( "top", intToPixels 0 )
+                            , ( "left", intToPixels 0 )
+                            , ( "width", intToPixels 0 )
+                            , ( "height", intToPixels 0 )
                             ]
                         ]
                         (List.map

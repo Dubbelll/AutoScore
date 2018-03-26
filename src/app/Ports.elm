@@ -7,10 +7,6 @@ type alias Detection =
     { color : String, height : Int, width : Int, x : Int, y : Int }
 
 
-type alias Crop =
-    { x : Int, y : Int, width : Int, height : Int }
-
-
 
 -- COMMAND
 
@@ -61,7 +57,7 @@ port cameraStopped : (Bool -> msg) -> Sub msg
 port inputSuccessful : (Bool -> msg) -> Sub msg
 
 
-port croppingSuccessful : (Crop -> msg) -> Sub msg
+port croppingSuccessful : (Bool -> msg) -> Sub msg
 
 
 port pickingBlackSuccessful : (Bool -> msg) -> Sub msg

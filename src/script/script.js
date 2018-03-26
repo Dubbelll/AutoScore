@@ -31,10 +31,12 @@ const state = {
     movementStartY: 0,
     movementStartTop: 0,
     movementStartLeft: 0,
-    cropInput: {},
-    cropBlack: {},
-    cropWhite: {}
+    movementStartWidth: 0,
+    movementStartHeight: 0,
 };
+
+const CROP_TYPE_RECTANGLE = 1;
+const CROP_TYPE_CIRCLE = 2;
 
 window.addEventListener("load", function () {
     setViewportMinimum();
@@ -47,11 +49,20 @@ window.addEventListener("resize", function () {
 window.addEventListener("mouseup", function () {
     state.isDragging = false;
     state.isResizing = false;
-})
+});
+
+window.addEventListener("touchend", function () {
+    state.isDragging = false;
+    state.isResizing = false;
+});
 
 function setViewportMinimum() {
     document.documentElement.style.fontSize = (Math.min(window.innerWidth, window.innerHeight) * 0.01) + "px";
 };
+
+function rem() {
+    return pixelsToNumber(document.documentElement.style.fontSize);
+}
 
 function numberToPixels(number) {
     return "" + number + "px";
@@ -69,12 +80,20 @@ function initializeDrag(startX, startY, crop) {
     state.movementStartLeft = pixelsToNumber(crop.style.left);
 }
 
-function drag(currentX, currentY, crop, image, border) {
+function initializeResize(startX, startY, crop) {
+    state.isResizing = true;
+    state.movementStartX = startX;
+    state.movementStartY = startY;
+    state.movementStartWidth = pixelsToNumber(crop.style.width);
+    state.movementStartHeight = pixelsToNumber(crop.style.height);
+}
+
+function drag(currentX, currentY, boundary, crop, image, border) {
     if (state.isDragging) {
         const newTop = state.movementStartTop + (currentY - state.movementStartY);
         const newLeft = state.movementStartLeft + (currentX - state.movementStartX);
-        const maxTop = state.input.height - pixelsToNumber(crop.style.height) - (border * 2);
-        const maxLeft = state.input.width - pixelsToNumber(crop.style.width) - (border * 2);
+        const maxTop = pixelsToNumber(boundary.style.height) - pixelsToNumber(crop.style.height) - (border * 2);
+        const maxLeft = pixelsToNumber(boundary.style.width) - pixelsToNumber(crop.style.width) - (border * 2);
         const newBoundedTop = Math.max(0, Math.min(maxTop, newTop));
         const newBoundedLeft = Math.max(0, Math.min(maxLeft, newLeft));
         crop.style.top = numberToPixels(newBoundedTop);
@@ -84,26 +103,144 @@ function drag(currentX, currentY, crop, image, border) {
     }
 }
 
-function addEventListenersForDragging(crop, image, area, border) {
+function resizeByFrame(currentX, currentY, boundary, crop, image, border) {
+    if (state.isResizing) {
+        const newWidth = state.movementStartWidth + (currentX - state.movementStartX);
+        const newHeight = state.movementStartHeight + (currentY - state.movementStartY);
+        const maxWidth = pixelsToNumber(boundary.style.width) - pixelsToNumber(crop.style.left) - (border * 2);
+        const maxHeight = pixelsToNumber(boundary.style.height) - pixelsToNumber(crop.style.top) - (border * 2);
+        const newBoundedWidth = Math.max(0, Math.min(maxWidth, newWidth));
+        const newBoundedHeight = Math.max(0, Math.min(maxHeight, newHeight));
+        crop.style.width = numberToPixels(newBoundedWidth);
+        crop.style.height = numberToPixels(newBoundedHeight);
+        image.style.width = numberToPixels(- (newBoundedWidth + border));
+        image.style.height = numberToPixels(- (newBoundedHeight + border));
+    }
+}
+
+function resizeBySlider(value, boundary, crop, image, border) {
+    const boundaryWidth = pixelsToNumber(boundary.style.width);
+    const boundaryHeight = pixelsToNumber(boundary.style.width);
+    const size = Math.min(boundaryWidth, boundaryHeight);
+    const newWidth = size * (value / 100);
+    const newHeight = size * (value / 100);
+    const maxWidth = boundaryWidth - pixelsToNumber(crop.style.left) - (border * 2);
+    const maxHeight = boundaryHeight - pixelsToNumber(crop.style.top) - (border * 2);
+    const newBoundedWidth = Math.max(0, Math.min(maxWidth, newWidth));
+    const newBoundedHeight = Math.max(0, Math.min(maxHeight, newHeight));
+    crop.style.width = numberToPixels(newBoundedWidth);
+    crop.style.height = numberToPixels(newBoundedHeight);
+    image.style.width = numberToPixels(- (newBoundedWidth + border));
+    image.style.height = numberToPixels(- (newBoundedHeight + border));
+}
+
+function addEventListenersForDragging(boundary, crop, image, area, border) {
     area.addEventListener("mousedown", function (event) {
         initializeDrag(event.pageX, event.pageY, crop);
 
         event.preventDefault();
     });
 
-    area.addEventListener("mousemove", function (event) {
-        drag(event.pageX, event.pageY, crop, image, border);
+    window.addEventListener("mousemove", function (event) {
+        drag(event.pageX, event.pageY, boundary, crop, image, border);
     });
 
     area.addEventListener("touchstart", function (event) {
-        initializeDrag(event.targetTouches[0].pageX, event.targetTouches[0].pageY, crop);
+        initializeDrag(event.touches[0].pageX, event.touches[0].pageY, crop);
 
         event.preventDefault();
     });
 
-    area.addEventListener("touchmove", function (event) {
-        drag(event.targetTouches[0].pageX, event.targetTouches[0].pageY, crop, image, border);
+    window.addEventListener("touchmove", function (event) {
+        drag(event.touches[0].pageX, event.touches[0].pageY, boundary, crop, image, border);
     });
+}
+
+function addEventListenersForResizingByFrame(boundary, crop, image, area, border) {
+    area.addEventListener("mousedown", function (event) {
+        initializeResize(event.pageX, event.pageY, crop);
+
+        event.preventDefault();
+    });
+
+    window.addEventListener("mousemove", function (event) {
+        resizeByFrame(event.pageX, event.pageY, boundary, crop, image, border);
+    });
+
+    area.addEventListener("touchstart", function (event) {
+        initializeResize(event.touches[0].pageX, event.touches[0].pageY, crop);
+
+        event.preventDefault();
+    });
+
+    window.addEventListener("touchmove", function (event) {
+        resizeByFrame(event.touches[0].pageX, event.touches[0].pageY, boundary, crop, image, border);
+    });
+}
+
+function addEventListenerForResizingBySlider(boundary, crop, image, slider, border) {
+    slider.addEventListener("input", function (event) {
+        resizeBySlider(parseFloat(event.target.value), boundary, crop, image, border);
+    });
+}
+
+function initializeCropFrame(name, type) {
+    const canvas = document.getElementById("canvas-" + name);
+    const fader = document.getElementById("crop-" + name + "-fader");
+    const boundary = document.getElementById("crop-" + name + "-boundary");
+    const crop = document.getElementById("crop-" + name);
+    const image = document.getElementById("crop-" + name + "-image");
+    const move = document.getElementById("crop-" + name + "-move");
+    const border = rem() * 0.3;
+    const size = Math.min(canvas.width, canvas.height) / 2;
+    const top = (canvas.height / 2) - (size / 2);
+    const left = (canvas.width / 2) - (size / 2);
+    const widthInput = numberToPixels(canvas.width);
+    const widthCrop = numberToPixels(size);
+    const heightInput = numberToPixels(canvas.height);
+    const heightCrop = numberToPixels(size);
+    const topCrop = numberToPixels(top);
+    const topImage = numberToPixels(- (top + border));
+    const leftCrop = numberToPixels(left);
+    const leftImage = numberToPixels(- (left + border));
+    const resizeSize = numberToPixels(size * 0.15);
+
+    fader.style.width = widthInput;
+    fader.style.height = heightInput;
+
+    boundary.style.width = widthInput;
+    boundary.style.height = heightInput;
+
+    crop.style.width = widthCrop;
+    crop.style.height = heightCrop;
+    crop.style.top = topCrop;
+    crop.style.left = leftCrop;
+
+    image.addEventListener("load", function () {
+        image.style.width = widthInput;
+        image.style.height = heightInput;
+        image.style.top = topImage;
+        image.style.left = leftImage;
+    });
+    image.src = canvas.toDataURL("image/png");
+
+    addEventListenersForDragging(boundary, crop, image, move, border);
+    if (type === CROP_TYPE_RECTANGLE) {
+        const resize = document.getElementById("crop-" + name + "-resize");
+        resize.style.width = resizeSize;
+        resize.style.height = resizeSize;
+        addEventListenersForResizingByFrame(boundary, crop, image, resize, border);
+    }
+    if (type === CROP_TYPE_CIRCLE) {
+        const slider = document.getElementById("crop-" + name + "-slider");
+        const widthBoundary = pixelsToNumber(boundary.style.width);
+        const heightBoundary = pixelsToNumber(boundary.style.height);
+        const heightSlider = rem() * 2;
+        slider.style.top = numberToPixels((heightBoundary / 2) - (heightSlider / 2));
+        slider.style.left = numberToPixels((widthBoundary / 2) + rem() * 10);
+        slider.style.width = boundary.style.height;
+        addEventListenerForResizingBySlider(boundary, crop, image, slider, border);
+    }
 }
 
 app.ports.useFile.subscribe(function (id) {
@@ -234,146 +371,85 @@ app.ports.takePhoto.subscribe(function (bool) {
 });
 
 app.ports.startCropping.subscribe(function (bool) {
-    const canvas = document.getElementById("canvas-input");
-    const fader = document.getElementById("crop-input-fader");
-    const boundary = document.getElementById("crop-input-boundary");
-    const crop = document.getElementById("crop-input");
-    const image = document.getElementById("crop-input-image");
-    const move = document.getElementById("crop-input-move");
-    const resize = document.getElementById("crop-input-resize");
-    const border = pixelsToNumber(document.documentElement.style.fontSize) * 0.3;
-    const widthInput = numberToPixels(state.input.width);
-    const widthCrop = numberToPixels(state.input.width / 2);
-    const heightInput = numberToPixels(state.input.height);
-    const heightCrop = numberToPixels(state.input.height / 2);
-    const topCrop = numberToPixels((state.input.height / 2) / 2);
-    const topImage = numberToPixels(- ((state.input.height / 2) / 2) - border);
-    const leftCrop = numberToPixels((state.input.width / 2) / 2);
-    const leftImage = numberToPixels(- ((state.input.width / 2) / 2) - border);
-    const resizeSize = numberToPixels((Math.min(state.input.width, state.input.height) / 2) * 0.2);
-
-    fader.style.width = widthInput;
-    fader.style.height = heightInput;
-
-    boundary.style.width = widthInput;
-    boundary.style.height = heightInput;
-
-    crop.style.width = widthCrop;
-    crop.style.height = heightCrop;
-    crop.style.top = topCrop;
-    crop.style.left = leftCrop;
-
-    image.addEventListener("load", function () {
-        image.style.width = widthInput;
-        image.style.height = heightInput;
-        image.style.top = topImage;
-        image.style.left = leftImage;
-    });
-    image.src = canvas.toDataURL("image/png");
-
-    resize.style.width = resizeSize;
-    resize.style.height = resizeSize;
-
-    addEventListenersForDragging(crop, image, move, border);
+    initializeCropFrame("input", CROP_TYPE_RECTANGLE);
 });
 
 app.ports.cropPhoto.subscribe(function (bool) {
+    const canvasInput = document.getElementById("canvas-input");
     const canvasBlack = document.getElementById("canvas-color-black");
     const canvasWhite = document.getElementById("canvas-color-white");
     const canvasOutput = document.getElementById("canvas-output");
+    const contextInput = canvasInput.getContext("2d");
     const contextBlack = canvasBlack.getContext("2d");
     const contextWhite = canvasWhite.getContext("2d");
     const contextOutput = canvasOutput.getContext("2d");
-    const image = new Image();
+    const crop = document.getElementById("crop-input");
+    const top = pixelsToNumber(crop.style.top);
+    const left = pixelsToNumber(crop.style.left);
+    const width = pixelsToNumber(crop.style.width);
+    const height = pixelsToNumber(crop.style.height);
+    const cropped = contextInput.getImageData(
+        left,
+        top,
+        width,
+        height
+    );
 
-    image.addEventListener("load", function () {
-        canvasBlack.width = image.width;
-        canvasWhite.width = image.width;
-        canvasBlack.height = image.height;
-        canvasWhite.height = image.height;
-        canvasOutput.width = image.width;
-        canvasOutput.height = image.height;
-        contextBlack.drawImage(image, 0, 0);
-        contextWhite.drawImage(image, 0, 0);
-        contextOutput.drawImage(image, 0, 0);
+    canvasBlack.width = width;
+    canvasWhite.width = width;
+    canvasOutput.width = width;
+    canvasBlack.height = height;
+    canvasWhite.height = height;
+    canvasOutput.height = height;
+    contextBlack.putImageData(cropped, 0, 0);
+    contextWhite.putImageData(cropped, 0, 0);
+    contextOutput.putImageData(cropped, 0, 0);
 
-        const crop = {
-            x: Math.round((window.innerWidth - image.width) / 2),
-            y: Math.round((window.innerHeight - image.height) / 2),
-            width: image.width,
-            height: image.height
-        }
-
-        const cropData = {
-            image: image,
-            width: image.width,
-            height: image.height
-        };
-
-        state.cropped = cropData;
-        app.ports.croppingSuccessful.send(crop);
-    });
-    image.src = state.cropInput.getCroppedImage().src;
+    app.ports.croppingSuccessful.send(true);
 });
 
 app.ports.startPickingBlack.subscribe(function (bool) {
-    const canvas = document.getElementById("canvas-color-black");
-
-    const width = state.cropped.width / 8;
-    const height = state.cropped.height / 8;
-    const crop = new ImageCropper(canvas, width - (width / 2), height - (height / 2), width, height, false);
-
-    crop.setImage(state.cropped.image);
-
-    state.cropBlack = crop;
+    initializeCropFrame("color-black", CROP_TYPE_CIRCLE);
 });
 
 app.ports.pickBlack.subscribe(function (bool) {
     const canvas = document.getElementById("canvas-color-black");
     const context = canvas.getContext("2d");
-    const image = new Image();
+    const crop = document.getElementById("crop-color-black");
+    const top = pixelsToNumber(crop.style.top);
+    const left = pixelsToNumber(crop.style.left);
+    const width = pixelsToNumber(crop.style.width);
+    const height = pixelsToNumber(crop.style.height);
+    const cropped = context.getImageData(
+        left,
+        top,
+        width,
+        height
+    );
 
-    image.addEventListener("load", function () {
-        const cropData = {
-            image: image,
-            width: image.width,
-            height: image.height
-        };
-
-        state.black = cropData;
-        app.ports.pickingBlackSuccessful.send(true);
-    });
-    image.src = state.cropBlack.getCroppedImage().src;
+    app.ports.pickingBlackSuccessful.send(true);
 });
 
 app.ports.startPickingWhite.subscribe(function (bool) {
-    const canvas = document.getElementById("canvas-color-white");
-
-    const width = state.cropped.width / 8;
-    const height = state.cropped.height / 8;
-    const crop = new ImageCropper(canvas, width - (width / 2), height - (height / 2), width, height, false);
-
-    crop.setImage(state.cropped.image);
-
-    state.cropWhite = crop;
+    initializeCropFrame("color-white", CROP_TYPE_CIRCLE);
 });
 
 app.ports.pickWhite.subscribe(function (bool) {
     const canvas = document.getElementById("canvas-color-white");
     const context = canvas.getContext("2d");
-    const image = new Image();
+    const crop = document.getElementById("crop-color-white");
+    const top = pixelsToNumber(crop.style.top);
+    const left = pixelsToNumber(crop.style.left);
+    const width = pixelsToNumber(crop.style.width);
+    const height = pixelsToNumber(crop.style.height);
+    const cropped = context.getImageData(
+        left,
+        top,
+        width,
+        height
+    );
 
-    image.addEventListener("load", function () {
-        const cropData = {
-            image: image,
-            width: image.width,
-            height: image.height
-        };
-
-        state.white = cropData;
-        app.ports.pickingWhiteSuccessful.send(true);
-    });
-    image.src = state.cropWhite.getCroppedImage().src;
+    app.ports.pickingWhiteSuccessful.send(true);
 });
 
 app.ports.startProcessing.subscribe(function (bool) {

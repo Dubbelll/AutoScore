@@ -88,53 +88,165 @@ function initializeResize(startX, startY, crop) {
     state.movementStartHeight = pixelsToNumber(crop.style.height);
 }
 
-function drag(currentX, currentY, boundary, crop, image, border) {
+function calculateBoundedOffset(currentX, currentY, widthBoundary, heightBoundary, widthCrop, heightCrop, border) {
+    const newTop = state.movementStartTop + (currentY - state.movementStartY);
+    const newLeft = state.movementStartLeft + (currentX - state.movementStartX);
+    const maxTop = heightBoundary - heightCrop - (border * 2);
+    const maxLeft = widthBoundary - widthCrop - (border * 2);
+    const newBoundedTop = Math.max(0, Math.min(maxTop, newTop));
+    const newBoundedLeft = Math.max(0, Math.min(maxLeft, newLeft));
+
+    return { top: newBoundedTop, left: newBoundedLeft };
+}
+
+function calculatePreviewOffset(offset, sizePreview, widthBoundary, heightBoundary, widthCrop, heightCrop, border) {
+    const size = Math.min(widthBoundary, heightBoundary);
+    const previewTop = (- (offset.top + border)) * (sizePreview / heightCrop);
+    const previewLeft = (- (offset.left + border)) * (sizePreview / widthCrop);
+
+    return { top: previewTop, left: previewLeft };
+}
+
+function drag(currentX, currentY, boundary, crop, border, image, imagePreview, sizePreview) {
     if (state.isDragging) {
-        const newTop = state.movementStartTop + (currentY - state.movementStartY);
-        const newLeft = state.movementStartLeft + (currentX - state.movementStartX);
-        const maxTop = pixelsToNumber(boundary.style.height) - pixelsToNumber(crop.style.height) - (border * 2);
-        const maxLeft = pixelsToNumber(boundary.style.width) - pixelsToNumber(crop.style.width) - (border * 2);
-        const newBoundedTop = Math.max(0, Math.min(maxTop, newTop));
-        const newBoundedLeft = Math.max(0, Math.min(maxLeft, newLeft));
-        crop.style.top = numberToPixels(newBoundedTop);
-        crop.style.left = numberToPixels(newBoundedLeft);
-        image.style.top = numberToPixels(- (newBoundedTop + border));
-        image.style.left = numberToPixels(- (newBoundedLeft + border));
+        const widthBoundary = pixelsToNumber(boundary.style.width);
+        const widthCrop = pixelsToNumber(crop.style.width);
+        const heightBoundary = pixelsToNumber(boundary.style.height);
+        const heightCrop = pixelsToNumber(crop.style.height);
+
+        const offset = calculateBoundedOffset(
+            currentX,
+            currentY,
+            widthBoundary,
+            heightBoundary,
+            widthCrop,
+            heightCrop,
+            border
+        );
+        crop.style.top = numberToPixels(offset.top);
+        crop.style.left = numberToPixels(offset.left);
+        image.style.top = numberToPixels(- (offset.top + border));
+        image.style.left = numberToPixels(- (offset.left + border));
+
+        if (imagePreview) {
+            const offsetPreview = calculatePreviewOffset(
+                offset,
+                sizePreview,
+                widthBoundary,
+                heightBoundary,
+                widthCrop,
+                heightCrop,
+                border
+            );
+            imagePreview.style.top = numberToPixels(offsetPreview.top);
+            imagePreview.style.left = numberToPixels(offsetPreview.left);
+        }
     }
 }
 
-function resizeByFrame(currentX, currentY, boundary, crop, image, border) {
-    if (state.isResizing) {
-        const newWidth = state.movementStartWidth + (currentX - state.movementStartX);
-        const newHeight = state.movementStartHeight + (currentY - state.movementStartY);
-        const maxWidth = pixelsToNumber(boundary.style.width) - pixelsToNumber(crop.style.left) - (border * 2);
-        const maxHeight = pixelsToNumber(boundary.style.height) - pixelsToNumber(crop.style.top) - (border * 2);
-        const newBoundedWidth = Math.max(0, Math.min(maxWidth, newWidth));
-        const newBoundedHeight = Math.max(0, Math.min(maxHeight, newHeight));
-        crop.style.width = numberToPixels(newBoundedWidth);
-        crop.style.height = numberToPixels(newBoundedHeight);
-        image.style.width = numberToPixels(- (newBoundedWidth + border));
-        image.style.height = numberToPixels(- (newBoundedHeight + border));
-    }
-}
-
-function resizeBySlider(value, boundary, crop, image, border) {
-    const boundaryWidth = pixelsToNumber(boundary.style.width);
-    const boundaryHeight = pixelsToNumber(boundary.style.width);
-    const size = Math.min(boundaryWidth, boundaryHeight);
-    const newWidth = size * (value / 100);
-    const newHeight = size * (value / 100);
-    const maxWidth = boundaryWidth - pixelsToNumber(crop.style.left) - (border * 2);
-    const maxHeight = boundaryHeight - pixelsToNumber(crop.style.top) - (border * 2);
+function calculateFrameDimensions(currentX, currentY, widthBoundary, heightBoundary, topCrop, leftCrop, border) {
+    const newWidth = state.movementStartWidth + (currentX - state.movementStartX);
+    const newHeight = state.movementStartHeight + (currentY - state.movementStartY);
+    const maxWidth = widthBoundary - leftCrop - (border * 2);
+    const maxHeight = heightBoundary - topCrop - (border * 2);
     const newBoundedWidth = Math.max(0, Math.min(maxWidth, newWidth));
     const newBoundedHeight = Math.max(0, Math.min(maxHeight, newHeight));
-    crop.style.width = numberToPixels(newBoundedWidth);
-    crop.style.height = numberToPixels(newBoundedHeight);
-    image.style.width = numberToPixels(- (newBoundedWidth + border));
-    image.style.height = numberToPixels(- (newBoundedHeight + border));
+
+    return { width: newBoundedWidth, height: newBoundedHeight };
 }
 
-function addEventListenersForDragging(boundary, crop, image, area, border) {
+function resizeByFrame(currentX, currentY, boundary, crop, border, image) {
+    if (state.isResizing) {
+        const widthBoundary = pixelsToNumber(boundary.style.width);
+        const heightBoundary = pixelsToNumber(boundary.style.height);
+        const topCrop = pixelsToNumber(crop.style.top);
+        const leftCrop = pixelsToNumber(crop.style.left);
+
+        const dimensions = calculateFrameDimensions(
+            currentX,
+            currentY,
+            widthBoundary,
+            heightBoundary,
+            topCrop,
+            leftCrop,
+            border
+        );
+        crop.style.width = numberToPixels(dimensions.width);
+        crop.style.height = numberToPixels(dimensions.height);
+    }
+}
+
+function calculateSliderDimensions(value, size, widthBoundary, heightBoundary, topCrop, leftCrop, border) {
+    const newWidth = size * (value / 100);
+    const newHeight = size * (value / 100);
+    const maxWidth = widthBoundary - leftCrop - (border * 2);
+    const maxHeight = heightBoundary - topCrop - (border * 2);
+    const newBoundedWidth = Math.max(0, Math.min(maxWidth, newWidth));
+    const newBoundedHeight = Math.max(0, Math.min(maxHeight, newHeight));
+
+    return { width: newBoundedWidth, height: newBoundedHeight };
+}
+
+function calculatePreviewDimensions(size, sizePreview, widthBoundary, heightBoundary, widthCrop, heightCrop) {
+    const newWidth = widthBoundary * (sizePreview / widthCrop);
+    const newHeight = heightBoundary * (sizePreview / heightCrop);
+
+    return { width: newWidth, height: newHeight };
+}
+
+function resizeBySlider(targetValue, boundary, crop, border, image, imagePreview, sizePreview) {
+    const value = parseFloat(targetValue);
+    const widthBoundary = pixelsToNumber(boundary.style.width);
+    const heightBoundary = pixelsToNumber(boundary.style.height);
+    const topCrop = pixelsToNumber(crop.style.top);
+    const leftCrop = pixelsToNumber(crop.style.left);
+    const size = Math.min(widthBoundary, heightBoundary);
+    const ratio = widthBoundary / heightBoundary;
+
+    const dimensions = calculateSliderDimensions(
+        value,
+        size,
+        widthBoundary,
+        heightBoundary,
+        topCrop,
+        leftCrop,
+        border
+    );
+    crop.style.width = numberToPixels(dimensions.width);
+    crop.style.height = numberToPixels(dimensions.height);
+
+    if (imagePreview) {
+        const topCrop = pixelsToNumber(crop.style.top);
+        const leftCrop = pixelsToNumber(crop.style.left);
+        const widthCrop = pixelsToNumber(crop.style.width);
+        const heightCrop = pixelsToNumber(crop.style.height);
+        const offsetCrop = { top: topCrop, left: leftCrop };
+
+        const offsetPreview = calculatePreviewOffset(
+            offsetCrop,
+            sizePreview,
+            widthBoundary,
+            heightBoundary,
+            dimensions.width,
+            dimensions.height,
+            border
+        );
+        const dimensionsPreview = calculatePreviewDimensions(
+            size,
+            sizePreview,
+            widthBoundary,
+            heightBoundary,
+            widthCrop,
+            heightCrop
+        );
+        imagePreview.style.top = numberToPixels(offsetPreview.top);
+        imagePreview.style.left = numberToPixels(offsetPreview.left);
+        imagePreview.style.width = numberToPixels(dimensionsPreview.width);
+        imagePreview.style.height = numberToPixels(dimensionsPreview.height);
+    }
+}
+
+function addEventListenersForDragging(boundary, crop, border, area, image, imagePreview, sizePreview) {
     area.addEventListener("mousedown", function (event) {
         initializeDrag(event.pageX, event.pageY, crop);
 
@@ -142,7 +254,7 @@ function addEventListenersForDragging(boundary, crop, image, area, border) {
     });
 
     window.addEventListener("mousemove", function (event) {
-        drag(event.pageX, event.pageY, boundary, crop, image, border);
+        drag(event.pageX, event.pageY, boundary, crop, border, image, imagePreview, sizePreview);
     });
 
     area.addEventListener("touchstart", function (event) {
@@ -152,11 +264,11 @@ function addEventListenersForDragging(boundary, crop, image, area, border) {
     });
 
     window.addEventListener("touchmove", function (event) {
-        drag(event.touches[0].pageX, event.touches[0].pageY, boundary, crop, image, border);
+        drag(event.touches[0].pageX, event.touches[0].pageY, boundary, crop, border, image, imagePreview, sizePreview);
     });
 }
 
-function addEventListenersForResizingByFrame(boundary, crop, image, area, border) {
+function addEventListenersForResizingByFrame(boundary, crop, border, area, image) {
     area.addEventListener("mousedown", function (event) {
         initializeResize(event.pageX, event.pageY, crop);
 
@@ -164,7 +276,7 @@ function addEventListenersForResizingByFrame(boundary, crop, image, area, border
     });
 
     window.addEventListener("mousemove", function (event) {
-        resizeByFrame(event.pageX, event.pageY, boundary, crop, image, border);
+        resizeByFrame(event.pageX, event.pageY, boundary, crop, border, image);
     });
 
     area.addEventListener("touchstart", function (event) {
@@ -174,13 +286,13 @@ function addEventListenersForResizingByFrame(boundary, crop, image, area, border
     });
 
     window.addEventListener("touchmove", function (event) {
-        resizeByFrame(event.touches[0].pageX, event.touches[0].pageY, boundary, crop, image, border);
+        resizeByFrame(event.touches[0].pageX, event.touches[0].pageY, boundary, crop, border, image);
     });
 }
 
-function addEventListenerForResizingBySlider(boundary, crop, image, slider, border) {
+function addEventListenerForResizingBySlider(boundary, crop, border, slider, image, imagePreview, sizePreview) {
     slider.addEventListener("input", function (event) {
-        resizeBySlider(parseFloat(event.target.value), boundary, crop, image, border);
+        resizeBySlider(event.target.value, boundary, crop, border, image, imagePreview, sizePreview);
     });
 }
 
@@ -224,22 +336,38 @@ function initializeCropFrame(name, type) {
     });
     image.src = canvas.toDataURL("image/png");
 
-    addEventListenersForDragging(boundary, crop, image, move, border);
     if (type === CROP_TYPE_RECTANGLE) {
         const resize = document.getElementById("crop-" + name + "-resize");
         resize.style.width = resizeSize;
         resize.style.height = resizeSize;
-        addEventListenersForResizingByFrame(boundary, crop, image, resize, border);
+        addEventListenersForDragging(boundary, crop, border, move, image);
+        addEventListenersForResizingByFrame(boundary, crop, border, resize, image);
     }
     if (type === CROP_TYPE_CIRCLE) {
+        const preview = document.getElementById("crop-" + name + "-preview");
+        const imagePreview = document.getElementById("crop-" + name + "-preview-image");
         const slider = document.getElementById("crop-" + name + "-slider");
-        const widthBoundary = pixelsToNumber(boundary.style.width);
-        const heightBoundary = pixelsToNumber(boundary.style.height);
+        const sizePreview = Math.min(canvas.width, canvas.height) * 0.2;
         const heightSlider = rem() * 2;
-        slider.style.top = numberToPixels((heightBoundary / 2) - (heightSlider / 2));
-        slider.style.left = numberToPixels((widthBoundary / 2) + rem() * 10);
-        slider.style.width = boundary.style.height;
-        addEventListenerForResizingBySlider(boundary, crop, image, slider, border);
+
+        preview.style.top = numberToPixels(- (sizePreview + (rem() * 5)));
+        preview.style.width = numberToPixels(sizePreview);
+        preview.style.height = numberToPixels(sizePreview);
+
+        imagePreview.addEventListener("load", function () {
+            imagePreview.style.width = numberToPixels(canvas.width * (sizePreview / size));
+            imagePreview.style.height = numberToPixels(canvas.height * (sizePreview / size));
+            imagePreview.style.top = numberToPixels((- (top + border)) * (sizePreview / size));
+            imagePreview.style.left = numberToPixels((- (left + border)) * (sizePreview / size));
+        });
+        imagePreview.src = canvas.toDataURL("image/png");
+
+        slider.style.top = numberToPixels((canvas.height / 2) - (heightSlider / 2));
+        slider.style.left = numberToPixels((canvas.width / 2) + rem() * 10);
+        slider.style.width = numberToPixels(canvas.height);
+
+        addEventListenersForDragging(boundary, crop, border, move, image, imagePreview, sizePreview);
+        addEventListenerForResizingBySlider(boundary, crop, border, slider, image, imagePreview, sizePreview);
     }
 }
 

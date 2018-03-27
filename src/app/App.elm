@@ -755,6 +755,7 @@ view model =
         , viewCanvas "canvas-input" (model.isInputSuccessful && model.route == RouteCrop)
         , viewCanvas "canvas-color-black" (model.isCroppingSuccessful && model.route == RouteBlack)
         , viewCanvas "canvas-color-white" (model.isPickingBlackSuccessful && model.route == RouteWhite)
+        , viewCanvas "canvas-preview" False
         , viewCanvas "canvas-output" (model.isPickingWhiteSuccessful && model.route == RouteProcessing)
         , viewCropFrame "crop-input" Rectangle (model.isInputSuccessful && model.route == RouteCrop)
         , viewCropFrame "crop-color-black" Circle (model.isCroppingSuccessful && model.route == RouteBlack)
@@ -848,6 +849,8 @@ viewCropFrame identifier shape isVisible =
                         [ img [ id (identifier ++ "-image"), classList [ ( "crop-frame--image", True ) ] ] []
                         , div [ id (identifier ++ "-move"), classList [ ( "crop-frame--move", True ) ] ] []
                         ]
+                    , div [ id (identifier ++ "-preview"), classList [ ( "crop-frame-preview", True ) ] ]
+                        [ img [ id (identifier ++ "-preview-image"), classList [ ( "crop-frame-preview--image", True ) ] ] [] ]
                     , input [ id (identifier ++ "-slider"), classList [ ( "crop-frame-slider", True ) ], type_ "range" ] []
                     ]
     in

@@ -257,6 +257,20 @@ input[type="file"] {
     transform: translateX(-50%) translateY(-50%);
     z-index: $depth-crop;
 
+    &>.crop-frame-preview 
+    {
+        position: absolute;
+        left: 50%;
+        transform: translateX(-50%);
+        overflow: hidden;
+        border-radius: 50%;
+
+        &>.crop-frame-preview--image
+        {
+            position: absolute;
+        }
+    }
+
     &>.crop-frame-slider
     {
         position: absolute;

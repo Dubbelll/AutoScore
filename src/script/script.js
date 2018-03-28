@@ -33,6 +33,8 @@ const state = {
     movementStartLeft: 0,
     movementStartWidth: 0,
     movementStartHeight: 0,
+    thresholdsBlack: {},
+    thresholdsWhite: {}
 };
 
 const CROP_TYPE_RECTANGLE = 1;
@@ -177,12 +179,12 @@ function resizeByFrame(currentX, currentY, boundary, crop, border, image) {
 }
 
 function calculateSliderDimensions(value, size, widthBoundary, heightBoundary, topCrop, leftCrop, border) {
-    const newWidth = size * (value / 100);
-    const newHeight = size * (value / 100);
+    const newSize = size * (value / 100);
     const maxWidth = widthBoundary - leftCrop - (border * 2);
     const maxHeight = heightBoundary - topCrop - (border * 2);
-    const newBoundedWidth = Math.max(0, Math.min(maxWidth, newWidth));
-    const newBoundedHeight = Math.max(0, Math.min(maxHeight, newHeight));
+    const newMax = Math.min(maxWidth, maxHeight);
+    const newBoundedWidth = Math.max(0, Math.min(newMax, newSize));
+    const newBoundedHeight = Math.max(0, Math.min(newMax, newSize));
 
     return { width: newBoundedWidth, height: newBoundedHeight };
 }
@@ -363,12 +365,111 @@ function initializeCropFrame(name, type) {
         imagePreview.src = canvas.toDataURL("image/png");
 
         slider.style.top = numberToPixels((canvas.height / 2) - (heightSlider / 2));
-        slider.style.left = numberToPixels((canvas.width / 2) + rem() * 10);
+        slider.style.left = numberToPixels(
+            (canvas.width - (canvas.height / 2))
+            + (rem() * 2.5)
+            + ((rem() * 2.5) - (heightSlider / 2))
+            + (rem() * 5)
+        );
         slider.style.width = numberToPixels(canvas.height);
 
         addEventListenersForDragging(boundary, crop, border, move, image, imagePreview, sizePreview);
         addEventListenerForResizingBySlider(boundary, crop, border, slider, image, imagePreview, sizePreview);
     }
+}
+
+function calculateFixedAspectDimensions(width, height, maxWidth, maxHeight) {
+    let newWidth = width;
+    let newHeight = height;
+    let newAspectRatio = 1;
+
+    if (width > height) {
+        if (width > maxWidth) {
+            newAspectRatio = width / height;
+            newWidth = maxWidth;
+            newHeight = Math.round(maxWidth / newAspectRatio);
+        }
+    }
+    else if (height > width) {
+        if (height > maxHeight) {
+            newAspectRatio = height / width;
+            newWidth = Math.round(maxHeight / newAspectRatio);
+            newHeight = maxHeight;
+        }
+    }
+    else {
+        if (width > maxWidth && height > maxHeight) {
+            newAspectRatio = 1;
+            newWidth = Math.min(maxWidth, maxHeight);
+            newHeight = Math.min(maxWidth, maxHeight);
+        }
+    }
+
+    return { width: newWidth, height: newHeight, aspectRatio: newAspectRatio };
+}
+
+function calculateAverageColors(pixels) {
+    let reds = 0;
+    let greens = 0;
+    let blues = 0;
+    let count = 0;
+
+    for (let i = 0; i < pixels.length; i += 4) {
+        if (pixels[i + 3] !== 0) {
+            reds += pixels[i];
+            greens += pixels[i + 1];
+            blues += pixels[i + 2];
+
+            count++;
+        }
+    }
+
+    const averages = {
+        r: reds / count,
+        g: greens / count,
+        b: blues / count
+    };
+
+    return averages;
+}
+
+function determineAverageColorsInCrop(name, callback) {
+    const canvasColor = document.getElementById("canvas-" + name);
+    const canvasTemporary = document.getElementById("canvas-temporary");
+    const contextColor = canvasColor.getContext("2d");
+    const contextTemporary = canvasTemporary.getContext("2d");
+    const crop = document.getElementById("crop-" + name);
+    const border = rem() * 0.3;
+    const top = pixelsToNumber(crop.style.top) + border;
+    const left = pixelsToNumber(crop.style.left) + border;
+    const size = Math.min(pixelsToNumber(crop.style.width), pixelsToNumber(crop.style.height));
+    const radius = size / 2;
+    const image = new Image();
+    const cropped = contextColor.getImageData(
+        left,
+        top,
+        size,
+        size
+    );
+
+    canvasTemporary.width = size;
+    canvasTemporary.height = size;
+    contextTemporary.putImageData(cropped, 0, 0);
+
+    image.addEventListener("load", function () {
+        contextTemporary.clearRect(0, 0, canvasTemporary.width, canvasTemporary.height);
+        contextTemporary.beginPath();
+        contextTemporary.arc(radius, radius, radius, 0, Math.PI * 2, true);
+        contextTemporary.closePath();
+        contextTemporary.clip();
+        contextTemporary.drawImage(image, 0, 0);
+
+        const pixels = contextTemporary.getImageData(0, 0, canvasTemporary.width, canvasTemporary.height).data;
+        const averages = calculateAverageColors(pixels);
+
+        callback(averages);
+    });
+    image.src = canvasTemporary.toDataURL("image/png");
 }
 
 app.ports.useFile.subscribe(function (id) {
@@ -385,44 +486,22 @@ app.ports.useFile.subscribe(function (id) {
 
     reader.addEventListener("load", function () {
         image.addEventListener("load", function () {
-            let width = image.width;
-            let height = image.height;
-            let aspectRatio = 1;
+            const dimensions = calculateFixedAspectDimensions(
+                image.width,
+                image.height,
+                window.innerWidth,
+                window.innerHeight
+            );
 
-            if (image.width > image.height) {
-                aspectRatio = image.width / image.height;
-
-                if (image.width > window.innerWidth) {
-                    width = window.innerWidth;
-                    height = Math.round(width / aspectRatio);
-                }
-            }
-            else if (image.height > image.width) {
-                aspectRatio = image.height / image.width;
-
-                if (image.height > window.innerHeight) {
-                    height = window.innerHeight;
-                    width = Math.round(height / aspectRatio);
-                }
-            }
-            else {
-                aspectRatio = 1;
-
-                if (image.width > window.innerWidth && image.height > window.innerHeight) {
-                    width = Math.min(window.innerWidth, window.innerHeight);
-                    height = width;
-                }
-            }
-
-            canvas.width = width;
-            canvas.height = height;
-            context.drawImage(image, 0, 0, width, height);
+            canvas.width = dimensions.width;
+            canvas.height = dimensions.height;
+            context.drawImage(image, 0, 0, dimensions.width, dimensions.height);
 
             const imageData =
                 {
                     image: image,
-                    width: width,
-                    height: height
+                    width: dimensions.width,
+                    height: dimensions.height
                 };
 
             state.input = imageData;
@@ -507,33 +586,49 @@ app.ports.cropPhoto.subscribe(function (bool) {
     const canvasBlack = document.getElementById("canvas-color-black");
     const canvasWhite = document.getElementById("canvas-color-white");
     const canvasOutput = document.getElementById("canvas-output");
+    const canvasTemporary = document.getElementById("canvas-temporary");
     const contextInput = canvasInput.getContext("2d");
     const contextBlack = canvasBlack.getContext("2d");
     const contextWhite = canvasWhite.getContext("2d");
     const contextOutput = canvasOutput.getContext("2d");
+    const contextTemporary = canvasTemporary.getContext("2d");
     const crop = document.getElementById("crop-input");
     const top = pixelsToNumber(crop.style.top);
     const left = pixelsToNumber(crop.style.left);
     const width = pixelsToNumber(crop.style.width);
     const height = pixelsToNumber(crop.style.height);
+    const image = new Image();
     const cropped = contextInput.getImageData(
         left,
         top,
         width,
         height
     );
+    const dimensions = calculateFixedAspectDimensions(
+        width,
+        height,
+        window.innerWidth * 0.6,
+        window.innerHeight * 0.6
+    );
 
-    canvasBlack.width = width;
-    canvasWhite.width = width;
-    canvasOutput.width = width;
-    canvasBlack.height = height;
-    canvasWhite.height = height;
-    canvasOutput.height = height;
-    contextBlack.putImageData(cropped, 0, 0);
-    contextWhite.putImageData(cropped, 0, 0);
-    contextOutput.putImageData(cropped, 0, 0);
+    canvasTemporary.width = width;
+    canvasTemporary.height = height;
+    contextTemporary.putImageData(cropped, 0, 0);
 
-    app.ports.croppingSuccessful.send(true);
+    image.addEventListener("load", function () {
+        canvasBlack.width = dimensions.width;
+        canvasWhite.width = dimensions.width;
+        canvasOutput.width = dimensions.width;
+        canvasBlack.height = dimensions.height;
+        canvasWhite.height = dimensions.height;
+        canvasOutput.height = dimensions.height;
+        contextBlack.drawImage(image, 0, 0, dimensions.width, dimensions.height);
+        contextWhite.drawImage(image, 0, 0, dimensions.width, dimensions.height);
+        contextOutput.drawImage(image, 0, 0, dimensions.width, dimensions.height);
+
+        app.ports.croppingSuccessful.send(true);
+    });
+    image.src = canvasTemporary.toDataURL("image/png");
 });
 
 app.ports.startPickingBlack.subscribe(function (bool) {
@@ -541,21 +636,14 @@ app.ports.startPickingBlack.subscribe(function (bool) {
 });
 
 app.ports.pickBlack.subscribe(function (bool) {
-    const canvas = document.getElementById("canvas-color-black");
-    const context = canvas.getContext("2d");
-    const crop = document.getElementById("crop-color-black");
-    const top = pixelsToNumber(crop.style.top);
-    const left = pixelsToNumber(crop.style.left);
-    const width = pixelsToNumber(crop.style.width);
-    const height = pixelsToNumber(crop.style.height);
-    const cropped = context.getImageData(
-        left,
-        top,
-        width,
-        height
-    );
+    function useAverages(averages) {
+        state.thresholdsBlack = averages;
+        console.log(averages);
 
-    app.ports.pickingBlackSuccessful.send(true);
+        app.ports.pickingBlackSuccessful.send(true);
+    }
+
+    determineAverageColorsInCrop("color-black", useAverages);
 });
 
 app.ports.startPickingWhite.subscribe(function (bool) {
@@ -563,21 +651,14 @@ app.ports.startPickingWhite.subscribe(function (bool) {
 });
 
 app.ports.pickWhite.subscribe(function (bool) {
-    const canvas = document.getElementById("canvas-color-white");
-    const context = canvas.getContext("2d");
-    const crop = document.getElementById("crop-color-white");
-    const top = pixelsToNumber(crop.style.top);
-    const left = pixelsToNumber(crop.style.left);
-    const width = pixelsToNumber(crop.style.width);
-    const height = pixelsToNumber(crop.style.height);
-    const cropped = context.getImageData(
-        left,
-        top,
-        width,
-        height
-    );
+    function useAverages(averages) {
+        state.thresholdsWhite = averages;
+        console.log(averages);
 
-    app.ports.pickingWhiteSuccessful.send(true);
+        app.ports.pickingWhiteSuccessful.send(true);
+    }
+
+    const averages = determineAverageColorsInCrop("color-white", useAverages);
 });
 
 app.ports.startProcessing.subscribe(function (bool) {
@@ -585,63 +666,68 @@ app.ports.startProcessing.subscribe(function (bool) {
     const context = canvas.getContext("2d");
     const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
 
-    console.log("processing size: " + canvas.width + " x " + canvas.height);
-
-    const thresholdBlack = 32.5;
-    const thresholdWhite = 150;
-
-    function isMatch(matches, size, x, y) {
-        return matches.filter(function (match) {
-            return (x >= match.x && x <= match.x + size)
-                && (y >= match.y && y <= match.y + size);
-        }).length > 0;
-    }
-
-    function averageColors(pixels) {
-        let reds = 0;
-        let greens = 0;
-        let blues = 0;
-
-        for (let i = 0; i < pixels.length; i += 4) {
-            reds += pixels[i];
-            greens += pixels[i + 1];
-            blues += pixels[i + 2];
-        }
-
-        const averages = {
-            r: reds / pixels.length,
-            g: greens / pixels.length,
-            b: blues / pixels.length
-        };
-
-        return averages;
-    }
-
     function isBlack(r, g, b) {
-        return r <= thresholdBlack
-            && g <= thresholdBlack
-            && b <= thresholdBlack;
+        return r <= state.thresholdsBlack.r
+            && g <= state.thresholdsBlack.g
+            && b <= state.thresholdsBlack.b;
     }
 
     function isWhite(r, g, b) {
-        return r >= thresholdWhite
-            && g >= thresholdWhite
-            && b >= thresholdWhite;
+        return r >= state.thresholdsWhite.r
+            && g >= state.thresholdsWhite.g
+            && b >= state.thresholdsWhite.b;
     }
 
-    function isMostlyBlack(averages) {
-        return averages.r <= thresholdBlack
-            && averages.g <= thresholdBlack
-            && averages.b <= thresholdBlack;
+    function isWithinRange(a, b, range) {
+        return (a.x - range === b.x
+            || a.x + range === b.x
+            || a.y - range === b.y
+            || a.y + range === b.y)
+            && a.color === b.color
     }
 
-    function isMostlyWhite(averages) {
-        return averages.r >= thresholdWhite
-            && averages.g >= thresholdWhite
-            && averages.b >= thresholdWhite;
+    function groupMatches(groups, matches, matchIndex) {
+        const match = matches[matchIndex];
+        const exisitingGroupIndexes = [];
+
+        loopGroups:
+        for (let i = 0; i < groups.length; i++) {
+            const group = groups[i];
+
+            loopMembers:
+            for (let j = 0; j < group.length; j++) {
+                const member = group[j];
+                const isWithinRange = (match.x - 1 === member.x
+                    || match.x + 1 === member.x
+                    || match.y - 1 === member.y
+                    || match.y + 1 === member.y)
+                    && match.color === member.color;
+
+                if (isWithinRange) {
+                    exisitingGroupIndexes.push(i);
+
+                    break loopGroups;
+                }
+            }
+        }
+
+        if (exisitingGroupIndexes.length === 0) {
+            groups.push([matchIndex]);
+        }
+        if (exisitingGroupIndexes.length === 1) {
+            const groupIndex = exisitingGroupIndexes[0];
+            groups[groupIndex].push(matchIndex);
+        }
+
+        if (matchIndex + 1 < matches.length) {
+            console.log("+");
+            groupMatches(groups, matches, matchIndex + 1);
+        }
+        else {
+            return groups;
+        }
     }
 
-    const size = 25;
     const matches = [];
     for (let y = 0; y < canvas.height; y++) {
         for (let x = 0; x < canvas.width; x++) {
@@ -652,59 +738,16 @@ app.ports.startProcessing.subscribe(function (bool) {
             if (black) {
                 context.fillStyle = "#F44336";
                 context.fillRect(x, y, 3, 3);
+                matches.push({ x: x, y: y, color: 0 })
             }
             if (white) {
                 context.fillStyle = "#03A9F4";
                 context.fillRect(x, y, 3, 3);
+                matches.push({ x: x, y: y, color: 1 });
             }
-
-            /* if (!hasMatched) {
-                const vector = context.getImageData(x, y, size, size).data;
-                const averages = averageColors(vector);
-                const isBlack = isMostlyBlack(averages);
-                const isWhite = isMostlyWhite(averages);
-
-                if (isBlack) {
-                    context.fillStyle = "#F44336";
-                    context.fillRect(x, y, 3, 3);
-                    matches.push({ x: x, y: y, color: "black" });
-                }
-                if (isWhite) {
-                    context.fillStyle = "#03A9F4";
-                    context.fillRect(x, y, 3, 3);
-                    matches.push({ x: x, y: y, color: "white" });
-                }
-            } */
         }
     }
-    console.log(matches);
 
-
-    /* const thresholdBlack = 32.5;
-    const thresholdWhite = 150;
-
-    tracking.ColorTracker.registerColor("black", function (r, g, b) {
-        return r <= thresholdBlack && g <= thresholdBlack && b <= thresholdBlack;
-    });
-
-    tracking.ColorTracker.registerColor("white", function (r, g, b) {
-        return r >= thresholdWhite && g >= thresholdWhite && b >= thresholdWhite;
-    });
-
-    const tracker = new tracking.ColorTracker(["black", "white"]);
-    tracker.setMinDimension(15);
-
-    tracker.on("track", function (event) {
-        if (event.data.length === 0) {
-            return;
-        } else {
-            event.data.map(function (detection) {
-                app.ports.stoneDetected.send(detection);
-            });
-
-            app.ports.processingSuccessful.send(true);
-        }
-    });
-
-    tracking.track("#canvas-output", tracker); */
+    const groups = groupMatches([], matches, 0);
+    console.log(groups);
 });

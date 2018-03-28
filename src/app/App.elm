@@ -755,8 +755,8 @@ view model =
         , viewCanvas "canvas-input" (model.isInputSuccessful && model.route == RouteCrop)
         , viewCanvas "canvas-color-black" (model.isCroppingSuccessful && model.route == RouteBlack)
         , viewCanvas "canvas-color-white" (model.isPickingBlackSuccessful && model.route == RouteWhite)
-        , viewCanvas "canvas-preview" False
         , viewCanvas "canvas-output" (model.isPickingWhiteSuccessful && model.route == RouteProcessing)
+        , viewCanvas "canvas-temporary" False
         , viewCropFrame "crop-input" Rectangle (model.isInputSuccessful && model.route == RouteCrop)
         , viewCropFrame "crop-color-black" Circle (model.isCroppingSuccessful && model.route == RouteBlack)
         , viewCropFrame "crop-color-white" Circle (model.isPickingBlackSuccessful && model.route == RouteWhite)

@@ -66,7 +66,4 @@ port pickingBlackSuccessful : (Bool -> msg) -> Sub msg
 port pickingWhiteSuccessful : (Bool -> msg) -> Sub msg
 
 
-port stoneDetected : (Detection -> msg) -> Sub msg
-
-
 port processingSuccessful : (Bool -> msg) -> Sub msg

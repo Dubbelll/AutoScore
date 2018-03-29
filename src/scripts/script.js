@@ -4,6 +4,7 @@ const flags = {
     baseURL: CONFIG_API_BASE_URL
 };
 const app = Elm.App.embed(element, flags);
+const processor = new Worker("scripts/pixels.js");
 const state = {
     input: {
         image: new Image(),
@@ -56,6 +57,10 @@ window.addEventListener("mouseup", function () {
 window.addEventListener("touchend", function () {
     state.isDragging = false;
     state.isResizing = false;
+});
+
+processor.addEventListener("message", function (event) {
+    app.ports.processingSuccessful.send(true);
 });
 
 function setViewportMinimum() {
@@ -665,6 +670,8 @@ app.ports.startProcessing.subscribe(function (bool) {
     const canvas = document.getElementById("canvas-output");
     const context = canvas.getContext("2d");
     const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
+    const crop = document.getElementById("crop-color-white");
+    const size = pixelsToNumber(crop.style.width);
 
     function isBlack(r, g, b) {
         return r <= state.thresholdsBlack.r
@@ -676,56 +683,6 @@ app.ports.startProcessing.subscribe(function (bool) {
         return r >= state.thresholdsWhite.r
             && g >= state.thresholdsWhite.g
             && b >= state.thresholdsWhite.b;
-    }
-
-    function isWithinRange(a, b, range) {
-        return (a.x - range === b.x
-            || a.x + range === b.x
-            || a.y - range === b.y
-            || a.y + range === b.y)
-            && a.color === b.color
-    }
-
-    function groupMatches(groups, matches, matchIndex) {
-        const match = matches[matchIndex];
-        const exisitingGroupIndexes = [];
-
-        loopGroups:
-        for (let i = 0; i < groups.length; i++) {
-            const group = groups[i];
-
-            loopMembers:
-            for (let j = 0; j < group.length; j++) {
-                const member = group[j];
-                const isWithinRange = (match.x - 1 === member.x
-                    || match.x + 1 === member.x
-                    || match.y - 1 === member.y
-                    || match.y + 1 === member.y)
-                    && match.color === member.color;
-
-                if (isWithinRange) {
-                    exisitingGroupIndexes.push(i);
-
-                    break loopGroups;
-                }
-            }
-        }
-
-        if (exisitingGroupIndexes.length === 0) {
-            groups.push([matchIndex]);
-        }
-        if (exisitingGroupIndexes.length === 1) {
-            const groupIndex = exisitingGroupIndexes[0];
-            groups[groupIndex].push(matchIndex);
-        }
-
-        if (matchIndex + 1 < matches.length) {
-            console.log("+");
-            groupMatches(groups, matches, matchIndex + 1);
-        }
-        else {
-            return groups;
-        }
     }
 
     const matches = [];
@@ -748,6 +705,5 @@ app.ports.startProcessing.subscribe(function (bool) {
         }
     }
 
-    const groups = groupMatches([], matches, 0);
-    console.log(groups);
+    processor.postMessage({ matches: matches, size: size });
 });

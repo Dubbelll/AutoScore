@@ -35,7 +35,6 @@ type alias Model =
     , isCroppingSuccessful : Bool
     , isPickingBlackSuccessful : Bool
     , isPickingWhiteSuccessful : Bool
-    , detections : Array PT.Detection
     , isProcessingSuccessful : Bool
     , stars19x19 : List Star
     , stars13x13 : List Star
@@ -62,30 +61,8 @@ type CropShape
     | Circle
 
 
-type alias DetectionMeta =
-    { averageWidth : Int
-    , averageHeight : Int
-    , minimumWidth : Int
-    , minimumHeight : Int
-    , minimumX : Int
-    , minimumY : Int
-    , maximumX : Int
-    , maximumY : Int
-    }
-
-
 type alias Star =
     { x : Int, y : Int }
-
-
-type alias StoneMatrix =
-    { startX : Int
-    , startY : Int
-    , currentX : Int
-    , currentY : Int
-    , endX : Int
-    , endY : Int
-    }
 
 
 type StoneColor
@@ -134,7 +111,6 @@ init flags location =
             , isCroppingSuccessful = False
             , isPickingBlackSuccessful = False
             , isPickingWhiteSuccessful = False
-            , detections = Array.empty
             , isProcessingSuccessful = False
             , stars19x19 = stars19x19
             , stars13x13 = stars13x13
@@ -189,321 +165,6 @@ stringToBoardSize string =
 
         _ ->
             Nineteen
-
-
-median : List Int -> Float
-median numbers =
-    let
-        isEven =
-            (List.length numbers) % 2 == 0
-
-        sizeHalf =
-            (List.length numbers) // 2
-
-        firstHalf =
-            List.take sizeHalf numbers
-
-        secondHalf =
-            List.drop sizeHalf numbers
-    in
-        case isEven of
-            True ->
-                let
-                    lastOfFirst =
-                        List.drop (sizeHalf - 1) firstHalf
-                            |> List.head
-                            |> Maybe.withDefault 0
-                            |> toFloat
-
-                    firstOfLast =
-                        List.take 1 secondHalf
-                            |> List.head
-                            |> Maybe.withDefault 0
-                            |> toFloat
-                in
-                    (lastOfFirst + firstOfLast) / 2
-
-            False ->
-                List.take 1 secondHalf
-                    |> List.head
-                    |> Maybe.withDefault 0
-                    |> toFloat
-
-
-interquartileRange : List Int -> Float
-interquartileRange numbers =
-    let
-        isEven =
-            (List.length numbers) % 2 == 0
-
-        sizeHalf =
-            (List.length numbers) // 2
-
-        firstHalf =
-            List.take sizeHalf numbers
-
-        secondHalf =
-            case isEven of
-                True ->
-                    List.drop sizeHalf numbers
-
-                False ->
-                    List.drop (sizeHalf + 1) numbers
-
-        q1 =
-            median firstHalf
-
-        q3 =
-            median secondHalf
-    in
-        q3 - q1
-
-
-furthestFrom : Float -> Int -> Int -> Int
-furthestFrom from a b =
-    case abs ((toFloat a) - from) > abs ((toFloat b) - from) of
-        True ->
-            a
-
-        False ->
-            b
-
-
-removeOutliers : List Int -> List Int
-removeOutliers numbers =
-    case List.head numbers of
-        Just first ->
-            let
-                average =
-                    (toFloat (List.sum numbers)) / (toFloat (List.length numbers))
-
-                furthestFromAverage =
-                    List.foldl (furthestFrom average) first numbers
-
-                maxDistance =
-                    (interquartileRange numbers) * 1.5
-            in
-                case (abs ((toFloat furthestFromAverage) - average)) > maxDistance of
-                    True ->
-                        removeOutliers (List.filter (\x -> x /= furthestFromAverage) numbers)
-
-                    False ->
-                        numbers
-
-        Nothing ->
-            numbers
-
-
-averageStoneWidth : List PT.Detection -> Float
-averageStoneWidth detections =
-    let
-        sortedWidths =
-            List.map .width detections
-                |> List.sort
-
-        singleStoneWidths =
-            removeOutliers sortedWidths
-    in
-        (toFloat (List.sum singleStoneWidths)) / (toFloat (List.length singleStoneWidths))
-
-
-averageStoneHeight : List PT.Detection -> Float
-averageStoneHeight detections =
-    let
-        sortedHeights =
-            List.map .height detections
-                |> List.sort
-
-        singleStoneHeights =
-            removeOutliers sortedHeights
-    in
-        (toFloat (List.sum singleStoneHeights)) / (toFloat (List.length singleStoneHeights))
-
-
-minimumBoardX : List PT.Detection -> Int -> Int
-minimumBoardX detections averageWidth =
-    List.map .x detections
-        |> List.sort
-        |> List.filter (\x -> x <= averageWidth)
-        |> List.maximum
-        |> Maybe.withDefault 0
-
-
-maximumBoardX : List PT.Detection -> Int -> Int -> Int -> Int
-maximumBoardX detections averageWidth minimumX boardWidth =
-    List.map .x detections
-        |> List.sort
-        |> List.reverse
-        |> List.filter (\x -> (boardWidth - (x + minimumX)) <= averageWidth)
-        |> List.minimum
-        |> Maybe.withDefault -1
-
-
-minimumBoardY : List PT.Detection -> Int -> Int
-minimumBoardY detections averageHeight =
-    List.map .y detections
-        |> List.sort
-        |> List.filter (\y -> y <= averageHeight)
-        |> List.maximum
-        |> Maybe.withDefault 0
-
-
-maximumBoardY : List PT.Detection -> Int -> Int -> Int -> Int
-maximumBoardY detections averageHeight minimumY boardHeight =
-    List.map .y detections
-        |> List.sort
-        |> List.reverse
-        |> List.filter (\y -> (boardHeight - (y + minimumY)) <= averageHeight)
-        |> List.minimum
-        |> Maybe.withDefault -1
-
-
-detectionColorToStoneColor : String -> StoneColor
-detectionColorToStoneColor color =
-    case color of
-        "black" ->
-            Black
-
-        "white" ->
-            White
-
-        _ ->
-            Black
-
-
-stoneMatrixToStones : StoneMatrix -> StoneColor -> Array Stone -> Array Stone
-stoneMatrixToStones matrix color stones =
-    let
-        newStones =
-            Array.push (Stone matrix.currentX matrix.currentY 4 color) stones
-
-        newX =
-            case matrix.currentX + 1 > matrix.endX of
-                True ->
-                    matrix.startX
-
-                False ->
-                    matrix.currentX + 1
-
-        newY =
-            case matrix.currentX + 1 > matrix.endX of
-                True ->
-                    matrix.currentY + 1
-
-                False ->
-                    matrix.currentY
-
-        newMatrix =
-            { matrix | currentX = newX, currentY = newY }
-    in
-        case newY > matrix.endY of
-            True ->
-                newStones
-
-            False ->
-                stoneMatrixToStones newMatrix color newStones
-
-
-detectionToStones : DetectionMeta -> PT.Detection -> List Stone
-detectionToStones meta detection =
-    let
-        startX =
-            toFloat (detection.x - meta.minimumX - (meta.averageWidth - detection.width))
-                / toFloat meta.averageWidth
-                |> floor
-                |> Basics.max 1
-                |> Basics.min 19
-
-        startY =
-            toFloat (detection.y - meta.minimumY - (meta.averageHeight - detection.height))
-                / toFloat meta.averageHeight
-                |> floor
-                |> Basics.max 1
-                |> Basics.min 19
-
-        endX =
-            if detection.width < meta.averageWidth && detection.width >= meta.minimumWidth then
-                startX
-            else
-                toFloat detection.width
-                    / toFloat meta.averageWidth
-                    |> floor
-                    |> Basics.min 19
-
-        endY =
-            if detection.height < meta.averageHeight && detection.height >= meta.minimumHeight then
-                startY
-            else
-                toFloat detection.height
-                    / toFloat meta.averageHeight
-                    |> floor
-                    |> Basics.min 19
-
-        matrix =
-            StoneMatrix startX startY startX startY endX endY
-
-        color =
-            detectionColorToStoneColor detection.color
-    in
-        stoneMatrixToStones matrix color Array.empty
-            |> Array.toList
-
-
-detectionsToStones : List PT.Detection -> Board
-detectionsToStones detections =
-    let
-        averageWidth =
-            ceiling <| averageStoneWidth detections
-
-        averageHeight =
-            ceiling <| averageStoneHeight detections
-
-        minimumWidth =
-            List.map .width detections
-                |> List.minimum
-                |> Maybe.withDefault (ceiling (toFloat averageWidth * 0.6))
-
-        minimumHeight =
-            List.map .width detections
-                |> List.minimum
-                |> Maybe.withDefault (ceiling (toFloat averageWidth * 0.6))
-
-        minimumX =
-            minimumBoardX detections averageWidth
-
-        minimumY =
-            minimumBoardY detections averageHeight
-
-        maximumX =
-            maximumBoardX detections averageWidth minimumX 0
-
-        maximumY =
-            maximumBoardY detections averageHeight minimumY 0
-
-        meta =
-            DetectionMeta
-                averageWidth
-                averageHeight
-                minimumWidth
-                minimumHeight
-                minimumX
-                minimumY
-                maximumX
-                maximumY
-
-        log =
-            Debug.log "meta" meta
-    in
-        List.map (detectionToStones meta) detections
-            |> List.concat
-            |> Array.fromList
-
-
-stonesForPosition : Model -> Int -> Int -> List Stone
-stonesForPosition model x y =
-    model.board
-        |> Array.toList
-        |> List.filter (\z -> z.x == x && z.y == y)
 
 
 stars19x19 : List Star
@@ -612,7 +273,6 @@ type Msg
     | PickingBlackSuccessful Bool
     | PickWhite
     | PickingWhiteSuccessful Bool
-    | StoneDetected PT.Detection
     | ProcessingSuccessful Bool
 
 
@@ -629,7 +289,12 @@ update message model =
 
                 newModel =
                     if newRoute == RouteProcessing then
-                        { model | route = newRoute, location = location, detections = Array.empty }
+                        { model
+                            | route = newRoute
+                            , location = location
+                            , isLoading = True
+                            , loadingMessage = Just "Processing images"
+                        }
                     else
                         { model | route = newRoute, location = location }
 
@@ -711,19 +376,14 @@ update message model =
         PickingWhiteSuccessful isSuccessful ->
             ( { model | isPickingWhiteSuccessful = isSuccessful }, Navigation.newUrl "#processing" )
 
-        StoneDetected detection ->
-            let
-                newDetections =
-                    Array.push detection model.detections
-            in
-                ( { model | detections = newDetections }, Cmd.none )
-
         ProcessingSuccessful isSuccessful ->
-            let
-                newBoard =
-                    detectionsToStones (Array.toList model.detections)
-            in
-                ( { model | isProcessingSuccessful = isSuccessful, board = newBoard }, Cmd.none )
+            ( { model
+                | isProcessingSuccessful = isSuccessful
+                , isLoading = False
+                , loadingMessage = Nothing
+              }
+            , Cmd.none
+            )
 
 
 
@@ -739,7 +399,6 @@ subscriptions model =
         , PT.croppingSuccessful CroppingSuccessful
         , PT.pickingBlackSuccessful PickingBlackSuccessful
         , PT.pickingWhiteSuccessful PickingWhiteSuccessful
-        , PT.stoneDetected StoneDetected
         , PT.processingSuccessful ProcessingSuccessful
         ]
 
@@ -1116,19 +775,6 @@ viewProcessing model =
             case model.isCroppingSuccessful of
                 True ->
                     [ buttonClose True
-                    , div
-                        [ classList [ ( "detections", True ) ]
-                        , style
-                            [ ( "top", intToPixels 0 )
-                            , ( "left", intToPixels 0 )
-                            , ( "width", intToPixels 0 )
-                            , ( "height", intToPixels 0 )
-                            ]
-                        ]
-                        (List.map
-                            (viewDetection model)
-                            (Array.toList model.detections)
-                        )
                     , viewIconText
                         "info"
                         [ ( "score", True ), ( "score--overlay", True ), ( "score--info", True ) ]
@@ -1216,7 +862,7 @@ viewBoardColumn : Model -> Int -> Int -> Html Msg
 viewBoardColumn model y x =
     let
         stones =
-            stonesForPosition model x y
+            []
 
         isStone =
             List.length stones > 0

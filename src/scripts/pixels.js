@@ -1,8 +1,40 @@
 addEventListener("message", function (event) {
+    const size = event.data.size;
     const matches = event.data.matches;
+    const board = [];
+
+    for (let i = 1; i < 361; i++) {
+        board[i] = { probabilityStone: 0, probabilityBlack: 0, probabilityWhite: 0 };
+    }
+
+    for (let i = 0; i < matches.length; i++) {
+        const match = matches[i];
+        const percentageX = match.x / size;
+        const percentageY = match.y / size;
+        const x = Math.round(19 * percentageX);
+        const y = Math.round(19 * percentageY);
+
+        if (x > 0 && y > 0) {
+            const stone = board[x * y];
+
+            stone.probabilityStone += 1;
+            if (match.color === 0) {
+                stone.probabilityBlack += 1;
+            }
+            if (match.color === 1) {
+                stone.probabilityWhite += 1;
+            }
+        }
+    }
+
+    console.log(board);
+
+    this.postMessage(true);
+
+    /* const matches = event.data.matches;
     const size = event.data.size;
     const minimumGroupSize = (size * size) * 0.5;
-    const maximumGroupSize = (size * size) * 1.1;
+    const maximumGroupSize = (size * size) * 1.25;
 
     function isWithinRange(a, b, range) {
         return (a.x === b.x || a.x - range === b.x || a.x + range === b.x)
@@ -35,13 +67,7 @@ addEventListener("message", function (event) {
         }
         if (exisitingGroupIndexes.length === 1) {
             const groupIndex = exisitingGroupIndexes[0];
-            const group = groups[groupIndex];
-            if (group.length < maximumGroupSize) {
-                groups[groupIndex].push(match);
-            }
-            else {
-                groups.push([match]);
-            }
+            groups[groupIndex].push(match);
         }
 
         return groups;
@@ -58,11 +84,11 @@ addEventListener("message", function (event) {
         return group.length >= minimumGroupSize && group.length <= maximumGroupSize;
     });
     const tooBig = groups.filter(function (group) {
-        return group.length >= maximumGroupSize;
+        return group.length > maximumGroupSize;
     });
     console.log(groups.length);
     console.log(filtered.length);
     console.log(tooBig.length);
 
-    postMessage(true);
+    postMessage(true); */
 });

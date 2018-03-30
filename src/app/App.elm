@@ -36,6 +36,7 @@ type alias Model =
     , isPickingBlackSuccessful : Bool
     , isPickingWhiteSuccessful : Bool
     , isProcessingSuccessful : Bool
+    , probabilities : Array PT.Probability
     , stars19x19 : List Star
     , stars13x13 : List Star
     , stars9x9 : List Star
@@ -112,6 +113,7 @@ init flags location =
             , isPickingBlackSuccessful = False
             , isPickingWhiteSuccessful = False
             , isProcessingSuccessful = False
+            , probabilities = Array.empty
             , stars19x19 = stars19x19
             , stars13x13 = stars13x13
             , stars9x9 = stars9x9
@@ -273,7 +275,7 @@ type Msg
     | PickingBlackSuccessful Bool
     | PickWhite
     | PickingWhiteSuccessful Bool
-    | ProcessingSuccessful Bool
+    | ProcessingSuccessful (Array PT.Probability)
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -288,15 +290,7 @@ update message model =
                     parseLocation location
 
                 newModel =
-                    if newRoute == RouteProcessing then
-                        { model
-                            | route = newRoute
-                            , location = location
-                            , isLoading = True
-                            , loadingMessage = Just "Processing images"
-                        }
-                    else
-                        { model | route = newRoute, location = location }
+                    { model | route = newRoute, location = location }
 
                 commandOldRoute =
                     if model.route == RoutePhoto && model.isVideoPlaying then
@@ -376,14 +370,8 @@ update message model =
         PickingWhiteSuccessful isSuccessful ->
             ( { model | isPickingWhiteSuccessful = isSuccessful }, Navigation.newUrl "#processing" )
 
-        ProcessingSuccessful isSuccessful ->
-            ( { model
-                | isProcessingSuccessful = isSuccessful
-                , isLoading = False
-                , loadingMessage = Nothing
-              }
-            , Cmd.none
-            )
+        ProcessingSuccessful probabilities ->
+            ( { model | isProcessingSuccessful = True, probabilities = probabilities }, Cmd.none )
 
 
 
@@ -803,24 +791,6 @@ viewProcessing model =
             overlay
 
 
-viewDetection : Model -> PT.Detection -> Html Msg
-viewDetection model detection =
-    div
-        [ classList
-            [ ( "detection", True )
-            , ( "detection--black", detection.color == "black" )
-            , ( "detection--white", detection.color == "white" )
-            ]
-        , style
-            [ ( "top", intToPixels detection.y )
-            , ( "left", intToPixels detection.x )
-            , ( "width", intToPixels detection.width )
-            , ( "height", intToPixels detection.height )
-            ]
-        ]
-        []
-
-
 viewScore : Model -> Html Msg
 viewScore model =
     div
@@ -861,20 +831,18 @@ viewBoardRow model y =
 viewBoardColumn : Model -> Int -> Int -> Html Msg
 viewBoardColumn model y x =
     let
-        stones =
-            []
-
-        isStone =
-            List.length stones > 0
+        probability =
+            Array.get ((x * y) - 1) model.probabilities
+                |> Maybe.withDefault (PT.Probability -1 -1 -1)
 
         isBlack =
-            List.length stones == 1 && List.any (\x -> x.color == Black) stones
+            probability.probabilityBlack > 0
 
         isWhite =
-            List.length stones == 1 && List.any (\x -> x.color == White) stones
+            probability.probabilityWhite > 0
 
         isConflict =
-            List.length stones > 1
+            probability.probabilityBlack > 0 && probability.probabilityWhite > 0
     in
         div
             [ classList
@@ -886,7 +854,7 @@ viewBoardColumn model y x =
             ]
             [ span
                 [ classList
-                    [ ( "board-stone", isStone )
+                    [ ( "board-stone", True )
                     , ( "board-stone--black", isBlack )
                     , ( "board-stone--white", isWhite )
                     , ( "board-stone--conflict", isConflict )

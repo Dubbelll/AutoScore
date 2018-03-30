@@ -4,7 +4,6 @@ const flags = {
     baseURL: CONFIG_API_BASE_URL
 };
 const app = Elm.App.embed(element, flags);
-const processor = new Worker("scripts/pixels.js");
 const state = {
     input: {
         image: new Image(),
@@ -57,10 +56,6 @@ window.addEventListener("mouseup", function () {
 window.addEventListener("touchend", function () {
     state.isDragging = false;
     state.isResizing = false;
-});
-
-processor.addEventListener("message", function (event) {
-    app.ports.processingSuccessful.send(true);
 });
 
 function setViewportMinimum() {
@@ -670,8 +665,7 @@ app.ports.startProcessing.subscribe(function (bool) {
     const canvas = document.getElementById("canvas-output");
     const context = canvas.getContext("2d");
     const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
-    const crop = document.getElementById("crop-color-white");
-    const size = pixelsToNumber(crop.style.width);
+    const size = Math.min(canvas.width, canvas.height);
 
     function isBlack(r, g, b) {
         return r <= state.thresholdsBlack.r
@@ -705,5 +699,32 @@ app.ports.startProcessing.subscribe(function (bool) {
         }
     }
 
-    processor.postMessage({ matches: matches, size: size });
+    const probabilities = [];
+    for (let i = 0; i < 361; i++) {
+        probabilities[i] = { probabilityStone: 0, probabilityBlack: 0, probabilityWhite: 0 };
+    }
+
+    for (let i = 0; i < matches.length; i++) {
+        const match = matches[i];
+        const percentageX = match.x / canvas.width;
+        const percentageY = match.y / canvas.height;
+        const x = Math.round(19 * percentageX);
+        const y = Math.round(19 * percentageY);
+
+        if (x > 0 && y > 0) {
+            const stone = probabilities[x * y];
+
+            stone.probabilityStone += 1;
+            if (match.color === 0) {
+                stone.probabilityBlack += 1;
+            }
+            if (match.color === 1) {
+                stone.probabilityWhite += 1;
+            }
+        }
+    }
+
+    console.log(probabilities);
+
+    app.ports.processingSuccessful.send(probabilities);
 });

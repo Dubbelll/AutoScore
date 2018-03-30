@@ -1,10 +1,13 @@
 port module Ports exposing (..)
 
+import Array exposing (Array)
+
+
 -- MODEL
 
 
-type alias Detection =
-    { color : String, height : Int, width : Int, x : Int, y : Int }
+type alias Probability =
+    { probabilityStone : Int, probabilityBlack : Int, probabilityWhite : Int }
 
 
 
@@ -66,4 +69,4 @@ port pickingBlackSuccessful : (Bool -> msg) -> Sub msg
 port pickingWhiteSuccessful : (Bool -> msg) -> Sub msg
 
 
-port processingSuccessful : (Bool -> msg) -> Sub msg
+port processingSuccessful : (Array Probability -> msg) -> Sub msg

@@ -665,7 +665,6 @@ app.ports.startProcessing.subscribe(function (bool) {
     const canvas = document.getElementById("canvas-output");
     const context = canvas.getContext("2d");
     const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
-    const size = Math.min(canvas.width, canvas.height);
 
     function isBlack(r, g, b) {
         return r <= state.thresholdsBlack.r
@@ -699,20 +698,24 @@ app.ports.startProcessing.subscribe(function (bool) {
         }
     }
 
-    const probabilities = [];
-    for (let i = 0; i < 361; i++) {
-        probabilities[i] = { probabilityStone: 0, probabilityBlack: 0, probabilityWhite: 0 };
+    const probabilities = {};
+    for (let y = 1; y < 20; y++) {
+        for (let x = 1; x < 20; x++) {
+            const key = y.toString() + "-" + x.toString();
+            probabilities[key] = { probabilityStone: 0, probabilityBlack: 0, probabilityWhite: 0 };
+        }
     }
 
     for (let i = 0; i < matches.length; i++) {
         const match = matches[i];
         const percentageX = match.x / canvas.width;
         const percentageY = match.y / canvas.height;
-        const x = Math.round(19 * percentageX);
-        const y = Math.round(19 * percentageY);
+        const x = Math.min(19, Math.ceil(19 * percentageX));
+        const y = Math.min(19, Math.ceil(19 * percentageY));
 
         if (x > 0 && y > 0) {
-            const stone = probabilities[x * y];
+            const key = y.toString() + "-" + x.toString();
+            const stone = probabilities[key];
 
             stone.probabilityStone += 1;
             if (match.color === 0) {
@@ -723,8 +726,6 @@ app.ports.startProcessing.subscribe(function (bool) {
             }
         }
     }
-
-    console.log(probabilities);
 
     app.ports.processingSuccessful.send(probabilities);
 });

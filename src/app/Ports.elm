@@ -1,14 +1,6 @@
 port module Ports exposing (..)
 
-import Array exposing (Array)
-
-
--- MODEL
-
-
-type alias Probability =
-    { probabilityStone : Int, probabilityBlack : Int, probabilityWhite : Int }
-
+import Json.Decode as JD
 
 
 -- COMMAND
@@ -69,4 +61,4 @@ port pickingBlackSuccessful : (Bool -> msg) -> Sub msg
 port pickingWhiteSuccessful : (Bool -> msg) -> Sub msg
 
 
-port processingSuccessful : (Array Probability -> msg) -> Sub msg
+port processingSuccessful : (JD.Value -> msg) -> Sub msg

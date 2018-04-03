@@ -35,7 +35,8 @@
         "watch:scss": "onchange \"src/assets/scss/**/*.scss\" -- npm run sass:generate",
         "watch:html": "onchange \"src/*.html\" -- npm run copy:html",
         "server": "browser-sync start --config \"bs-config.js\"",
-        "format": "elm-format"
+        "format": "elm-format",
+        "probability": "browser-sync start --ss \"src/app/probability\" --files \"src/app/probability\""
     },
     "repository": {
         "type": "git",

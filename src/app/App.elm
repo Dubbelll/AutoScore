@@ -10,6 +10,7 @@ import Ports as PT
 import Array exposing (Array)
 import Svg exposing (svg, use)
 import Svg.Attributes as SA exposing (class, xlinkHref)
+import Dict exposing (Dict)
 
 
 main : Program Flags Model Msg
@@ -36,7 +37,8 @@ type alias Model =
     , isPickingBlackSuccessful : Bool
     , isPickingWhiteSuccessful : Bool
     , isProcessingSuccessful : Bool
-    , probabilities : Array PT.Probability
+    , probabilities : Dict String Probability
+    , maximumProbability : Int
     , stars19x19 : List Star
     , stars13x13 : List Star
     , stars9x9 : List Star
@@ -60,6 +62,10 @@ type TextDirection
 type CropShape
     = Rectangle
     | Circle
+
+
+type alias Probability =
+    { probabilityStone : Int, probabilityBlack : Int, probabilityWhite : Int }
 
 
 type alias Star =
@@ -113,7 +119,8 @@ init flags location =
             , isPickingBlackSuccessful = False
             , isPickingWhiteSuccessful = False
             , isProcessingSuccessful = False
-            , probabilities = Array.empty
+            , probabilities = Dict.empty
+            , maximumProbability = 0
             , stars19x19 = stars19x19
             , stars13x13 = stars13x13
             , stars9x9 = stars9x9
@@ -121,6 +128,28 @@ init flags location =
             }
     in
         ( model, Cmd.none )
+
+
+
+-- DECODERS
+
+
+decoderProbability : JD.Decoder Probability
+decoderProbability =
+    JD.map3 Probability
+        (JD.field "probabilityStone" JD.int)
+        (JD.field "probabilityBlack" JD.int)
+        (JD.field "probabilityWhite" JD.int)
+
+
+decoderProbabilities : JD.Decoder (Dict String Probability)
+decoderProbabilities =
+    JD.dict decoderProbability
+
+
+decodeProbabilities : JD.Value -> Result String (Dict String Probability)
+decodeProbabilities =
+    JD.decodeValue decoderProbabilities
 
 
 
@@ -275,7 +304,7 @@ type Msg
     | PickingBlackSuccessful Bool
     | PickWhite
     | PickingWhiteSuccessful Bool
-    | ProcessingSuccessful (Array PT.Probability)
+    | ProcessingSuccessful (Result String (Dict String Probability))
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -370,8 +399,24 @@ update message model =
         PickingWhiteSuccessful isSuccessful ->
             ( { model | isPickingWhiteSuccessful = isSuccessful }, Navigation.newUrl "#processing" )
 
-        ProcessingSuccessful probabilities ->
-            ( { model | isProcessingSuccessful = True, probabilities = probabilities }, Cmd.none )
+        ProcessingSuccessful (Ok probabilities) ->
+            let
+                maximumProbability =
+                    Dict.values probabilities
+                        |> List.map .probabilityStone
+                        |> List.maximum
+                        |> Maybe.withDefault 0
+            in
+                ( { model
+                    | isProcessingSuccessful = True
+                    , probabilities = probabilities
+                    , maximumProbability = maximumProbability
+                  }
+                , Cmd.none
+                )
+
+        ProcessingSuccessful (Err _) ->
+            ( model, Cmd.none )
 
 
 
@@ -387,7 +432,7 @@ subscriptions model =
         , PT.croppingSuccessful CroppingSuccessful
         , PT.pickingBlackSuccessful PickingBlackSuccessful
         , PT.pickingWhiteSuccessful PickingWhiteSuccessful
-        , PT.processingSuccessful ProcessingSuccessful
+        , PT.processingSuccessful (decodeProbabilities >> ProcessingSuccessful)
         ]
 
 
@@ -831,18 +876,27 @@ viewBoardRow model y =
 viewBoardColumn : Model -> Int -> Int -> Html Msg
 viewBoardColumn model y x =
     let
+        key =
+            toString y ++ "-" ++ toString x
+
         probability =
-            Array.get ((x * y) - 1) model.probabilities
-                |> Maybe.withDefault (PT.Probability -1 -1 -1)
+            Dict.get key model.probabilities
+                |> Maybe.withDefault (Probability -1 -1 -1)
+
+        probabilityPercentage =
+            toFloat probability.probabilityStone / toFloat model.maximumProbability
+
+        isStone =
+            probabilityPercentage > 0.2
 
         isBlack =
-            probability.probabilityBlack > 0
+            isStone && probability.probabilityBlack > 0 && probability.probabilityBlack > probability.probabilityWhite
 
         isWhite =
-            probability.probabilityWhite > 0
+            isStone && probability.probabilityWhite > 0 && probability.probabilityWhite > probability.probabilityBlack
 
         isConflict =
-            probability.probabilityBlack > 0 && probability.probabilityWhite > 0
+            isStone && probability.probabilityBlack == probability.probabilityWhite
     in
         div
             [ classList

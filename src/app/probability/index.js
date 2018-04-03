@@ -1,19 +1,19 @@
 document.addEventListener("DOMContentLoaded", function () {
-    const canvas = document.getElementById("canvas-output");
+    const canvas = document.getElementById("canvas-test");
     const context = canvas.getContext("2d");
     const size = Math.min(canvas.width, canvas.height);
     const image = new Image();
 
     function isBlack(r, g, b) {
-        return r <= 35
-            && g <= 35
-            && b <= 35;
+        return r <= 25.65
+            && g <= 30.92
+            && b <= 32.08;
     }
 
     function isWhite(r, g, b) {
-        return r >= 150
-            && g >= 150
-            && b >= 150;
+        return r >= 151.05
+            && g >= 161
+            && b >= 164.13;
     }
 
     function calculate() {
@@ -38,20 +38,24 @@ document.addEventListener("DOMContentLoaded", function () {
             }
         }
 
-        const probabilities = [];
-        for (let i = 0; i < 362; i++) {
-            probabilities[i] = { probabilityStone: 0, probabilityBlack: 0, probabilityWhite: 0 };
+        const probabilities = {};
+        for (let y = 1; y < 20; y++) {
+            for (let x = 1; x < 20; x++) {
+                const key = y.toString() + "-" + x.toString();
+                probabilities[key] = { probabilityStone: 0, probabilityBlack: 0, probabilityWhite: 0 };
+            }
         }
 
         for (let i = 0; i < matches.length; i++) {
             const match = matches[i];
             const percentageX = match.x / canvas.width;
             const percentageY = match.y / canvas.height;
-            const x = Math.round(19 * percentageX);
-            const y = Math.round(19 * percentageY);
+            const x = Math.min(19, Math.ceil(19 * percentageX));
+            const y = Math.min(19, Math.ceil(19 * percentageY));
 
             if (x > 0 && y > 0) {
-                const stone = probabilities[x * y];
+                const key = y.toString() + "-" + x.toString();
+                const stone = probabilities[key];
 
                 stone.probabilityStone += 1;
                 if (match.color === 0) {
@@ -63,10 +67,13 @@ document.addEventListener("DOMContentLoaded", function () {
             }
         }
 
-        console.log(probabilities);
-
+        const probabilityValues = Object.values(probabilities);
+        const maximumProbability = probabilityValues.reduce(function (a, b) {
+            return { probabilityStone: Math.max(a.probabilityStone, b.probabilityStone) };
+        });
         const board = document.getElementById("board");
-        board.style = "display: flex; flex-wrap: wrap; width: 475px; background-color: #E3B579;";
+        const stones = {};
+        board.style = "display: flex; flex-wrap: wrap; width: 475px; float: left; background-color: #E3B579;";
         for (let y = 1; y < 20; y++) {
             const row = document.createElement("div");
             row.style.display = "flex";
@@ -74,23 +81,28 @@ document.addEventListener("DOMContentLoaded", function () {
             row.style.flexDirection = "row";
             for (let x = 1; x < 20; x++) {
                 const stone = document.createElement("div");
-                const probability = probabilities[(x * y) - 1];
-                const isBlack = probability.probabilityBlack > 0;
-                const isWhite = probability.probabilityWhite > 0;
+                const key = y.toString() + "-" + x.toString();
+                const probability = probabilities[key];
+                const probabilityPercentage = probability.probabilityStone / maximumProbability.probabilityStone;
+                const isBlack = probability.probabilityBlack > 0 && probability.probabilityBlack > probability.probabilityWhite;
+                const isWhite = probability.probabilityWhite > 0 && probability.probabilityWhite > probability.probabilityBlack;
 
                 stone.style.width = "25px";
                 stone.style.height = "25px";
                 stone.style.borderRadius = "50%";
-                if (isBlack && isWhite) {
-                    stone.style.backgroundColor = "#F44336";
-                }
-                else {
+                if (probabilityPercentage > 0.2) {
                     if (isBlack) {
                         stone.style.backgroundColor = "#2F2F2F";
+                        stones[key] = { isStone: true, color: 0 };
                     }
                     if (isWhite) {
                         stone.style.backgroundColor = "#FDFDFD";
+                        stones[key] = { isStone: true, color: 1 };
                     }
+                }
+                else {
+                    stone.style.opacity = "0.2";
+                    stones[key] = { isStone: false, color: -1 };
                 }
                 row.appendChild(stone);
             }
@@ -101,6 +113,7 @@ document.addEventListener("DOMContentLoaded", function () {
     image.addEventListener("load", function () {
         canvas.width = image.width;
         canvas.height = image.height;
+        canvas.style.cssFloat = "left";
         context.drawImage(image, 0, 0, image.width, image.height);
 
         calculate();

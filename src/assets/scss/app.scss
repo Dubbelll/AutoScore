@@ -27,12 +27,14 @@ body
     overscroll-behavior-y: contain;
 }
 
-body, 
-#app, 
-.container-app, 
-.container-landing, 
-.container-photo, 
-.container-crop, 
+body,
+#app,
+.container-app,
+.container-landing,
+.container-settings,
+.container-source,
+.container-photo,
+.container-crop,
 .container-color-black,
 .container-color-white,
 .container-processing, 
@@ -347,6 +349,14 @@ input[type="file"] {
     }
 }
 
+.action
+{
+    top: auto;
+    bottom: $positioning-thumb;
+    transform: translateX(-50%); 
+    z-index: $depth-overlay-ui;
+}
+
 /* CONTENT */
 /* CONTENT */
 /* CONTENT */
@@ -355,12 +365,28 @@ input[type="file"] {
     overflow: hidden;
 }
 
-.container-landing
+.container-settings, .container-source
 {
     display: flex;
     align-items: center;
     justify-content: center;
     flex-wrap: wrap;
+}
+
+.settings
+{
+    position: absolute;
+    left: 50%;
+
+    &.settings--overlay
+    {
+        @extend .overlay;
+    }
+
+    &.settings--action
+    {
+        @extend .action;
+    }
 }
 
 .container-photo
@@ -420,12 +446,9 @@ input[type="file"] {
         @include animation-fade-out(fadeOutCrop);
     }
 
-    &.crop--start
+    &.crop--action
     {
-        top: auto;
-        bottom: $positioning-thumb;
-        transform: translateX(-50%); 
-        z-index: $depth-overlay-ui;
+        @extend .action;
     }
 }
 
@@ -450,59 +473,31 @@ input[type="file"] {
         @include animation-fade-out(fadeOutColorWhite);
     }
 
-    &.color--start
+    &.color--action
     {
-        top: auto;
-        bottom: $positioning-thumb;
-        transform: translateX(-50%); 
-        z-index: $depth-overlay-ui;
+        @extend .action;
     }
 }
 
-.detections
-{
-    position: absolute;
-    overflow: hidden;
-    z-index: $depth-overlay-detections;
-}
-
-.detection
-{
-    position: absolute;
-
-    &.detection--black
-    {
-        border: 0.3rem solid red;
-    }
-
-    &.detection--white
-    {
-        border: 0.3rem solid blue;
-    }
-}
-
-.score
+.processed
 {
     position: absolute;
     top: 50%;
     left: 50%;
     transform: translateX(-50%) translateY(-50%);
 
-    &.score--overlay
+    &.processed--overlay
     {
         @extend .overlay;
     }
 
-    &.score--info {
-        @include animation-fade-out(fadeOutScore);
+    &.processed--info {
+        @include animation-fade-out(fadeOutProcessed);
     }
 
-    &.score--start
+    &.processed--action
     {
-        top: auto;
-        bottom: $positioning-thumb;
-        transform: translateX(-50%); 
-        z-index: $depth-overlay-ui;
+        @extend .action;
     }
 }
 

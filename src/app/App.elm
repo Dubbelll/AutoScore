@@ -28,9 +28,10 @@ type alias Model =
     , location : Location
     , isLoading : Bool
     , loadingMessage : Maybe String
-    , amountStones : Int
     , boardSizes : List BoardSize
     , boardSize : BoardSize
+    , prisonersBlack : Int
+    , prisonersWhite : Int
     , isVideoPlaying : Bool
     , isInputSuccessful : Bool
     , isCroppingSuccessful : Bool
@@ -110,9 +111,10 @@ init flags location =
             , location = location
             , isLoading = False
             , loadingMessage = Nothing
-            , amountStones = 284
             , boardSizes = [ Nineteen, Thirteen, Nine ]
             , boardSize = Nineteen
+            , prisonersBlack = 0
+            , prisonersWhite = 0
             , isVideoPlaying = False
             , isInputSuccessful = False
             , isCroppingSuccessful = False
@@ -251,6 +253,8 @@ isStar model x y =
 
 type Route
     = RouteLanding
+    | RouteSettings
+    | RouteSource
     | RoutePhoto
     | RouteCrop
     | RouteBlack
@@ -264,6 +268,8 @@ matchers : UP.Parser (Route -> a) a
 matchers =
     UP.oneOf
         [ UP.map RouteLanding UP.top
+        , UP.map RouteSettings (UP.s "settings")
+        , UP.map RouteSource (UP.s "source")
         , UP.map RoutePhoto (UP.s "photo")
         , UP.map RouteCrop (UP.s "crop")
         , UP.map RouteBlack (UP.s "black")
@@ -292,8 +298,9 @@ type Msg
     | ChangeLocation Location
     | StartCamera
     | NewFile
-    | NewAmountStones String
     | NewBoardSize String
+    | NewPrisonersBlack String
+    | NewPrisonersWhite String
     | CameraStarted Bool
     | CameraStopped Bool
     | TakePhoto
@@ -355,19 +362,26 @@ update message model =
         NewFile ->
             ( model, PT.useFile "file-input" )
 
-        NewAmountStones amount ->
-            let
-                newAmount =
-                    Result.withDefault 0 (String.toInt amount)
-            in
-                ( { model | amountStones = newAmount }, Cmd.none )
-
         NewBoardSize boardSize ->
             let
                 newBoardSize =
                     stringToBoardSize boardSize
             in
                 ( { model | boardSize = newBoardSize }, Cmd.none )
+
+        NewPrisonersBlack amount ->
+            let
+                newAmount =
+                    Result.withDefault 0 (String.toInt amount)
+            in
+                ( { model | prisonersBlack = newAmount }, Cmd.none )
+
+        NewPrisonersWhite amount ->
+            let
+                newAmount =
+                    Result.withDefault 0 (String.toInt amount)
+            in
+                ( { model | prisonersWhite = newAmount }, Cmd.none )
 
         CameraStarted isPlaying ->
             ( { model | isVideoPlaying = isPlaying, isLoading = False, loadingMessage = Nothing }, Cmd.none )
@@ -475,6 +489,12 @@ page model =
     case model.route of
         RouteLanding ->
             viewLanding model
+
+        RouteSettings ->
+            viewSettings model
+
+        RouteSource ->
+            viewSource model
 
         RoutePhoto ->
             viewPhoto model
@@ -628,7 +648,66 @@ buttonClose isOverlay =
 viewLanding : Model -> Html Msg
 viewLanding model =
     div [ classList [ ( "container-landing", True ) ] ]
-        [ ul []
+        [ button [onClick (ChangePath "#settings")] [text "Start"]]
+
+
+viewSettings : Model -> Html Msg
+viewSettings model =
+    div [ classList [ ( "container-settings", True ) ] ]
+        [ buttonClose False
+        , viewIconTextLink
+            "continue"
+            [ ( "settings", True ), ( "settings--overlay", True ), ( "settings--action", True ) ]
+            "Continue"
+            ToRight
+            (ChangePath "#source")
+        , ul []
+            [ li [ classList [ ( "container-select", True ), ( "list-item", True ) ] ]
+                [ viewIconText "grid" [] "Board size" ToRight False
+                , select [ classList [ ( "input", True ) ], on "change" (JD.map NewBoardSize targetValue) ]
+                    (List.map (viewOptionBoardSize model) model.boardSizes)
+                ]
+            , li [ classList [ ( "container-input", True ), ( "list-item", True ) ] ]
+                [ label [ for "prisoners-black" ]
+                    [ viewIconText "stones" [] "Number of black prisoners" ToRight False
+                    , input
+                        [ id "prisoners-black"
+                        , classList [ ( "input", True ) ]
+                        , type_ "number"
+                        , onInput NewPrisonersBlack
+                        , value (toString model.prisonersBlack)
+                        ]
+                        []
+                    ]
+                ]
+            , li [ classList [ ( "container-input", True ), ( "list-item", True ) ] ]
+                [ label [ for "prisoners-white" ]
+                    [ viewIconText "stones" [] "Number of white prisoners" ToRight False
+                    , input
+                        [ id "prisoners-white"
+                        , classList [ ( "input", True ) ]
+                        , type_ "number"
+                        , onInput NewPrisonersWhite
+                        , value (toString model.prisonersWhite)
+                        ]
+                        []
+                    ]
+                ]
+            ]
+        ]
+
+
+viewOptionBoardSize : Model -> BoardSize -> Html Msg
+viewOptionBoardSize model boardSize =
+    option [ value (boardSizeToString boardSize), selected (model.boardSize == boardSize) ] 
+        [ text (boardSizeToString boardSize) ]
+
+
+viewSource : Model -> Html Msg
+viewSource model =
+    div [ classList [ ( "container-source", True ) ] ]
+        [ buttonClose False
+        , ul []
             [ li [ classList [ ( "container-link", True ), ( "list-item", True ) ] ]
                 [ viewIconTextLink "camera" [] "Photo" ToRight (ChangePath "#photo") ]
             , li [ classList [ ( "container-input", True ), ( "list-item", True ) ] ]
@@ -637,31 +716,8 @@ viewLanding model =
                     , input [ id "file-input", type_ "file", on "change" (JD.succeed NewFile) ] []
                     ]
                 ]
-            , li [ classList [ ( "container-input", True ), ( "list-item", True ) ] ]
-                [ label [ for "stones-amount" ]
-                    [ viewIconText "stones" [] "Number of stones" ToRight False
-                    , input
-                        [ id "stones-amount"
-                        , classList [ ( "input", True ) ]
-                        , type_ "number"
-                        , onInput NewAmountStones
-                        , value (toString model.amountStones)
-                        ]
-                        []
-                    ]
-                ]
-            , li [ classList [ ( "container-select", True ), ( "list-item", True ) ] ]
-                [ viewIconText "grid" [] "Board size" ToRight False
-                , select [ classList [ ( "input", True ) ], on "change" (JD.map NewBoardSize targetValue) ]
-                    (List.map (viewOptionBoardSize model) model.boardSizes)
-                ]
             ]
         ]
-
-
-viewOptionBoardSize : Model -> BoardSize -> Html Msg
-viewOptionBoardSize model boardSize =
-    option [ value (boardSizeToString boardSize), selected (model.boardSize == boardSize) ] [ text (boardSizeToString boardSize) ]
 
 
 viewPhoto : Model -> Html Msg
@@ -683,7 +739,7 @@ viewPhoto model =
                     [ buttonClose False
                     , viewIconTextLink
                         "camera"
-                        [ ( "camera", True ), ( "camera--start", True ) ]
+                        [ ( "camera", True ), ( "camera--action", True ) ]
                         "Start camera"
                         ToRight
                         StartCamera
@@ -708,7 +764,7 @@ viewCrop model =
                         False
                     , viewIconTextLink
                         "crop"
-                        [ ( "crop", True ), ( "crop--overlay", True ), ( "crop--start", True ) ]
+                        [ ( "crop", True ), ( "crop--overlay", True ), ( "crop--action", True ) ]
                         "Crop"
                         ToRight
                         CropPhoto
@@ -744,7 +800,7 @@ viewBlack model =
                         False
                     , viewIconTextLink
                         "color"
-                        [ ( "color", True ), ( "color--overlay", True ), ( "color--start", True ) ]
+                        [ ( "color", True ), ( "color--overlay", True ), ( "color--action", True ) ]
                         "Pick"
                         ToRight
                         PickBlack
@@ -780,7 +836,7 @@ viewWhite model =
                         False
                     , viewIconTextLink
                         "color"
-                        [ ( "color", True ), ( "color--overlay", True ), ( "color--start", True ) ]
+                        [ ( "color", True ), ( "color--overlay", True ), ( "color--action", True ) ]
                         "Pick"
                         ToRight
                         PickWhite
@@ -810,14 +866,14 @@ viewProcessing model =
                     [ buttonClose True
                     , viewIconText
                         "info"
-                        [ ( "score", True ), ( "score--overlay", True ), ( "score--info", True ) ]
+                        [ ( "processed", True ), ( "processed--overlay", True ), ( "processed--info", True ) ]
                         "This is how I detected the stones on the board. You can make corrections in the next step"
                         ToRight
                         False
                     , viewIconTextLink
-                        "score"
-                        [ ( "score", True ), ( "score--overlay", True ), ( "score--start", True ) ]
-                        "Score"
+                        "continue"
+                        [ ( "processed", True ), ( "processed--overlay", True ), ( "processed--action", True ) ]
+                        "Continue"
                         ToRight
                         (ChangePath "#score")
                     ]

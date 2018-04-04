@@ -7,10 +7,11 @@ import Navigation exposing (Location)
 import UrlParser as UP
 import Json.Decode as JD
 import Ports as PT
-import Array exposing (Array)
 import Svg exposing (svg, use)
 import Svg.Attributes as SA exposing (class, xlinkHref)
 import Dict exposing (Dict)
+import Dict.Extra
+import Array exposing (Array)
 
 
 main : Program Flags Model Msg
@@ -30,6 +31,7 @@ type alias Model =
     , loadingMessage : Maybe String
     , boardSizes : List BoardSize
     , boardSize : BoardSize
+    , komi : Float
     , prisonersBlack : Int
     , prisonersWhite : Int
     , isVideoPlaying : Bool
@@ -38,12 +40,13 @@ type alias Model =
     , isPickingBlackSuccessful : Bool
     , isPickingWhiteSuccessful : Bool
     , isProcessingSuccessful : Bool
-    , probabilities : Dict String Probability
-    , maximumProbability : Int
     , stars19x19 : List Star
     , stars13x13 : List Star
     , stars9x9 : List Star
     , board : Board
+    , dead : Dict BoardPosition Bool
+    , territory : Dict BoardPosition Territory
+    , state : State
     }
 
 
@@ -76,14 +79,29 @@ type alias Star =
 type StoneColor
     = White
     | Black
+    | Conflict
+    | Empty
 
 
 type alias Stone =
-    { x : Int, y : Int, liberties : Int, color : StoneColor }
+    { isStone : Bool, color : StoneColor }
 
 
 type alias Prisoner =
     StoneColor
+
+
+type Edge
+    = BoardEdge
+    | ColorEdge StoneColor
+    | NotEdge
+
+
+type Direction
+    = Up
+    | Right
+    | Down
+    | Left
 
 
 type BoardSize
@@ -92,8 +110,21 @@ type BoardSize
     | Nine
 
 
+type alias BoardPosition =
+    ( Int, Int )
+
+
 type alias Board =
-    Array Stone
+    Dict BoardPosition Stone
+
+
+type alias Territory =
+    { isTerritory : Bool, color : StoneColor }
+
+
+type State
+    = Editing
+    | Scoring
 
 
 init : Flags -> Location -> ( Model, Cmd Msg )
@@ -113,6 +144,7 @@ init flags location =
             , loadingMessage = Nothing
             , boardSizes = [ Nineteen, Thirteen, Nine ]
             , boardSize = Nineteen
+            , komi = 6.5
             , prisonersBlack = 0
             , prisonersWhite = 0
             , isVideoPlaying = False
@@ -121,37 +153,16 @@ init flags location =
             , isPickingBlackSuccessful = False
             , isPickingWhiteSuccessful = False
             , isProcessingSuccessful = False
-            , probabilities = Dict.empty
-            , maximumProbability = 0
             , stars19x19 = stars19x19
             , stars13x13 = stars13x13
             , stars9x9 = stars9x9
-            , board = Array.empty
+            , board = Dict.empty
+            , dead = Dict.empty
+            , territory = Dict.empty
+            , state = Editing
             }
     in
         ( model, Cmd.none )
-
-
-
--- DECODERS
-
-
-decoderProbability : JD.Decoder Probability
-decoderProbability =
-    JD.map3 Probability
-        (JD.field "probabilityStone" JD.int)
-        (JD.field "probabilityBlack" JD.int)
-        (JD.field "probabilityWhite" JD.int)
-
-
-decoderProbabilities : JD.Decoder (Dict String Probability)
-decoderProbabilities =
-    JD.dict decoderProbability
-
-
-decodeProbabilities : JD.Value -> Result String (Dict String Probability)
-decodeProbabilities =
-    JD.decodeValue decoderProbabilities
 
 
 
@@ -200,6 +211,83 @@ stringToBoardSize string =
             Nineteen
 
 
+probabilityToStone : Int -> String -> Probability -> Stone
+probabilityToStone maximumProbability key probability =
+    let
+        probabilityPercentage =
+            toFloat probability.probabilityStone / toFloat maximumProbability
+
+        isStone =
+            probabilityPercentage > 0.2
+
+        color =
+            if
+                isStone
+                    && probability.probabilityBlack
+                    > 0
+                    && probability.probabilityBlack
+                    > probability.probabilityWhite
+            then
+                Black
+            else if
+                isStone
+                    && probability.probabilityWhite
+                    > 0
+                    && probability.probabilityWhite
+                    > probability.probabilityBlack
+            then
+                White
+            else if
+                isStone
+                    && probability.probabilityBlack
+                    == probability.probabilityWhite
+            then
+                Conflict
+            else
+                Empty
+    in
+        Stone isStone color
+
+
+boardKeyToBoardPosition : String -> BoardPosition
+boardKeyToBoardPosition key =
+    let
+        values =
+            String.split "-" key
+                |> Array.fromList
+
+        y =
+            Array.get 0 values
+                |> Maybe.withDefault "-1"
+                |> String.toInt
+                |> Result.withDefault -1
+
+        x =
+            Array.get 1 values
+                |> Maybe.withDefault "-1"
+                |> String.toInt
+                |> Result.withDefault -1
+    in
+        ( y, x )
+
+
+isStar : Model -> Int -> Int -> Bool
+isStar model x y =
+    case model.boardSize of
+        Nineteen ->
+            List.any (\z -> z == (Star x y)) model.stars19x19
+
+        Thirteen ->
+            List.any (\z -> z == (Star x y)) model.stars13x13
+
+        Nine ->
+            List.any (\z -> z == (Star x y)) model.stars9x9
+
+
+
+-- DATA
+
+
 stars19x19 : List Star
 stars19x19 =
     [ Star 4 4
@@ -234,17 +322,201 @@ stars9x9 =
     ]
 
 
-isStar : Model -> Int -> Int -> Bool
-isStar model x y =
-    case model.boardSize of
-        Nineteen ->
-            List.any (\z -> z == (Star x y)) model.stars19x19
 
-        Thirteen ->
-            List.any (\z -> z == (Star x y)) model.stars13x13
+-- CALCULATION
 
-        Nine ->
-            List.any (\z -> z == (Star x y)) model.stars9x9
+
+findEdgeFromPosition : Board -> BoardPosition -> Direction -> Edge
+findEdgeFromPosition board position direction =
+    let
+        y =
+            Tuple.first position
+
+        x =
+            Tuple.second position
+
+        nextPosition =
+            case direction of
+                Up ->
+                    ( (Basics.max 1 (y - 1)), x )
+
+                Right ->
+                    ( y, (Basics.min 19 (x + 1)) )
+
+                Down ->
+                    ( (Basics.min 19 (y + 1)), x )
+
+                Left ->
+                    ( y, (Basics.max 1 (x - 1)) )
+
+        nextStone =
+            Dict.get nextPosition board
+                |> Maybe.withDefault (Stone False Empty)
+
+        edge =
+            case direction of
+                Up ->
+                    if y == 1 then
+                        BoardEdge
+                    else if nextStone.isStone then
+                        ColorEdge nextStone.color
+                    else
+                        NotEdge
+
+                Right ->
+                    if x == 19 then
+                        BoardEdge
+                    else if nextStone.isStone then
+                        ColorEdge nextStone.color
+                    else
+                        NotEdge
+
+                Down ->
+                    if y == 19 then
+                        BoardEdge
+                    else if nextStone.isStone then
+                        ColorEdge nextStone.color
+                    else
+                        NotEdge
+
+                Left ->
+                    if x == 1 then
+                        BoardEdge
+                    else if nextStone.isStone then
+                        ColorEdge nextStone.color
+                    else
+                        NotEdge
+    in
+        case edge of
+            NotEdge ->
+                findEdgeFromPosition board nextPosition direction
+
+            _ ->
+                edge
+
+
+isStoneDead : Board -> BoardPosition -> Stone -> Bool
+isStoneDead board position stone =
+    let
+        edgeUp =
+            findEdgeFromPosition board position Up
+
+        edgeRight =
+            findEdgeFromPosition board position Right
+
+        edgeDown =
+            findEdgeFromPosition board position Down
+
+        edgeLeft =
+            findEdgeFromPosition board position Left
+
+        enemyColor =
+            case stone.color of
+                Black ->
+                    White
+
+                White ->
+                    Black
+
+                _ ->
+                    Empty
+    in
+        if
+            (edgeUp == BoardEdge || edgeUp == ColorEdge enemyColor)
+                && (edgeRight == BoardEdge || edgeRight == ColorEdge enemyColor)
+                && (edgeDown == BoardEdge || edgeDown == ColorEdge enemyColor)
+                && (edgeLeft == BoardEdge || edgeLeft == ColorEdge enemyColor)
+        then
+            True
+        else
+            False
+
+
+findDeadStones : Board -> Dict BoardPosition Bool
+findDeadStones board =
+    let
+        stones =
+            Dict.filter (\key value -> value.isStone == True) board
+
+        dead =
+            Dict.map (isStoneDead board) stones
+    in
+        dead
+
+
+isTerritoryForWho : Board -> BoardPosition -> Stone -> Territory
+isTerritoryForWho board position stone =
+    let
+        edgeUp =
+            findEdgeFromPosition board position Up
+
+        edgeRight =
+            findEdgeFromPosition board position Right
+
+        edgeDown =
+            findEdgeFromPosition board position Down
+
+        edgeLeft =
+            findEdgeFromPosition board position Left
+
+        edges =
+            [ edgeUp, edgeRight, edgeDown, edgeLeft ]
+
+        blackEdges =
+            List.filter (\x -> x == ColorEdge Black) edges
+                |> List.length
+
+        whiteEdges =
+            List.filter (\x -> x == ColorEdge White) edges
+                |> List.length
+    in
+        if blackEdges > 0 && whiteEdges == 0 then
+            Territory True Black
+        else if whiteEdges > 0 && blackEdges == 0 then
+            Territory True White
+        else if blackEdges > 0 && whiteEdges > 0 then
+            Territory True Empty
+        else
+            Territory False Empty
+
+
+findTerritories : Board -> Dict BoardPosition Territory
+findTerritories board =
+    let
+        spaces =
+            Dict.filter (\key value -> value.isStone == False) board
+
+        territory =
+            Dict.map (isTerritoryForWho board) spaces
+    in
+        territory
+
+
+calculateScore : Board -> Float
+calculateScore board =
+    0
+
+
+
+-- DECODERS
+
+
+decoderProbability : JD.Decoder Probability
+decoderProbability =
+    JD.map3 Probability
+        (JD.field "probabilityStone" JD.int)
+        (JD.field "probabilityBlack" JD.int)
+        (JD.field "probabilityWhite" JD.int)
+
+
+decoderProbabilities : JD.Decoder (Dict String Probability)
+decoderProbabilities =
+    JD.dict decoderProbability
+
+
+decodeProbabilities : JD.Value -> Result String (Dict String Probability)
+decodeProbabilities =
+    JD.decodeValue decoderProbabilities
 
 
 
@@ -299,6 +571,7 @@ type Msg
     | StartCamera
     | NewFile
     | NewBoardSize String
+    | NewKomi String
     | NewPrisonersBlack String
     | NewPrisonersWhite String
     | CameraStarted Bool
@@ -312,6 +585,7 @@ type Msg
     | PickWhite
     | PickingWhiteSuccessful Bool
     | ProcessingSuccessful (Result String (Dict String Probability))
+    | NewState State
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -369,19 +643,26 @@ update message model =
             in
                 ( { model | boardSize = newBoardSize }, Cmd.none )
 
-        NewPrisonersBlack amount ->
+        NewKomi komi ->
             let
-                newAmount =
-                    Result.withDefault 0 (String.toInt amount)
+                newKomi =
+                    Result.withDefault 0 (String.toFloat komi)
             in
-                ( { model | prisonersBlack = newAmount }, Cmd.none )
+                ( { model | komi = newKomi }, Cmd.none )
 
-        NewPrisonersWhite amount ->
+        NewPrisonersBlack prisoners ->
             let
-                newAmount =
-                    Result.withDefault 0 (String.toInt amount)
+                newPrisoners =
+                    Result.withDefault 0 (String.toInt prisoners)
             in
-                ( { model | prisonersWhite = newAmount }, Cmd.none )
+                ( { model | prisonersBlack = newPrisoners }, Cmd.none )
+
+        NewPrisonersWhite prisoners ->
+            let
+                newPrisoners =
+                    Result.withDefault 0 (String.toInt prisoners)
+            in
+                ( { model | prisonersWhite = newPrisoners }, Cmd.none )
 
         CameraStarted isPlaying ->
             ( { model | isVideoPlaying = isPlaying, isLoading = False, loadingMessage = Nothing }, Cmd.none )
@@ -420,17 +701,23 @@ update message model =
                         |> List.map .probabilityStone
                         |> List.maximum
                         |> Maybe.withDefault 0
+
+                stones =
+                    Dict.map (probabilityToStone maximumProbability) probabilities
+
+                board =
+                    Dict.Extra.mapKeys boardKeyToBoardPosition stones
+
+                territory =
+                    findTerritories board
             in
-                ( { model
-                    | isProcessingSuccessful = True
-                    , probabilities = probabilities
-                    , maximumProbability = maximumProbability
-                  }
-                , Cmd.none
-                )
+                ( { model | isProcessingSuccessful = True, board = board, territory = territory }, Cmd.none )
 
         ProcessingSuccessful (Err _) ->
             ( model, Cmd.none )
+
+        NewState state ->
+            ( { model | state = state }, Cmd.none )
 
 
 
@@ -648,7 +935,15 @@ buttonClose isOverlay =
 viewLanding : Model -> Html Msg
 viewLanding model =
     div [ classList [ ( "container-landing", True ) ] ]
-        [ button [onClick (ChangePath "#settings")] [text "Start"]]
+        [ viewIconTextLink
+            "start"
+            [ ( "landing", True ), ( "landing--overlay", True ), ( "landing--action", True ) ]
+            "Start"
+            ToRight
+            (ChangePath "#settings")
+        , p [ classList [ ( "landing-pitch", True ) ] ]
+            [ text "Automatically score your finished Go games in just a few simple steps" ]
+        ]
 
 
 viewSettings : Model -> Html Msg
@@ -666,6 +961,19 @@ viewSettings model =
                 [ viewIconText "grid" [] "Board size" ToRight False
                 , select [ classList [ ( "input", True ) ], on "change" (JD.map NewBoardSize targetValue) ]
                     (List.map (viewOptionBoardSize model) model.boardSizes)
+                ]
+            , li [ classList [ ( "container-input", True ), ( "list-item", True ) ] ]
+                [ label [ for "komi" ]
+                    [ viewIconText "stones" [] "Komi" ToRight False
+                    , input
+                        [ id "komi"
+                        , classList [ ( "input", True ) ]
+                        , type_ "number"
+                        , onInput NewKomi
+                        , value (toString model.komi)
+                        ]
+                        []
+                    ]
                 ]
             , li [ classList [ ( "container-input", True ), ( "list-item", True ) ] ]
                 [ label [ for "prisoners-black" ]
@@ -699,7 +1007,7 @@ viewSettings model =
 
 viewOptionBoardSize : Model -> BoardSize -> Html Msg
 viewOptionBoardSize model boardSize =
-    option [ value (boardSizeToString boardSize), selected (model.boardSize == boardSize) ] 
+    option [ value (boardSizeToString boardSize), selected (model.boardSize == boardSize) ]
         [ text (boardSizeToString boardSize) ]
 
 
@@ -894,20 +1202,51 @@ viewProcessing model =
 
 viewScore : Model -> Html Msg
 viewScore model =
-    div
-        [ classList [ ( "container-score", True ) ] ]
-        [ buttonClose True
-        , viewBoard model
-        , div
-            [ classList
-                [ ( "container-board-surface", True )
-                , ( "container-board-surface--19x19", model.boardSize == Nineteen )
-                , ( "container-board-surface--13x13", model.boardSize == Thirteen )
-                , ( "container-board-surface--13x13", model.boardSize == Nine )
+    let
+        scoreBlack =
+            10
+
+        scoreWhite =
+            16.5
+    in
+        div
+            [ classList [ ( "container-score", True ) ] ]
+            [ buttonClose True
+            , viewBoard model
+            , div
+                [ classList
+                    [ ( "container-board-surface", True )
+                    , ( "container-board-surface--19x19", model.boardSize == Nineteen )
+                    , ( "container-board-surface--13x13", model.boardSize == Thirteen )
+                    , ( "container-board-surface--13x13", model.boardSize == Nine )
+                    ]
+                ]
+                []
+            , div [ classList [ ( "controls", True ), ( "controls--black", True ) ] ]
+                [ ul []
+                    [ li [ classList [ ( "list-item", True ) ] ]
+                        [ div [ classList [ ( "controls-button", True ) ], onClick (NewState Editing) ]
+                            [ text "Edit" ]
+                        ]
+                    , li [ classList [ ( "list-item", True ) ] ]
+                        [ div [ classList [ ( "points", True ) ] ]
+                            [ text (toString scoreBlack) ]
+                        ]
+                    ]
+                ]
+            , div [ classList [ ( "controls", True ), ( "controls--white", True ) ] ]
+                [ ul []
+                    [ li [ classList [ ( "list-item", True ) ] ]
+                        [ div [ classList [ ( "controls-button", True ) ], onClick (NewState Scoring) ]
+                            [ text "Score" ]
+                        ]
+                    , li [ classList [ ( "list-item", True ) ] ]
+                        [ div [ classList [ ( "points", True ) ] ]
+                            [ text (toString scoreWhite) ]
+                        ]
+                    ]
                 ]
             ]
-            []
-        ]
 
 
 viewBoard : Model -> Html Msg
@@ -932,27 +1271,48 @@ viewBoardRow model y =
 viewBoardColumn : Model -> Int -> Int -> Html Msg
 viewBoardColumn model y x =
     let
-        key =
-            toString y ++ "-" ++ toString x
+        position =
+            ( y, x )
 
-        probability =
-            Dict.get key model.probabilities
-                |> Maybe.withDefault (Probability -1 -1 -1)
+        stone =
+            Dict.get position model.board
+                |> Maybe.withDefault (Stone False Empty)
 
-        probabilityPercentage =
-            toFloat probability.probabilityStone / toFloat model.maximumProbability
+        isDead =
+            Dict.get position model.dead
+                |> Maybe.withDefault False
 
-        isStone =
-            probabilityPercentage > 0.2
+        territory =
+            Dict.get position model.territory
+                |> Maybe.withDefault (Territory False Empty)
 
-        isBlack =
-            isStone && probability.probabilityBlack > 0 && probability.probabilityBlack > probability.probabilityWhite
+        classColorStone =
+            case stone.color of
+                Black ->
+                    "board-stone--black"
 
-        isWhite =
-            isStone && probability.probabilityWhite > 0 && probability.probabilityWhite > probability.probabilityBlack
+                White ->
+                    "board-stone--white"
 
-        isConflict =
-            isStone && probability.probabilityBlack == probability.probabilityWhite
+                Conflict ->
+                    "board-stone--conflict"
+
+                Empty ->
+                    "board-stone--empty"
+
+        classColorTerritory =
+            if territory.isTerritory then
+                case territory.color of
+                    Black ->
+                        "board-point--territory-black"
+
+                    White ->
+                        "board-point--territory-white"
+
+                    _ ->
+                        "board-point--territory-neutral"
+            else
+                "board-point--territory-empty"
     in
         div
             [ classList
@@ -965,13 +1325,19 @@ viewBoardColumn model y x =
             [ span
                 [ classList
                     [ ( "board-stone", True )
-                    , ( "board-stone--black", isBlack )
-                    , ( "board-stone--white", isWhite )
-                    , ( "board-stone--conflict", isConflict )
+                    , ( "board-stone--dead", isDead )
+                    , ( classColorStone, True )
                     ]
                 ]
                 []
-            , span [ classList [ ( "board-point", True ), ( "board-point--star", isStar model x y ) ] ] []
+            , span
+                [ classList
+                    [ ( "board-point", True )
+                    , ( "board-point--star", isStar model x y )
+                    , ( classColorTerritory, True )
+                    ]
+                ]
+                []
             , span [ classList [ ( "board-connection", True ), ( "board-connection--right", True ) ] ] []
             , span [ classList [ ( "board-connection", True ), ( "board-connection--down", True ) ] ] []
             ]

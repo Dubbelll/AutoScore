@@ -1,9 +1,5 @@
 const element = document.getElementById("app");
-const flags = {
-    version: CONFIG_API_VERSION,
-    baseURL: CONFIG_API_BASE_URL
-};
-const app = Elm.App.embed(element, flags);
+const app = Elm.App.embed(element);
 const state = {
     input: {
         image: new Image(),

@@ -14,9 +14,9 @@ import Dict.Extra
 import Array exposing (Array)
 
 
-main : Program Flags Model Msg
+main : Program Never Model Msg
 main =
-    Navigation.programWithFlags ChangeLocation { init = init, view = view, update = update, subscriptions = subscriptions }
+    Navigation.program ChangeLocation { init = init, view = view, update = update, subscriptions = subscriptions }
 
 
 
@@ -24,8 +24,7 @@ main =
 
 
 type alias Model =
-    { config : Config
-    , route : Route
+    { route : Route
     , location : Location
     , isLoading : Bool
     , loadingMessage : Maybe String
@@ -53,14 +52,6 @@ type alias Model =
     , scoreBlack : Float
     , scoreWhite : Float
     }
-
-
-type alias Flags =
-    { version : String, baseURL : String }
-
-
-type alias Config =
-    { version : String, baseURL : String }
 
 
 type TextDirection
@@ -146,18 +137,14 @@ type Tool
     | NoTool
 
 
-init : Flags -> Location -> ( Model, Cmd Msg )
-init flags location =
+init : Location -> ( Model, Cmd Msg )
+init location =
     let
         currentRoute =
             parseLocation location
 
-        config =
-            { version = flags.version, baseURL = flags.baseURL }
-
         model =
-            { config = config
-            , route = currentRoute
+            { route = currentRoute
             , location = location
             , isLoading = False
             , loadingMessage = Nothing

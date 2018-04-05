@@ -637,7 +637,6 @@ app.ports.startPickingBlack.subscribe(function (bool) {
 
 app.ports.pickBlack.subscribe(function (bool) {
     function useAverages(averages) {
-        console.log(averages);
         state.thresholdsBlack = averages;
 
         app.ports.pickingBlackSuccessful.send(true);
@@ -652,7 +651,6 @@ app.ports.startPickingWhite.subscribe(function (bool) {
 
 app.ports.pickWhite.subscribe(function (bool) {
     function useAverages(averages) {
-        console.log(averages);
         state.thresholdsWhite = averages;
 
         app.ports.pickingWhiteSuccessful.send(true);

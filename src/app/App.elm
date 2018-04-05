@@ -44,9 +44,14 @@ type alias Model =
     , stars13x13 : List Star
     , stars9x9 : List Star
     , board : Board
-    , dead : Dict BoardPosition Bool
+    , dead : Dict BoardPosition Dead
     , territory : Dict BoardPosition Territory
     , state : State
+    , tool : Tool
+    , showingTools : Bool
+    , showingScore : Bool
+    , scoreBlack : Float
+    , scoreWhite : Float
     }
 
 
@@ -122,9 +127,23 @@ type alias Territory =
     { isTerritory : Bool, color : StoneColor }
 
 
+type alias Dead =
+    { isDead : Bool, color : StoneColor }
+
+
 type State
     = Editing
     | Scoring
+
+
+type Tool
+    = DeadBlack
+    | DeadWhite
+    | Alive
+    | AddBlack
+    | AddWhite
+    | Remove
+    | NoTool
 
 
 init : Flags -> Location -> ( Model, Cmd Msg )
@@ -160,6 +179,11 @@ init flags location =
             , dead = Dict.empty
             , territory = Dict.empty
             , state = Editing
+            , tool = NoTool
+            , showingTools = True
+            , showingScore = False
+            , scoreBlack = 0
+            , scoreWhite = 0
             }
     in
         ( model, Cmd.none )
@@ -271,17 +295,9 @@ boardKeyToBoardPosition key =
         ( y, x )
 
 
-isStar : Model -> Int -> Int -> Bool
-isStar model x y =
-    case model.boardSize of
-        Nineteen ->
-            List.any (\z -> z == (Star x y)) model.stars19x19
-
-        Thirteen ->
-            List.any (\z -> z == (Star x y)) model.stars13x13
-
-        Nine ->
-            List.any (\z -> z == (Star x y)) model.stars9x9
+isPositionStar : List Star -> Int -> Int -> Bool
+isPositionStar stars x y =
+    List.any (\z -> z == (Star x y)) stars
 
 
 
@@ -395,53 +411,23 @@ findEdgeFromPosition board position direction =
                 edge
 
 
-isStoneDead : Board -> BoardPosition -> Stone -> Bool
-isStoneDead board position stone =
+isNotDead : Dict BoardPosition Dead -> BoardPosition -> Stone -> Bool
+isNotDead dead position stone =
+    Dict.get position dead
+        |> Maybe.withDefault (Dead False Empty)
+        |> .isDead
+        |> not
+
+
+isSpaceOrDead : Dict BoardPosition Dead -> BoardPosition -> Stone -> Bool
+isSpaceOrDead dead position stone =
     let
-        edgeUp =
-            findEdgeFromPosition board position Up
-
-        edgeRight =
-            findEdgeFromPosition board position Right
-
-        edgeDown =
-            findEdgeFromPosition board position Down
-
-        edgeLeft =
-            findEdgeFromPosition board position Left
-
-        enemyColor =
-            case stone.color of
-                Black ->
-                    White
-
-                White ->
-                    Black
-
-                _ ->
-                    Empty
+        isDead =
+            Dict.get position dead
+                |> Maybe.withDefault (Dead False Empty)
+                |> .isDead
     in
-        if
-            (edgeUp == BoardEdge || edgeUp == ColorEdge enemyColor)
-                && (edgeRight == BoardEdge || edgeRight == ColorEdge enemyColor)
-                && (edgeDown == BoardEdge || edgeDown == ColorEdge enemyColor)
-                && (edgeLeft == BoardEdge || edgeLeft == ColorEdge enemyColor)
-        then
-            True
-        else
-            False
-
-
-findDeadStones : Board -> Dict BoardPosition Bool
-findDeadStones board =
-    let
-        stones =
-            Dict.filter (\key value -> value.isStone == True) board
-
-        dead =
-            Dict.map (isStoneDead board) stones
-    in
-        dead
+        not stone.isStone || isDead
 
 
 isTerritoryForWho : Board -> BoardPosition -> Stone -> Territory
@@ -480,21 +466,47 @@ isTerritoryForWho board position stone =
             Territory False Empty
 
 
-findTerritories : Board -> Dict BoardPosition Territory
-findTerritories board =
+findTerritories : Board -> Dict BoardPosition Dead -> Dict BoardPosition Territory
+findTerritories board dead =
     let
+        boardWithoutDead =
+            Dict.filter (isNotDead dead) board
+
         spaces =
-            Dict.filter (\key value -> value.isStone == False) board
+            Dict.filter (isSpaceOrDead dead) board
 
         territory =
-            Dict.map (isTerritoryForWho board) spaces
+            Dict.map (isTerritoryForWho boardWithoutDead) spaces
     in
         territory
 
 
-calculateScore : Board -> Float
-calculateScore board =
-    0
+calculateScoreBlack : Dict BoardPosition Territory -> Dict BoardPosition Dead -> Int -> Float
+calculateScoreBlack territory dead prisoners =
+    let
+        territoryBlack =
+            Dict.filter (\position territory -> territory.color == Black) territory
+                |> Dict.size
+
+        deadWhite =
+            Dict.filter (\position dead -> dead.color == White) dead
+                |> Dict.size
+    in
+        toFloat <| territoryBlack + deadWhite + prisoners
+
+
+calculateScoreWhite : Dict BoardPosition Territory -> Dict BoardPosition Dead -> Int -> Float -> Float
+calculateScoreWhite territory dead prisoners komi =
+    let
+        territoryWhite =
+            Dict.filter (\position territory -> territory.color == White) territory
+                |> Dict.size
+
+        deadBlack =
+            Dict.filter (\position dead -> dead.color == Black) dead
+                |> Dict.size
+    in
+        (toFloat <| territoryWhite + deadBlack + prisoners) + komi
 
 
 
@@ -586,6 +598,8 @@ type Msg
     | PickingWhiteSuccessful Bool
     | ProcessingSuccessful (Result String (Dict String Probability))
     | NewState State
+    | NewTool Tool
+    | UseToolAt BoardPosition
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -707,17 +721,89 @@ update message model =
 
                 board =
                     Dict.Extra.mapKeys boardKeyToBoardPosition stones
-
-                territory =
-                    findTerritories board
             in
-                ( { model | isProcessingSuccessful = True, board = board, territory = territory }, Cmd.none )
+                ( { model | isProcessingSuccessful = True, board = board }, Cmd.none )
 
         ProcessingSuccessful (Err _) ->
             ( model, Cmd.none )
 
         NewState state ->
-            ( { model | state = state }, Cmd.none )
+            let
+                showingTools =
+                    case state of
+                        Editing ->
+                            not model.showingTools
+
+                        Scoring ->
+                            False
+
+                showingScore =
+                    case state of
+                        Scoring ->
+                            not model.showingScore
+
+                        Editing ->
+                            False
+
+                territory =
+                    case state of
+                        Scoring ->
+                            findTerritories model.board model.dead
+
+                        Editing ->
+                            model.territory
+
+                scoreBlack =
+                    calculateScoreBlack territory model.dead model.prisonersBlack
+
+                scoreWhite =
+                    calculateScoreWhite territory model.dead model.prisonersWhite model.komi
+            in
+                ( { model
+                    | state = state
+                    , showingTools = showingTools
+                    , showingScore = showingScore
+                    , territory = territory
+                    , scoreBlack = scoreBlack
+                    , scoreWhite = scoreWhite
+                  }
+                , Cmd.none
+                )
+
+        NewTool tool ->
+            ( { model | tool = tool, showingTools = False }, Cmd.none )
+
+        UseToolAt position ->
+            let
+                board =
+                    case model.tool of
+                        AddBlack ->
+                            Dict.insert position (Stone True Black) model.board
+
+                        AddWhite ->
+                            Dict.insert position (Stone True White) model.board
+
+                        Remove ->
+                            Dict.insert position (Stone False Empty) model.board
+
+                        _ ->
+                            model.board
+
+                dead =
+                    case model.tool of
+                        DeadBlack ->
+                            Dict.insert position (Dead True Black) model.dead
+
+                        DeadWhite ->
+                            Dict.insert position (Dead True White) model.dead
+
+                        Alive ->
+                            Dict.remove position model.dead
+
+                        _ ->
+                            model.dead
+            in
+                ( { model | board = board, dead = dead }, Cmd.none )
 
 
 
@@ -964,7 +1050,7 @@ viewSettings model =
                 ]
             , li [ classList [ ( "container-input", True ), ( "list-item", True ) ] ]
                 [ label [ for "komi" ]
-                    [ viewIconText "stones" [] "Komi" ToRight False
+                    [ viewIconText "score" [] "Komi" ToRight False
                     , input
                         [ id "komi"
                         , classList [ ( "input", True ) ]
@@ -977,7 +1063,7 @@ viewSettings model =
                 ]
             , li [ classList [ ( "container-input", True ), ( "list-item", True ) ] ]
                 [ label [ for "prisoners-black" ]
-                    [ viewIconText "stones" [] "Number of black prisoners" ToRight False
+                    [ viewIconText "white" [] "Prisoners for black" ToRight False
                     , input
                         [ id "prisoners-black"
                         , classList [ ( "input", True ) ]
@@ -990,7 +1076,7 @@ viewSettings model =
                 ]
             , li [ classList [ ( "container-input", True ), ( "list-item", True ) ] ]
                 [ label [ for "prisoners-white" ]
-                    [ viewIconText "stones" [] "Number of white prisoners" ToRight False
+                    [ viewIconText "black" [] "Prisoners for white" ToRight False
                     , input
                         [ id "prisoners-white"
                         , classList [ ( "input", True ) ]
@@ -1202,51 +1288,110 @@ viewProcessing model =
 
 viewScore : Model -> Html Msg
 viewScore model =
-    let
-        scoreBlack =
-            10
-
-        scoreWhite =
-            16.5
-    in
-        div
-            [ classList [ ( "container-score", True ) ] ]
-            [ buttonClose True
-            , viewBoard model
-            , div
-                [ classList
-                    [ ( "container-board-surface", True )
-                    , ( "container-board-surface--19x19", model.boardSize == Nineteen )
-                    , ( "container-board-surface--13x13", model.boardSize == Thirteen )
-                    , ( "container-board-surface--13x13", model.boardSize == Nine )
-                    ]
-                ]
-                []
-            , div [ classList [ ( "controls", True ), ( "controls--black", True ) ] ]
-                [ ul []
-                    [ li [ classList [ ( "list-item", True ) ] ]
-                        [ div [ classList [ ( "controls-button", True ) ], onClick (NewState Editing) ]
-                            [ text "Edit" ]
-                        ]
-                    , li [ classList [ ( "list-item", True ) ] ]
-                        [ div [ classList [ ( "points", True ) ] ]
-                            [ text (toString scoreBlack) ]
-                        ]
-                    ]
-                ]
-            , div [ classList [ ( "controls", True ), ( "controls--white", True ) ] ]
-                [ ul []
-                    [ li [ classList [ ( "list-item", True ) ] ]
-                        [ div [ classList [ ( "controls-button", True ) ], onClick (NewState Scoring) ]
-                            [ text "Score" ]
-                        ]
-                    , li [ classList [ ( "list-item", True ) ] ]
-                        [ div [ classList [ ( "points", True ) ] ]
-                            [ text (toString scoreWhite) ]
-                        ]
-                    ]
+    div
+        [ classList [ ( "container-score", True ) ] ]
+        [ buttonClose True
+        , viewBoard model
+        , div
+            [ classList
+                [ ( "container-board-surface", True )
+                , ( "container-board-surface--19x19", model.boardSize == Nineteen )
+                , ( "container-board-surface--13x13", model.boardSize == Thirteen )
+                , ( "container-board-surface--13x13", model.boardSize == Nine )
                 ]
             ]
+            []
+        , ul [ classList [ ( "controls-buttons", True ) ] ]
+            [ li [ classList [ ( "list-item", True ) ] ]
+                [ div
+                    [ classList
+                        [ ( "controls-button", True )
+                        , ( "controls-button--active", model.state == Scoring )
+                        ]
+                    , onClick (NewState Scoring)
+                    ]
+                    [ text "Score" ]
+                ]
+            , li [ classList [ ( "list-item", True ) ] ]
+                [ div
+                    [ classList
+                        [ ( "controls-button", True )
+                        , ( "controls-button--active", model.state == Editing )
+                        ]
+                    , onClick (NewState Editing)
+                    ]
+                    [ text "Tools" ]
+                ]
+            ]
+        , ul [ classList [ ( "controls-score", True ) ] ]
+            [ li [ classList [ ( "list-item", True ) ] ]
+                [ viewIconText
+                    "black"
+                    [ ( "points", True ), ( "points--overlay", True ), ( "points--visible", model.showingScore ) ]
+                    (toString model.scoreBlack)
+                    ToRight
+                    False
+                ]
+            , li [ classList [ ( "list-item", True ) ] ]
+                [ viewIconText
+                    "white"
+                    [ ( "points", True ), ( "points--overlay", True ), ( "points--visible", model.showingScore ) ]
+                    (toString model.scoreWhite)
+                    ToRight
+                    False
+                ]
+            ]
+        , ul [ classList [ ( "controls-tools", True ) ] ]
+            [ li [ classList [ ( "list-item", True ) ] ]
+                [ viewIconTextLink
+                    "deadblack"
+                    [ ( "tool", True ), ( "tool--overlay", True ), ( "tool--visible", model.showingTools ) ]
+                    "Dead black"
+                    ToRight
+                    (NewTool DeadBlack)
+                ]
+            , li [ classList [ ( "list-item", True ) ] ]
+                [ viewIconTextLink
+                    "deadwhite"
+                    [ ( "tool", True ), ( "tool--overlay", True ), ( "tool--visible", model.showingTools ) ]
+                    "Dead white"
+                    ToRight
+                    (NewTool DeadWhite)
+                ]
+            , li [ classList [ ( "list-item", True ) ] ]
+                [ viewIconTextLink
+                    "alive"
+                    [ ( "tool", True ), ( "tool--overlay", True ), ( "tool--visible", model.showingTools ) ]
+                    "Alive"
+                    ToRight
+                    (NewTool Alive)
+                ]
+            , li [ classList [ ( "list-item", True ) ] ]
+                [ viewIconTextLink
+                    "addblack"
+                    [ ( "tool", True ), ( "tool--overlay", True ), ( "tool--visible", model.showingTools ) ]
+                    "Add black"
+                    ToRight
+                    (NewTool AddBlack)
+                ]
+            , li [ classList [ ( "list-item", True ) ] ]
+                [ viewIconTextLink
+                    "addwhite"
+                    [ ( "tool", True ), ( "tool--overlay", True ), ( "tool--visible", model.showingTools ) ]
+                    "Add white"
+                    ToRight
+                    (NewTool AddWhite)
+                ]
+            , li [ classList [ ( "list-item", True ) ] ]
+                [ viewIconTextLink
+                    "remove"
+                    [ ( "tool", True ), ( "tool--overlay", True ), ( "tool--visible", model.showingTools ) ]
+                    "Remove"
+                    ToRight
+                    (NewTool Remove)
+                ]
+            ]
+        ]
 
 
 viewBoard : Model -> Html Msg
@@ -1278,9 +1423,21 @@ viewBoardColumn model y x =
             Dict.get position model.board
                 |> Maybe.withDefault (Stone False Empty)
 
+        isStar =
+            case model.boardSize of
+                Nineteen ->
+                    isPositionStar model.stars19x19 x y
+
+                Thirteen ->
+                    isPositionStar model.stars13x13 x y
+
+                Nine ->
+                    isPositionStar model.stars9x9 x y
+
         isDead =
             Dict.get position model.dead
-                |> Maybe.withDefault False
+                |> Maybe.withDefault (Dead False Empty)
+                |> .isDead
 
         territory =
             Dict.get position model.territory
@@ -1301,7 +1458,7 @@ viewBoardColumn model y x =
                     "board-stone--empty"
 
         classColorTerritory =
-            if territory.isTerritory then
+            if territory.isTerritory && model.state == Scoring then
                 case territory.color of
                     Black ->
                         "board-point--territory-black"
@@ -1326,14 +1483,16 @@ viewBoardColumn model y x =
                 [ classList
                     [ ( "board-stone", True )
                     , ( "board-stone--dead", isDead )
+                    , ( "board-stone--dead--editing", isDead && model.state == Editing )
                     , ( classColorStone, True )
                     ]
+                , onClick (UseToolAt ( y, x ))
                 ]
                 []
             , span
                 [ classList
                     [ ( "board-point", True )
-                    , ( "board-point--star", isStar model x y )
+                    , ( "board-point--star", isStar )
                     , ( classColorTerritory, True )
                     ]
                 ]

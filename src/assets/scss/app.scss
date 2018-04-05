@@ -22,32 +22,56 @@
 /* MEDIA */
 @media screen and (orientation: landscape) 
 {
-    .controls
+    .controls-buttons,
     {
-        &.controls--black
-        {
-            left: $positioning-default;
-        }
+        top: 50%;
+        left: $positioning-thumb;
+        transform: translateY(-50%);
+    }
 
-        &.controls--white
-        {
-            right: $positioning-default;
-        }
+    .controls-score
+    {
+        top: 50%;
+        right: $positioning-thumb;
+        transform: translateY(-50%);
     }
 }
 
 @media screen and (orientation: portrait) 
 {
-    .controls
+    .controls-buttons
     {
-        &.controls--black
-        {
-            top: $positioning-default;
-        }
+        bottom: $positioning-thumb;
+        left: 50%;
+        transform: translateX(-50%);
 
-        &.controls--white
+        &>.list-item
         {
-            bottom: $positioning-default;
+            display: inline-block;
+            margin-bottom: 0;
+            
+            &:not(:first-child)
+            {
+                margin-left: $margin-minimal;
+            }
+        }
+    }
+
+    .controls-score
+    {
+        top: calc(((100% - 89.5rem) / 2) - 14rem);
+        left: 50%;
+        transform: translateX(-50%);
+
+        &>.list-item
+        {
+            display: inline-block;
+            margin-bottom: 0;
+        
+            &:not(:first-child)
+            {
+                margin-left: $margin-minimal;
+            }
         }
     }
 }
@@ -566,38 +590,70 @@ input[type="file"] {
     }
 }
 
-.container-score
+.controls-buttons, .controls-score, .controls-tools
 {
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    position: absolute;
+    z-index: $depth-overlay-ui;
 }
 
-.controls
+.controls-tools
 {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translateX(-50%) translateY(-50%);
+    max-width: 90rem;
+    max-height: 90rem;
 }
 
 .controls-button
 {
     @extend .text;
 
+    position: relative;
     width: 12.5rem;
     padding: $padding-default;
     background-color: $color-accent-primary;
     border-radius: 1rem;
     text-align: center;
     cursor: pointer;
+    user-select: none;
+
+    &.controls-button--active
+    {
+        font-weight: bold;
+    }
+}
+
+.tool
+{
+    display: none;
+    position: relative;
+    
+    &.tool--overlay
+    {
+        @extend .overlay;
+    }
+
+    &.tool--visible
+    {
+        display: flex;
+    }
 }
 
 .points
 {
-    @extend .text;
+    display: none;
+    position: relative;
+    
+    &.points--overlay
+    {
+        @extend .overlay;
+    }
 
-    text-align: center;
+    &.points--visible
+    {
+        display: flex;
+    }
 }
 
 .container-board
@@ -761,6 +817,12 @@ input[type="file"] {
     &.board-stone--dead
     {
         opacity: 0.5;
+        z-index: 0;
+
+        &.board-stone--dead--editing
+        {
+            z-index: $depth-board-stone;
+        }
     }
 
     &.board-stone--black

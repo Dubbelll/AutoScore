@@ -22,6 +22,18 @@
 /* MEDIA */
 @media screen and (orientation: landscape) 
 {
+    .settings-list
+    {
+        display: inline-block;
+        width: 50%;
+
+        &:not(:first-child)
+        {
+            width: calc(50% - 2rem);
+            margin-left: $margin-default;
+        }
+    }
+
     .controls-buttons,
     {
         top: 50%;
@@ -113,28 +125,28 @@ body,
     width: $icon-size-default;
     height: $icon-size-default;
     fill: $color-text-primary;
-}
 
-.icon--medium
-{
-    width: $icon-size-medium;
-    height: $icon-size-medium;
-    min-width: $icon-size-medium;
-    min-height: $icon-size-medium;
-    max-width: $icon-size-medium;
-    max-height: $icon-size-medium;
-    padding: $padding-minimal;
-}
+    &.icon--medium
+    {
+        width: $icon-size-medium;
+        height: $icon-size-medium;
+        min-width: $icon-size-medium;
+        min-height: $icon-size-medium;
+        max-width: $icon-size-medium;
+        max-height: $icon-size-medium;
+        padding: $padding-minimal;
+    }
 
-.icon--big
-{
-    width: $icon-size-big;
-    height: $icon-size-big;
-    min-width: $icon-size-big;
-    min-height: $icon-size-big;
-    max-width: $icon-size-big;
-    max-height: $icon-size-big;
-    padding: $padding-minimal;
+    &.icon--big
+    {
+        width: $icon-size-big;
+        height: $icon-size-big;
+        min-width: $icon-size-big;
+        min-height: $icon-size-big;
+        max-width: $icon-size-big;
+        max-height: $icon-size-big;
+        padding: $padding-minimal;
+    }
 }
 
 .text
@@ -146,8 +158,18 @@ body,
 .text-icon
 {
     padding: $padding-default;
-    font-size: $font-size-title;
+    font-size: $font-size-default;
     user-select: none;
+
+    &.text-icon--medium
+    {
+        font-size: $font-size-heading;
+    }
+
+    &.text-icon--big
+    {
+        font-size: $font-size-title;
+    }
 }
 
 .link-fake
@@ -162,10 +184,9 @@ input[type="file"] {
 .input
 {
     position: relative;
-    left: 13rem;
-    width: calc(5 * #{$font-size-title});
-    max-width: calc(5 * #{$font-size-title});
-    padding: $padding-minimal 0;
+    left: 9rem;
+    width: calc(5 * #{$font-size-heading});
+    max-width: calc(5 * #{$font-size-heading});
     margin-bottom: $margin-minimal;
     border: none;
     outline: none;
@@ -174,7 +195,7 @@ input[type="file"] {
     background-color: $color-background-primary;
     box-shadow: 0 0.3rem $color-shadow;
     font-family: $font-family-default;
-    font-size: $font-size-title;
+    font-size: $font-size-heading;
 }
 
 .list-item
@@ -471,6 +492,14 @@ input[type="file"] {
 
     width: 50%;
     text-align: center;
+}
+
+.container-settings-list
+{
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translateX(-50%) translateY(-50%);
 }
 
 .settings

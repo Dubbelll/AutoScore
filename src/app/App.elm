@@ -33,6 +33,8 @@ type alias Model =
     , komi : Float
     , prisonersBlack : Int
     , prisonersWhite : Int
+    , areDeadRemoved : Bool
+    , showHelp : Bool
     , isVideoPlaying : Bool
     , isInputSuccessful : Bool
     , isCroppingSuccessful : Bool
@@ -57,6 +59,11 @@ type alias Model =
 type TextDirection
     = ToLeft
     | ToRight
+
+
+type ViewSize
+    = Medium
+    | Big
 
 
 type CropShape
@@ -153,6 +160,8 @@ init location =
             , komi = 6.5
             , prisonersBlack = 0
             , prisonersWhite = 0
+            , areDeadRemoved = False
+            , showHelp = True
             , isVideoPlaying = False
             , isInputSuccessful = False
             , isCroppingSuccessful = False
@@ -229,7 +238,7 @@ probabilityToStone maximumProbability key probability =
             toFloat probability.probabilityStone / toFloat maximumProbability
 
         isStone =
-            probabilityPercentage > 0.2
+            probabilityPercentage > 0.25
 
         color =
             if
@@ -573,6 +582,8 @@ type Msg
     | NewKomi String
     | NewPrisonersBlack String
     | NewPrisonersWhite String
+    | NewAreDeadRemoved Bool
+    | NewShowHelp Bool
     | CameraStarted Bool
     | CameraStopped Bool
     | TakePhoto
@@ -664,6 +675,12 @@ update message model =
                     Result.withDefault 0 (String.toInt prisoners)
             in
                 ( { model | prisonersWhite = newPrisoners }, Cmd.none )
+
+        NewAreDeadRemoved removed ->
+            ( { model | areDeadRemoved = removed }, Cmd.none )
+
+        NewShowHelp show ->
+            ( { model | showHelp = show }, Cmd.none )
 
         CameraStarted isPlaying ->
             ( { model | isVideoPlaying = isPlaying, isLoading = False, loadingMessage = Nothing }, Cmd.none )
@@ -882,6 +899,92 @@ page model =
 -- VIEW GENERAL
 
 
+viewIcon : String -> List ( String, Bool ) -> Html Msg
+viewIcon name classesExtra =
+    let
+        classes =
+            [ ( "icon", True ) ] ++ classesExtra
+    in
+        svg [ SA.class (classString classes) ]
+            [ use [ xlinkHref ("#" ++ name) ] [] ]
+
+
+viewIconText : String -> List ( String, Bool ) -> String -> TextDirection -> Bool -> ViewSize -> Html Msg
+viewIconText name classesExtra value direction isClickable size =
+    let
+        classes =
+            [ ( "container-icon-text", True ), ( "link-fake", isClickable ) ] ++ classesExtra
+
+        textClass =
+            case size of
+                Medium ->
+                    "text-icon--medium"
+
+                Big ->
+                    "text-icon--big"
+
+        iconClass =
+            case size of
+                Medium ->
+                    "icon--medium"
+
+                Big ->
+                    "icon--big"
+
+        content =
+            case direction of
+                ToLeft ->
+                    [ span [ classList [ ( "text-icon", True ), ( textClass, True ) ] ] [ text value ]
+                    , viewIcon name [ ( iconClass, True ) ]
+                    ]
+
+                ToRight ->
+                    [ viewIcon name [ ( iconClass, True ) ]
+                    , span [ classList [ ( "text-icon", True ), ( textClass, True ) ] ] [ text value ]
+                    ]
+    in
+        span [ classList classes ]
+            content
+
+
+viewIconTextLink : String -> List ( String, Bool ) -> String -> TextDirection -> Msg -> ViewSize -> Html Msg
+viewIconTextLink name classesExtra value direction msg size =
+    let
+        classes =
+            [ ( "container-icon-text-link", True ), ( "link-fake", True ) ] ++ classesExtra
+
+        textClass =
+            case size of
+                Medium ->
+                    "text-icon--medium"
+
+                Big ->
+                    "text-icon--big"
+
+        iconClass =
+            case size of
+                Medium ->
+                    "icon--medium"
+
+                Big ->
+                    "icon--big"
+
+        content =
+            case direction of
+                ToLeft ->
+                    [ span [ classList [ ( "text-icon", True ), ( textClass, True ) ] ] [ text value ]
+                    , viewIcon name [ ( iconClass, True ) ]
+                    ]
+
+                ToRight ->
+                    [ viewIcon name [ ( iconClass, True ) ]
+                    , span [ classList [ ( "text-icon", True ), ( textClass, True ) ] ] [ text value ]
+                    ]
+    in
+        span [ classList classes, onClick msg ]
+            content
+
+
 viewCanvas : String -> Bool -> Html Msg
 viewCanvas identifier isVisible =
     canvas
@@ -942,63 +1045,9 @@ viewCropFrame identifier shape isVisible =
             ]
 
 
-viewIcon : String -> List ( String, Bool ) -> Html Msg
-viewIcon name classesExtra =
-    let
-        classes =
-            [ ( "icon", True ) ] ++ classesExtra
-    in
-        svg [ SA.class (classString classes) ]
-            [ use [ xlinkHref ("#" ++ name) ] [] ]
-
-
-viewIconText : String -> List ( String, Bool ) -> String -> TextDirection -> Bool -> Html Msg
-viewIconText name classesExtra value direction isClickable =
-    let
-        classes =
-            [ ( "container-icon-text", True ), ( "link-fake", isClickable ) ] ++ classesExtra
-
-        content =
-            case direction of
-                ToLeft ->
-                    [ span [ classList [ ( "text-icon", True ) ] ] [ text value ]
-                    , viewIcon name [ ( "icon--big", True ) ]
-                    ]
-
-                ToRight ->
-                    [ viewIcon name [ ( "icon--big", True ) ]
-                    , span [ classList [ ( "text-icon", True ) ] ] [ text value ]
-                    ]
-    in
-        span [ classList classes ]
-            content
-
-
-viewIconTextLink : String -> List ( String, Bool ) -> String -> TextDirection -> Msg -> Html Msg
-viewIconTextLink name classesExtra value direction msg =
-    let
-        classes =
-            [ ( "container-icon-text-link", True ), ( "link-fake", True ) ] ++ classesExtra
-
-        content =
-            case direction of
-                ToLeft ->
-                    [ span [ classList [ ( "text-icon", True ) ] ] [ text value ]
-                    , viewIcon name [ ( "icon--big", True ) ]
-                    ]
-
-                ToRight ->
-                    [ viewIcon name [ ( "icon--big", True ) ]
-                    , span [ classList [ ( "text-icon", True ) ] ] [ text value ]
-                    ]
-    in
-        span [ classList classes, onClick msg ]
-            content
-
-
-buttonClose : Bool -> Html Msg
-buttonClose isOverlay =
-    viewIconTextLink "close" [ ( "close", True ), ( "close--overlay", isOverlay ) ] "Close" ToLeft (ChangePath "#")
+viewButtonClose : Bool -> Html Msg
+viewButtonClose isOverlay =
+    viewIconTextLink "close" [ ( "close", True ), ( "close--overlay", isOverlay ) ] "Close" ToLeft (ChangePath "#") Big
 
 
 
@@ -1014,6 +1063,7 @@ viewLanding model =
             "Start"
             ToRight
             (ChangePath "#settings")
+            Big
         , p [ classList [ ( "landing-pitch", True ) ] ]
             [ text "Automatically score your finished Go games in just a few simple steps" ]
         ]
@@ -1021,61 +1071,97 @@ viewLanding model =
 
 viewSettings : Model -> Html Msg
 viewSettings model =
-    div [ classList [ ( "container-settings", True ) ] ]
-        [ buttonClose False
-        , viewIconTextLink
-            "continue"
-            [ ( "settings", True ), ( "settings--overlay", True ), ( "settings--action", True ) ]
-            "Continue"
-            ToRight
-            (ChangePath "#source")
-        , ul []
-            [ li [ classList [ ( "container-select", True ), ( "list-item", True ) ] ]
-                [ viewIconText "grid" [] "Board size" ToRight False
-                , select [ classList [ ( "input", True ) ], on "change" (JD.map NewBoardSize targetValue) ]
-                    (List.map (viewOptionBoardSize model) model.boardSizes)
-                ]
-            , li [ classList [ ( "container-input", True ), ( "list-item", True ) ] ]
-                [ label [ for "komi" ]
-                    [ viewIconText "score" [] "Komi" ToRight False
-                    , input
-                        [ id "komi"
-                        , classList [ ( "input", True ) ]
-                        , type_ "number"
-                        , onInput NewKomi
-                        , value (toString model.komi)
+    let
+        nameAreDeadRemoved =
+            if model.areDeadRemoved then
+                "checked"
+            else
+                "box"
+
+        nameShowHelp =
+            if model.showHelp then
+                "checked"
+            else
+                "box"
+    in
+        div [ classList [ ( "container-settings", True ) ] ]
+            [ viewButtonClose False
+            , viewIconTextLink
+                "continue"
+                [ ( "settings", True ), ( "settings--overlay", True ), ( "settings--action", True ) ]
+                "Continue"
+                ToRight
+                (ChangePath "#source")
+                Big
+            , div [ classList [ ( "container-settings-list", True ) ] ]
+                [ ul [ classList [ ( "settings-list", True ) ] ]
+                    [ li [ classList [ ( "container-select", True ), ( "list-item", True ) ] ]
+                        [ viewIconText "grid" [] "Board size" ToRight False Medium
+                        , select [ classList [ ( "input", True ) ], on "change" (JD.map NewBoardSize targetValue) ]
+                            (List.map (viewOptionBoardSize model) model.boardSizes)
                         ]
-                        []
+                    , li [ classList [ ( "list-item", True ) ] ]
+                        [ label [ for "prisoners-black" ]
+                            [ viewIconText "white" [] "Prisoners for black" ToRight False Medium
+                            , input
+                                [ id "prisoners-black"
+                                , classList [ ( "input", True ) ]
+                                , type_ "number"
+                                , onInput NewPrisonersBlack
+                                , value (toString model.prisonersBlack)
+                                ]
+                                []
+                            ]
+                        ]
+                    , li [ classList [ ( "list-item", True ) ] ]
+                        [ label [ for "prisoners-white" ]
+                            [ viewIconText "black" [] "Prisoners for white" ToRight False Medium
+                            , input
+                                [ id "prisoners-white"
+                                , classList [ ( "input", True ) ]
+                                , type_ "number"
+                                , onInput NewPrisonersWhite
+                                , value (toString model.prisonersWhite)
+                                ]
+                                []
+                            ]
+                        ]
                     ]
-                ]
-            , li [ classList [ ( "container-input", True ), ( "list-item", True ) ] ]
-                [ label [ for "prisoners-black" ]
-                    [ viewIconText "white" [] "Prisoners for black" ToRight False
-                    , input
-                        [ id "prisoners-black"
-                        , classList [ ( "input", True ) ]
-                        , type_ "number"
-                        , onInput NewPrisonersBlack
-                        , value (toString model.prisonersBlack)
+                , ul [ classList [ ( "settings-list", True ) ] ]
+                    [ li [ classList [ ( "list-item", True ) ] ]
+                        [ label [ for "komi" ]
+                            [ viewIconText "score" [] "Komi" ToRight False Medium
+                            , input
+                                [ id "komi"
+                                , classList [ ( "input", True ) ]
+                                , type_ "number"
+                                , onInput NewKomi
+                                , value (toString model.komi)
+                                ]
+                                []
+                            ]
                         ]
-                        []
-                    ]
-                ]
-            , li [ classList [ ( "container-input", True ), ( "list-item", True ) ] ]
-                [ label [ for "prisoners-white" ]
-                    [ viewIconText "black" [] "Prisoners for white" ToRight False
-                    , input
-                        [ id "prisoners-white"
-                        , classList [ ( "input", True ) ]
-                        , type_ "number"
-                        , onInput NewPrisonersWhite
-                        , value (toString model.prisonersWhite)
+                    , li [ classList [ ( "list-item", True ) ] ]
+                        [ viewIconTextLink
+                            nameAreDeadRemoved
+                            []
+                            "Dead stones have been removed"
+                            ToRight
+                            (NewAreDeadRemoved <| not model.areDeadRemoved)
+                            Medium
                         ]
-                        []
+                    , li [ classList [ ( "list-item", True ) ] ]
+                        [ viewIconTextLink
+                            nameShowHelp
+                            []
+                            "Show help messages"
+                            ToRight
+                            (NewShowHelp <| not model.showHelp)
+                            Medium
+                        ]
                     ]
                 ]
             ]
-        ]
 
 
 viewOptionBoardSize : Model -> BoardSize -> Html Msg
@@ -1087,13 +1173,13 @@ viewOptionBoardSize model boardSize =
 viewSource : Model -> Html Msg
 viewSource model =
     div [ classList [ ( "container-source", True ) ] ]
-        [ buttonClose False
+        [ viewButtonClose False
         , ul []
             [ li [ classList [ ( "container-link", True ), ( "list-item", True ) ] ]
-                [ viewIconTextLink "camera" [] "Photo" ToRight (ChangePath "#photo") ]
+                [ viewIconTextLink "camera" [] "Photo" ToRight (ChangePath "#photo") Big ]
             , li [ classList [ ( "container-input", True ), ( "list-item", True ) ] ]
                 [ label [ for "file-input" ]
-                    [ viewIconText "file" [] "File" ToRight True
+                    [ viewIconText "file" [] "File" ToRight True Big
                     , input [ id "file-input", type_ "file", on "change" (JD.succeed NewFile) ] []
                     ]
                 ]
@@ -1107,23 +1193,25 @@ viewPhoto model =
         overlay =
             case model.isVideoPlaying of
                 True ->
-                    [ buttonClose True
+                    [ viewButtonClose True
                     , viewIconText
                         "info"
                         [ ( "camera", True ), ( "camera--overlay", True ), ( "camera--info", True ) ]
                         "Tap/click anywhere to take a photo"
                         ToRight
                         False
+                        Big
                     ]
 
                 False ->
-                    [ buttonClose False
+                    [ viewButtonClose False
                     , viewIconTextLink
                         "camera"
                         [ ( "camera", True ), ( "camera--action", True ) ]
                         "Start camera"
                         ToRight
                         StartCamera
+                        Big
                     ]
     in
         div [ classList [ ( "container-photo", True ) ] ]
@@ -1136,29 +1224,32 @@ viewCrop model =
         overlay =
             case model.isInputSuccessful of
                 True ->
-                    [ buttonClose True
+                    [ viewButtonClose True
                     , viewIconText
                         "info"
                         [ ( "crop", True ), ( "crop--overlay", True ), ( "crop--info", True ) ]
                         "Crop the image so only the board remains"
                         ToRight
                         False
+                        Big
                     , viewIconTextLink
                         "crop"
                         [ ( "crop", True ), ( "crop--overlay", True ), ( "crop--action", True ) ]
                         "Crop"
                         ToRight
                         CropPhoto
+                        Big
                     ]
 
                 False ->
-                    [ buttonClose False
+                    [ viewButtonClose False
                     , viewIconText
                         "info"
                         [ ( "crop", True ) ]
                         "Nothing to crop"
                         ToRight
                         False
+                        Big
                     ]
     in
         div
@@ -1172,29 +1263,32 @@ viewBlack model =
         overlay =
             case model.isCroppingSuccessful of
                 True ->
-                    [ buttonClose True
+                    [ viewButtonClose True
                     , viewIconText
                         "info"
                         [ ( "color", True ), ( "color--overlay", True ), ( "color--info--black", True ) ]
                         "Select the lightest black stone"
                         ToRight
                         False
+                        Big
                     , viewIconTextLink
                         "color"
                         [ ( "color", True ), ( "color--overlay", True ), ( "color--action", True ) ]
                         "Pick"
                         ToRight
                         PickBlack
+                        Big
                     ]
 
                 False ->
-                    [ buttonClose False
+                    [ viewButtonClose False
                     , viewIconText
                         "info"
                         [ ( "color", True ) ]
                         "Nothing to pick"
                         ToRight
                         False
+                        Big
                     ]
     in
         div
@@ -1208,29 +1302,32 @@ viewWhite model =
         overlay =
             case model.isPickingBlackSuccessful of
                 True ->
-                    [ buttonClose True
+                    [ viewButtonClose True
                     , viewIconText
                         "info"
                         [ ( "color", True ), ( "color--overlay", True ), ( "color--info--white", True ) ]
                         "Select the darkest white stone"
                         ToRight
                         False
+                        Big
                     , viewIconTextLink
                         "color"
                         [ ( "color", True ), ( "color--overlay", True ), ( "color--action", True ) ]
                         "Pick"
                         ToRight
                         PickWhite
+                        Big
                     ]
 
                 False ->
-                    [ buttonClose False
+                    [ viewButtonClose False
                     , viewIconText
                         "info"
                         [ ( "color", True ) ]
                         "Nothing to pick"
                         ToRight
                         False
+                        Big
                     ]
     in
         div
@@ -1244,29 +1341,32 @@ viewProcessing model =
         overlay =
             case model.isCroppingSuccessful of
                 True ->
-                    [ buttonClose True
+                    [ viewButtonClose True
                     , viewIconText
                         "info"
                         [ ( "processed", True ), ( "processed--overlay", True ), ( "processed--info", True ) ]
                         "This is how I detected the stones on the board. You can make corrections in the next step"
                         ToRight
                         False
+                        Big
                     , viewIconTextLink
                         "continue"
                         [ ( "processed", True ), ( "processed--overlay", True ), ( "processed--action", True ) ]
                         "Continue"
                         ToRight
                         (ChangePath "#score")
+                        Big
                     ]
 
                 False ->
-                    [ buttonClose False
+                    [ viewButtonClose False
                     , viewIconText
                         "info"
                         [ ( "crop", True ) ]
                         "Nothing to process"
                         ToRight
                         False
+                        Big
                     ]
     in
         div [ classList [ ( "container-processing", True ) ] ]
@@ -1277,7 +1377,7 @@ viewScore : Model -> Html Msg
 viewScore model =
     div
         [ classList [ ( "container-score", True ) ] ]
-        [ buttonClose True
+        [ viewButtonClose True
         , viewBoard model
         , div
             [ classList
@@ -1318,6 +1418,7 @@ viewScore model =
                     (toString model.scoreBlack)
                     ToRight
                     False
+                    Big
                 ]
             , li [ classList [ ( "list-item", True ) ] ]
                 [ viewIconText
@@ -1326,6 +1427,7 @@ viewScore model =
                     (toString model.scoreWhite)
                     ToRight
                     False
+                    Big
                 ]
             ]
         , ul [ classList [ ( "controls-tools", True ) ] ]
@@ -1336,6 +1438,7 @@ viewScore model =
                     "Dead black"
                     ToRight
                     (NewTool DeadBlack)
+                    Big
                 ]
             , li [ classList [ ( "list-item", True ) ] ]
                 [ viewIconTextLink
@@ -1344,6 +1447,7 @@ viewScore model =
                     "Dead white"
                     ToRight
                     (NewTool DeadWhite)
+                    Big
                 ]
             , li [ classList [ ( "list-item", True ) ] ]
                 [ viewIconTextLink
@@ -1352,6 +1456,7 @@ viewScore model =
                     "Alive"
                     ToRight
                     (NewTool Alive)
+                    Big
                 ]
             , li [ classList [ ( "list-item", True ) ] ]
                 [ viewIconTextLink
@@ -1360,6 +1465,7 @@ viewScore model =
                     "Add black"
                     ToRight
                     (NewTool AddBlack)
+                    Big
                 ]
             , li [ classList [ ( "list-item", True ) ] ]
                 [ viewIconTextLink
@@ -1368,6 +1474,7 @@ viewScore model =
                     "Add white"
                     ToRight
                     (NewTool AddWhite)
+                    Big
                 ]
             , li [ classList [ ( "list-item", True ) ] ]
                 [ viewIconTextLink
@@ -1376,6 +1483,7 @@ viewScore model =
                     "Remove"
                     ToRight
                     (NewTool Remove)
+                    Big
                 ]
             ]
         ]

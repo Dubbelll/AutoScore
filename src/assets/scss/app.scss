@@ -1,6 +1,16 @@
 @import "variables";
 @import "mixins";
 
+@font-face 
+{
+    font-family: "Nunito";
+    font-style: normal;
+    font-weight: 400;
+    src: local("Nunito Regular"), local("Nunito-Regular"),
+         url("nunito.woff2") format("woff2"),
+         url("nunito.woff") format("woff");
+}
+
 :root
 {
     width: 100%;
@@ -22,15 +32,18 @@
 /* MEDIA */
 @media screen and (orientation: landscape) 
 {
+    .container-settings-list
+    {
+        display: flex;
+    }
+
     .settings-list
     {
-        display: inline-block;
         width: 50%;
 
         &:not(:first-child)
         {
-            width: calc(50% - 2rem);
-            margin-left: $margin-default;
+            margin-left: 12.5rem;
         }
     }
 
@@ -184,7 +197,7 @@ input[type="file"] {
 .input
 {
     position: relative;
-    left: 9rem;
+    left: 11.5rem;
     width: calc(5 * #{$font-size-heading});
     max-width: calc(5 * #{$font-size-heading});
     margin-bottom: $margin-minimal;

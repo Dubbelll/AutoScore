@@ -36,6 +36,10 @@ const state = {
 const CROP_TYPE_RECTANGLE = 1;
 const CROP_TYPE_CIRCLE = 2;
 
+if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("worker.js", { scope: "/" });
+}
+
 window.addEventListener("load", function () {
     setViewportMinimum();
 });

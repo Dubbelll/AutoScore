@@ -1,25 +1,30 @@
 /* Colors */
 $color-background-primary: #FDFDFD;
-$color-background-secondary: #607D8B;
-$color-background-tertiary: #CFD8DC;
+$color-background-secondary: #E3B579;
 $color-text-primary: #2F2F2F;
 $color-text-secondary: #FDFDFD;
 $color-object-primary: #2F2F2F;
-$color-person-primary: #FFE0B2;
+$color-object-secondary: #FDFDFD;
+$color-object-tertiary: #F44336;
 $color-accent-primary: #03A9F4;
+$color-shadow: lightgrey;
+$color-crop: #FFC107;
+$color-slider: #FFECB3;
 
 /* Font */
 $font-family-default: "Nunito", sans-serif;
 $font-size-default: 1vmin;
 $font-size-title: 5rem;
-$font-size-icon-fake: 3.75rem;
 $font-size-heading: 2.5rem;
-$font-size-description: 2.25rem;
-$font-size-icon: 1.75rem;
 $font-size-body: 1.25rem;
 
 /* Line */
 $line-height-tight: 1.25;
+
+/* Positioning */
+$positioning-thumb: 5rem;
+$positioning-default: 2rem;
+$positioning-minimal: 1rem;
 
 /* Padding */
 $padding-default: 2rem;
@@ -31,13 +36,19 @@ $margin-minimal: 1rem;
 
 /* Border */
 $border-width-default: 2px;
+$border-radius-default: 1rem;
 
 /* Icons */
 $icon-size-default: 2.5rem;
-$icon-size-big: 5rem;
+$icon-size-medium: 5rem;
+$icon-size-big: 10rem;
 
 /* Depth */
-$depth-card: 20;
-$depth-card-descendent: 15;
-$depth-building: 10;
-$depth-object: 5;
+$depth-loading: 30;
+$depth-overlay-ui: 25;
+$depth-crop: 20;
+$depth-overlay: 15;
+$depth-fader: 15;
+$depth-source: 10;
+$depth-board-stone: 10;
+$depth-board-point: 5;

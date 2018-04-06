@@ -4,22 +4,19 @@ import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
 import Navigation exposing (Location)
-import Translation.App as Translation
 import UrlParser as UP
-import Http
 import Json.Decode as JD
-import Json.Decode.Extra as JDE
-import Json.Decode.Pipeline as JDP
-import Date exposing (Date)
-import Time exposing (Time)
+import Ports as PT
 import Svg exposing (svg, use)
 import Svg.Attributes as SA exposing (class, xlinkHref)
 import Dict exposing (Dict)
+import Dict.Extra
+import Array exposing (Array)
 
 
-main : Program Flags Model Msg
+main : Program Never Model Msg
 main =
-    Navigation.programWithFlags LocationChange { init = init, view = view, update = update, subscriptions = subscriptions }
+    Navigation.program ChangeLocation { init = init, view = view, update = update, subscriptions = subscriptions }
 
 
 
@@ -27,546 +24,507 @@ main =
 
 
 type alias Model =
-    { config : Config, route : Route, location : Location, togglesVisibility : Toggles, mysteries : List Mystery, mystery : Mystery }
+    { route : Route
+    , location : Location
+    , isLoading : Bool
+    , loadingMessage : Maybe String
+    , boardSizes : List BoardSize
+    , boardSize : BoardSize
+    , komi : Float
+    , prisonersBlack : Int
+    , prisonersWhite : Int
+    , areDeadRemoved : Bool
+    , showHelp : Bool
+    , isVideoPlaying : Bool
+    , isInputSuccessful : Bool
+    , isCroppingSuccessful : Bool
+    , isPickingBlackSuccessful : Bool
+    , isPickingWhiteSuccessful : Bool
+    , isProcessingSuccessful : Bool
+    , stars19x19 : List Star
+    , stars13x13 : List Star
+    , stars9x9 : List Star
+    , board : Board
+    , dead : Dict BoardPosition Dead
+    , territory : Dict BoardPosition Territory
+    , state : State
+    , tool : Tool
+    , showingTools : Bool
+    , showingScore : Bool
+    , scoreBlack : Float
+    , scoreWhite : Float
+    }
 
 
-type alias Flags =
-    { version : String, baseURL : String }
+type TextDirection
+    = ToLeft
+    | ToRight
 
 
-type alias Config =
-    { version : String, baseURL : String }
+type ViewSize
+    = Medium
+    | Big
 
 
-type alias Toggles =
-    Dict String Bool
+type CropShape
+    = Rectangle
+    | Circle
 
 
-type alias Mystery =
-    { id : String, driver : Driver, car : Car, mysteriesSolveTags : List MysterySolveTag }
+type alias Probability =
+    { probabilityStone : Int, probabilityBlack : Int, probabilityWhite : Int }
 
 
-type alias Driver =
-    { id : Int, mysteryId : String, name : String, birthDate : Date, gender : String, race : String, email : String, address : String, smartphone : Smartphone, wallet : Wallet, keyNames : List KeyName }
+type alias Star =
+    { x : Int, y : Int }
 
 
-type alias Smartphone =
-    { id : Int, driverId : Int, contacts : List Contact, apps : List App, messages : List Message, toDoItems : List ToDoItem, browserHistoryEntries : List BrowserHistoryEntry, callHistoryEntries : List CallHistoryEntry }
+type StoneColor
+    = White
+    | Black
+    | Conflict
+    | Empty
 
 
-type alias Contact =
-    { id : Int, smartphoneId : Int, name : String }
+type alias Stone =
+    { isStone : Bool, color : StoneColor }
 
 
-type alias App =
-    { id : Int, smartphoneId : Int, name : String }
+type alias Prisoner =
+    StoneColor
 
 
-type alias Message =
-    { id : Int, smartphoneId : Int, sender : String, receiver : String, sendDateTime : Date, message : String, seenByRecipient : Bool }
+type Edge
+    = BoardEdge
+    | ColorEdge StoneColor
+    | NotEdge
 
 
-type alias ToDoItem =
-    { id : Int, smartphoneId : Int, description : String, isDone : Bool, addedDate : Date }
+type Direction
+    = Up
+    | Right
+    | Down
+    | Left
 
 
-type alias BrowserHistoryEntry =
-    { id : Int, smartphoneId : Int, url : String, visitDateTime : Date }
+type BoardSize
+    = Nineteen
+    | Thirteen
+    | Nine
 
 
-type alias CallHistoryEntry =
-    { id : Int, smartphoneId : Int, phoneNumber : String, callDateTime : Date, isIncoming : Bool, isOutgoing : Bool, isSuccessful : Bool }
+type alias BoardPosition =
+    ( Int, Int )
 
 
-type alias Wallet =
-    { id : Int, driverId : Int, cashCurrency : String, cashAmount : Float, bloodTypeCard : String, creditCards : List CreditCard }
+type alias Board =
+    Dict BoardPosition Stone
 
 
-type alias CreditCard =
-    { id : Int, walletId : Int, brand : String, validUntilDate : Date, name : String, number : String }
+type alias Territory =
+    { isTerritory : Bool, color : StoneColor }
 
 
-type alias KeyName =
-    { id : Int, driverId : Int, name : String }
+type alias Dead =
+    { isDead : Bool, color : StoneColor }
 
 
-type alias Car =
-    { id : Int, mysteryId : String, carType : String, dashBoardOrnament : String, mirrorOrnament : String, licensePlateCountry : String, licensePlate : String, gloveCompartmentItems : List GloveCompartmentItem, trunkContentItem : List TrunkContentItem, cupHolderContentItems : List CupHolderContentItem, damageEntries : List DamageEntry, diaryEntries : List DiaryEntry }
+type State
+    = Editing
+    | Scoring
 
 
-type alias GloveCompartmentItem =
-    { id : Int, carId : Int, description : String }
+type Tool
+    = DeadBlack
+    | DeadWhite
+    | Alive
+    | AddBlack
+    | AddWhite
+    | Remove
+    | NoTool
 
 
-type alias TrunkContentItem =
-    { id : Int, carId : Int, description : String }
-
-
-type alias CupHolderContentItem =
-    { id : Int, carId : Int, description : String }
-
-
-type alias DamageEntry =
-    { id : Int, carId : Int, description : String }
-
-
-type alias DiaryEntry =
-    { id : Int, carId : Int, pageNumber : Int, pageDate : Date, pageTitle : String, pageBody : String }
-
-
-type alias MysterySolveTag =
-    { mysteryId : String, solveTagId : Int, solveTag : SolveTag }
-
-
-type alias SolveTag =
-    { id : Int, description : String }
-
-
-init : Flags -> Location -> ( Model, Cmd Msg )
-init flags location =
+init : Location -> ( Model, Cmd Msg )
+init location =
     let
         currentRoute =
             parseLocation location
 
         model =
-            { config = { version = flags.version, baseURL = flags.baseURL }, route = currentRoute, location = location, togglesVisibility = Dict.empty, mysteries = [], mystery = makeEmptyMystery }
+            { route = currentRoute
+            , location = location
+            , isLoading = False
+            , loadingMessage = Nothing
+            , boardSizes = [ Nineteen, Thirteen, Nine ]
+            , boardSize = Nineteen
+            , komi = 6.5
+            , prisonersBlack = 0
+            , prisonersWhite = 0
+            , areDeadRemoved = False
+            , showHelp = True
+            , isVideoPlaying = False
+            , isInputSuccessful = False
+            , isCroppingSuccessful = False
+            , isPickingBlackSuccessful = False
+            , isPickingWhiteSuccessful = False
+            , isProcessingSuccessful = False
+            , stars19x19 = stars19x19
+            , stars13x13 = stars13x13
+            , stars9x9 = stars9x9
+            , board = Dict.empty
+            , dead = Dict.empty
+            , territory = Dict.empty
+            , state = Editing
+            , tool = NoTool
+            , showingTools = True
+            , showingScore = False
+            , scoreBlack = 0
+            , scoreWhite = 0
+            }
     in
-        ( model, retrieveMysteryLatest model )
+        ( model, Cmd.none )
 
 
-makeEmptyMystery : Mystery
-makeEmptyMystery =
-    Mystery "" makeEmptyDriver makeEmptyCar [ makeEmptyMysterySolveTag ]
+
+-- MODEL HELPERS
 
 
-makeEmptyDriver : Driver
-makeEmptyDriver =
-    Driver 0 "" "" (Date.fromTime (Time.millisecond * 0)) "" "" "" "" makeEmptySmartphone makeEmptyWallet [ makeEmptyKeyName ]
+boardSizeToString : BoardSize -> String
+boardSizeToString boardSize =
+    case boardSize of
+        Nineteen ->
+            "19x19"
+
+        Thirteen ->
+            "13x13"
+
+        Nine ->
+            "9x9"
 
 
-makeEmptySmartphone : Smartphone
-makeEmptySmartphone =
-    Smartphone 0 0 [ makeEmptyContact ] [ makeEmptyApp ] [ makeEmptyMessage ] [ makeEmptyToDoItem ] [ makeEmptyBrowserHistoryEntry ] [ makeEmptyCallHistoryEntry ]
+boardSizeToRange : BoardSize -> List Int
+boardSizeToRange boardSize =
+    case boardSize of
+        Nineteen ->
+            List.range 1 19
+
+        Thirteen ->
+            List.range 1 13
+
+        Nine ->
+            List.range 1 9
 
 
-makeEmptyContact : Contact
-makeEmptyContact =
-    Contact 0 0 ""
+stringToBoardSize : String -> BoardSize
+stringToBoardSize string =
+    case string of
+        "19x19" ->
+            Nineteen
+
+        "13x13" ->
+            Thirteen
+
+        "9x9" ->
+            Nine
+
+        _ ->
+            Nineteen
 
 
-makeEmptyApp : App
-makeEmptyApp =
-    App 0 0 ""
+probabilityToStone : Int -> String -> Probability -> Stone
+probabilityToStone maximumProbability key probability =
+    let
+        probabilityPercentage =
+            toFloat probability.probabilityStone / toFloat maximumProbability
+
+        isStone =
+            probabilityPercentage > 0.25
+
+        color =
+            if
+                isStone
+                    && probability.probabilityBlack
+                    > 0
+                    && probability.probabilityBlack
+                    > probability.probabilityWhite
+            then
+                Black
+            else if
+                isStone
+                    && probability.probabilityWhite
+                    > 0
+                    && probability.probabilityWhite
+                    > probability.probabilityBlack
+            then
+                White
+            else if
+                isStone
+                    && probability.probabilityBlack
+                    == probability.probabilityWhite
+            then
+                Conflict
+            else
+                Empty
+    in
+        Stone isStone color
 
 
-makeEmptyMessage : Message
-makeEmptyMessage =
-    Message 0 0 "" "" (Date.fromTime (Time.millisecond * 0)) "" False
+boardKeyToBoardPosition : String -> BoardPosition
+boardKeyToBoardPosition key =
+    let
+        values =
+            String.split "-" key
+                |> Array.fromList
+
+        y =
+            Array.get 0 values
+                |> Maybe.withDefault "-1"
+                |> String.toInt
+                |> Result.withDefault -1
+
+        x =
+            Array.get 1 values
+                |> Maybe.withDefault "-1"
+                |> String.toInt
+                |> Result.withDefault -1
+    in
+        ( y, x )
 
 
-makeEmptyToDoItem : ToDoItem
-makeEmptyToDoItem =
-    ToDoItem 0 0 "" False (Date.fromTime (Time.millisecond * 0))
-
-
-makeEmptyBrowserHistoryEntry : BrowserHistoryEntry
-makeEmptyBrowserHistoryEntry =
-    BrowserHistoryEntry 0 0 "" (Date.fromTime (Time.millisecond * 0))
-
-
-makeEmptyCallHistoryEntry : CallHistoryEntry
-makeEmptyCallHistoryEntry =
-    CallHistoryEntry 0 0 "" (Date.fromTime (Time.millisecond * 0)) False False False
-
-
-makeEmptyWallet : Wallet
-makeEmptyWallet =
-    Wallet 0 0 "" 0 "" [ makeEmptyCreditCard ]
-
-
-makeEmptyCreditCard : CreditCard
-makeEmptyCreditCard =
-    CreditCard 0 0 "" (Date.fromTime (Time.millisecond * 0)) "" ""
-
-
-makeEmptyKeyName : KeyName
-makeEmptyKeyName =
-    KeyName 0 0 ""
-
-
-makeEmptyCar : Car
-makeEmptyCar =
-    Car 0 "" "" "" "" "" "" [ makeEmptyGloveCompartmentItem ] [ makeEmptyTrunkContentItem ] [ makeEmptyCupHolderContentItem ] [ makeEmptyDamageEntry ] [ makeEmptyDiaryEntry ]
-
-
-makeEmptyGloveCompartmentItem : GloveCompartmentItem
-makeEmptyGloveCompartmentItem =
-    GloveCompartmentItem 0 0 ""
-
-
-makeEmptyTrunkContentItem : TrunkContentItem
-makeEmptyTrunkContentItem =
-    TrunkContentItem 0 0 ""
-
-
-makeEmptyCupHolderContentItem : CupHolderContentItem
-makeEmptyCupHolderContentItem =
-    CupHolderContentItem 0 0 ""
-
-
-makeEmptyDamageEntry : DamageEntry
-makeEmptyDamageEntry =
-    DamageEntry 0 0 ""
-
-
-makeEmptyDiaryEntry : DiaryEntry
-makeEmptyDiaryEntry =
-    DiaryEntry 0 0 0 (Date.fromTime (Time.millisecond * 0)) "" ""
-
-
-makeEmptyMysterySolveTag : MysterySolveTag
-makeEmptyMysterySolveTag =
-    MysterySolveTag "" 0 makeEmptySolveTag
-
-
-makeEmptySolveTag : SolveTag
-makeEmptySolveTag =
-    SolveTag 0 ""
-
-
-checkVisibility : Model -> String -> Bool
-checkVisibility model key =
-    case Dict.get key model.togglesVisibility of
-        Just value ->
-            value
-
-        Nothing ->
-            False
+isPositionStar : List Star -> Int -> Int -> Bool
+isPositionStar stars x y =
+    List.any (\z -> z == (Star x y)) stars
 
 
 
 -- DATA
 
 
-endpointMysteries : String
-endpointMysteries =
-    "/mysteries"
+stars19x19 : List Star
+stars19x19 =
+    [ Star 4 4
+    , Star 10 4
+    , Star 16 4
+    , Star 4 10
+    , Star 10 10
+    , Star 16 10
+    , Star 4 16
+    , Star 10 16
+    , Star 16 16
+    ]
 
 
-queryMysteries : String
-queryMysteries =
-    "?select=id,created_date_time,driver:drivers(*,smartphone:smartphones(*,contacts(*),apps(*),messages(*),todo_items(*),browser_history_entries(*),call_history_entries(*)),wallet:wallets(*,credit_cards(*)),key_names(*)),car:cars(*,glove_compartment_items(*),trunk_content_items(*),cupholder_content_items(*),damage_entries(*),diary_entries(*)),mysteries_solve_tags(*,solve_tag:solve_tags(*))"
+stars13x13 : List Star
+stars13x13 =
+    [ Star 4 4
+    , Star 10 4
+    , Star 7 7
+    , Star 4 10
+    , Star 10 10
+    ]
 
 
-queryMystery : String -> String
-queryMystery id =
-    "?id=eq." ++ id ++ "&select=id,created_date_time,driver:drivers(*,smartphone:smartphones(*,contacts(*),apps(*),messages(*),todo_items(*),browser_history_entries(*),call_history_entries(*)),wallet:wallets(*,credit_cards(*)),key_names(*)),car:cars(*,glove_compartment_items(*),trunk_content_items(*),cupholder_content_items(*),damage_entries(*),diary_entries(*)),mysteries_solve_tags(*,solve_tag:solve_tags(*))"
+stars9x9 : List Star
+stars9x9 =
+    [ Star 3 3
+    , Star 7 3
+    , Star 5 5
+    , Star 3 7
+    , Star 7 7
+    ]
 
 
-queryMysteryLatest : String
-queryMysteryLatest =
-    "?limit=1&order=created_date_time.desc&select=id,created_date_time,driver:drivers(*,smartphone:smartphones(*,contacts(*),apps(*),messages(*),todo_items(*),browser_history_entries(*),call_history_entries(*)),wallet:wallets(*,credit_cards(*)),key_names(*)),car:cars(*,glove_compartment_items(*),trunk_content_items(*),cupholder_content_items(*),damage_entries(*),diary_entries(*)),mysteries_solve_tags(*,solve_tag:solve_tags(*))"
+
+-- CALCULATION
+
+
+findEdgeFromPosition : Board -> BoardPosition -> Direction -> Edge
+findEdgeFromPosition board position direction =
+    let
+        y =
+            Tuple.first position
+
+        x =
+            Tuple.second position
+
+        nextPosition =
+            case direction of
+                Up ->
+                    ( (Basics.max 1 (y - 1)), x )
+
+                Right ->
+                    ( y, (Basics.min 19 (x + 1)) )
+
+                Down ->
+                    ( (Basics.min 19 (y + 1)), x )
+
+                Left ->
+                    ( y, (Basics.max 1 (x - 1)) )
+
+        nextStone =
+            Dict.get nextPosition board
+                |> Maybe.withDefault (Stone False Empty)
+
+        edge =
+            case direction of
+                Up ->
+                    if y == 1 then
+                        BoardEdge
+                    else if nextStone.isStone then
+                        ColorEdge nextStone.color
+                    else
+                        NotEdge
+
+                Right ->
+                    if x == 19 then
+                        BoardEdge
+                    else if nextStone.isStone then
+                        ColorEdge nextStone.color
+                    else
+                        NotEdge
+
+                Down ->
+                    if y == 19 then
+                        BoardEdge
+                    else if nextStone.isStone then
+                        ColorEdge nextStone.color
+                    else
+                        NotEdge
+
+                Left ->
+                    if x == 1 then
+                        BoardEdge
+                    else if nextStone.isStone then
+                        ColorEdge nextStone.color
+                    else
+                        NotEdge
+    in
+        case edge of
+            NotEdge ->
+                findEdgeFromPosition board nextPosition direction
+
+            _ ->
+                edge
+
+
+isNotDead : Dict BoardPosition Dead -> BoardPosition -> Stone -> Bool
+isNotDead dead position stone =
+    Dict.get position dead
+        |> Maybe.withDefault (Dead False Empty)
+        |> .isDead
+        |> not
+
+
+isSpaceOrDead : Dict BoardPosition Dead -> BoardPosition -> Stone -> Bool
+isSpaceOrDead dead position stone =
+    let
+        isDead =
+            Dict.get position dead
+                |> Maybe.withDefault (Dead False Empty)
+                |> .isDead
+    in
+        not stone.isStone || isDead
+
+
+isTerritoryForWho : Board -> BoardPosition -> Stone -> Territory
+isTerritoryForWho board position stone =
+    let
+        edgeUp =
+            findEdgeFromPosition board position Up
+
+        edgeRight =
+            findEdgeFromPosition board position Right
+
+        edgeDown =
+            findEdgeFromPosition board position Down
+
+        edgeLeft =
+            findEdgeFromPosition board position Left
+
+        edges =
+            [ edgeUp, edgeRight, edgeDown, edgeLeft ]
+
+        blackEdges =
+            List.filter (\x -> x == ColorEdge Black) edges
+                |> List.length
+
+        whiteEdges =
+            List.filter (\x -> x == ColorEdge White) edges
+                |> List.length
+    in
+        if blackEdges > 0 && whiteEdges == 0 then
+            Territory True Black
+        else if whiteEdges > 0 && blackEdges == 0 then
+            Territory True White
+        else if blackEdges > 0 && whiteEdges > 0 then
+            Territory True Empty
+        else
+            Territory False Empty
+
+
+findTerritories : Board -> Dict BoardPosition Dead -> Dict BoardPosition Territory
+findTerritories board dead =
+    let
+        boardWithoutDead =
+            Dict.filter (isNotDead dead) board
+
+        spaces =
+            Dict.filter (isSpaceOrDead dead) board
+
+        territory =
+            Dict.map (isTerritoryForWho boardWithoutDead) spaces
+    in
+        territory
+
+
+calculateScoreBlack : Dict BoardPosition Territory -> Dict BoardPosition Dead -> Int -> Float
+calculateScoreBlack territory dead prisoners =
+    let
+        territoryBlack =
+            Dict.filter (\position territory -> territory.color == Black) territory
+                |> Dict.size
+
+        deadWhite =
+            Dict.filter (\position dead -> dead.color == White) dead
+                |> Dict.size
+    in
+        toFloat <| territoryBlack + deadWhite + prisoners
+
+
+calculateScoreWhite : Dict BoardPosition Territory -> Dict BoardPosition Dead -> Int -> Float -> Float
+calculateScoreWhite territory dead prisoners komi =
+    let
+        territoryWhite =
+            Dict.filter (\position territory -> territory.color == White) territory
+                |> Dict.size
+
+        deadBlack =
+            Dict.filter (\position dead -> dead.color == Black) dead
+                |> Dict.size
+    in
+        (toFloat <| territoryWhite + deadBlack + prisoners) + komi
 
 
 
 -- DECODERS
 
 
-decodeMystery : JD.Decoder Mystery
-decodeMystery =
-    JDP.decode Mystery
-        |> JDP.required "id" JD.string
-        |> JDP.required "driver" (JD.index 0 decodeDriver)
-        |> JDP.required "car" (JD.index 0 decodeCar)
-        |> JDP.required "mysteries_solve_tags" decodeMysteriesSolveTags
+decoderProbability : JD.Decoder Probability
+decoderProbability =
+    JD.map3 Probability
+        (JD.field "probabilityStone" JD.int)
+        (JD.field "probabilityBlack" JD.int)
+        (JD.field "probabilityWhite" JD.int)
 
 
-decodeMysteries : JD.Decoder (List Mystery)
-decodeMysteries =
-    JD.list decodeMystery
+decoderProbabilities : JD.Decoder (Dict String Probability)
+decoderProbabilities =
+    JD.dict decoderProbability
 
 
-decodeDriver : JD.Decoder Driver
-decodeDriver =
-    JDP.decode Driver
-        |> JDP.required "id" JD.int
-        |> JDP.required "mystery_id" JD.string
-        |> JDP.required "name" JD.string
-        |> JDP.required "birth_date" JDE.date
-        |> JDP.required "gender" JD.string
-        |> JDP.required "race" JD.string
-        |> JDP.required "email" JD.string
-        |> JDP.required "address" JD.string
-        |> JDP.required "smartphone" (JD.index 0 decodeSmartphone)
-        |> JDP.required "wallet" (JD.index 0 decodeWallet)
-        |> JDP.required "key_names" decodeKeyNames
-
-
-decodeDrivers : JD.Decoder (List Driver)
-decodeDrivers =
-    JD.list decodeDriver
-
-
-decodeSmartphone : JD.Decoder Smartphone
-decodeSmartphone =
-    JDP.decode Smartphone
-        |> JDP.required "id" JD.int
-        |> JDP.required "driver_id" JD.int
-        |> JDP.required "contacts" decodeContacts
-        |> JDP.required "apps" decodeApps
-        |> JDP.required "messages" decodeMessages
-        |> JDP.required "todo_items" decodeToDoItems
-        |> JDP.required "browser_history_entries" decodeBrowserHistoryEntries
-        |> JDP.required "call_history_entries" decodeCallHistoryEntries
-
-
-decodeSmartphones : JD.Decoder (List Smartphone)
-decodeSmartphones =
-    JD.list decodeSmartphone
-
-
-decodeContact : JD.Decoder Contact
-decodeContact =
-    JDP.decode Contact
-        |> JDP.required "id" JD.int
-        |> JDP.required "smartphone_id" JD.int
-        |> JDP.required "name" JD.string
-
-
-decodeContacts : JD.Decoder (List Contact)
-decodeContacts =
-    JD.list decodeContact
-
-
-decodeApp : JD.Decoder App
-decodeApp =
-    JDP.decode App
-        |> JDP.required "id" JD.int
-        |> JDP.required "smartphone_id" JD.int
-        |> JDP.required "name" JD.string
-
-
-decodeApps : JD.Decoder (List App)
-decodeApps =
-    JD.list decodeApp
-
-
-decodeMessage : JD.Decoder Message
-decodeMessage =
-    JDP.decode Message
-        |> JDP.required "id" JD.int
-        |> JDP.required "smartphone_id" JD.int
-        |> JDP.required "sender" JD.string
-        |> JDP.required "receiver" JD.string
-        |> JDP.required "send_date_time" JDE.date
-        |> JDP.required "message" JD.string
-        |> JDP.required "seen_by_recipient" JD.bool
-
-
-decodeMessages : JD.Decoder (List Message)
-decodeMessages =
-    JD.list decodeMessage
-
-
-decodeToDoItem : JD.Decoder ToDoItem
-decodeToDoItem =
-    JDP.decode ToDoItem
-        |> JDP.required "id" JD.int
-        |> JDP.required "smartphone_id" JD.int
-        |> JDP.required "description" JD.string
-        |> JDP.required "is_done" JD.bool
-        |> JDP.required "added_date" JDE.date
-
-
-decodeToDoItems : JD.Decoder (List ToDoItem)
-decodeToDoItems =
-    JD.list decodeToDoItem
-
-
-decodeBrowserHistoryEntry : JD.Decoder BrowserHistoryEntry
-decodeBrowserHistoryEntry =
-    JDP.decode BrowserHistoryEntry
-        |> JDP.required "id" JD.int
-        |> JDP.required "smartphone_id" JD.int
-        |> JDP.required "url" JD.string
-        |> JDP.required "visit_date_time" JDE.date
-
-
-decodeBrowserHistoryEntries : JD.Decoder (List BrowserHistoryEntry)
-decodeBrowserHistoryEntries =
-    JD.list decodeBrowserHistoryEntry
-
-
-decodeCallHistoryEntry : JD.Decoder CallHistoryEntry
-decodeCallHistoryEntry =
-    JDP.decode CallHistoryEntry
-        |> JDP.required "id" JD.int
-        |> JDP.required "smartphone_id" JD.int
-        |> JDP.required "phone_number" JD.string
-        |> JDP.required "call_date_time" JDE.date
-        |> JDP.required "is_incoming" JD.bool
-        |> JDP.required "is_outgoing" JD.bool
-        |> JDP.required "is_successful" JD.bool
-
-
-decodeCallHistoryEntries : JD.Decoder (List CallHistoryEntry)
-decodeCallHistoryEntries =
-    JD.list decodeCallHistoryEntry
-
-
-decodeWallet : JD.Decoder Wallet
-decodeWallet =
-    JDP.decode Wallet
-        |> JDP.required "id" JD.int
-        |> JDP.required "driver_id" JD.int
-        |> JDP.required "cash_currency" JD.string
-        |> JDP.required "cash_amount" JD.float
-        |> JDP.required "blood_type_card" JD.string
-        |> JDP.required "credit_cards" decodeCreditCards
-
-
-decodeWallets : JD.Decoder (List Wallet)
-decodeWallets =
-    JD.list decodeWallet
-
-
-decodeCreditCard : JD.Decoder CreditCard
-decodeCreditCard =
-    JDP.decode CreditCard
-        |> JDP.required "id" JD.int
-        |> JDP.required "wallet_id" JD.int
-        |> JDP.required "brand" JD.string
-        |> JDP.required "valid_until_date" JDE.date
-        |> JDP.required "name" JD.string
-        |> JDP.required "number" JD.string
-
-
-decodeCreditCards : JD.Decoder (List CreditCard)
-decodeCreditCards =
-    JD.list decodeCreditCard
-
-
-decodeKeyName : JD.Decoder KeyName
-decodeKeyName =
-    JDP.decode KeyName
-        |> JDP.required "id" JD.int
-        |> JDP.required "driver_id" JD.int
-        |> JDP.required "name" JD.string
-
-
-decodeKeyNames : JD.Decoder (List KeyName)
-decodeKeyNames =
-    JD.list decodeKeyName
-
-
-decodeCar : JD.Decoder Car
-decodeCar =
-    JDP.decode Car
-        |> JDP.required "id" JD.int
-        |> JDP.required "mystery_id" JD.string
-        |> JDP.required "type" JD.string
-        |> JDP.required "dashboard_ornament" JD.string
-        |> JDP.required "mirror_ornament" JD.string
-        |> JDP.required "license_plate_country" JD.string
-        |> JDP.required "license_plate" JD.string
-        |> JDP.required "glove_compartment_items" decodeGloveCompartmentItems
-        |> JDP.required "trunk_content_items" decodeTrunkContentItems
-        |> JDP.required "cupholder_content_items" decodeCupHolderContentItems
-        |> JDP.required "damage_entries" decodeDamageEntries
-        |> JDP.required "diary_entries" decodeDiaryEntries
-
-
-decodeCars : JD.Decoder (List Car)
-decodeCars =
-    JD.list decodeCar
-
-
-decodeGloveCompartmentItem : JD.Decoder GloveCompartmentItem
-decodeGloveCompartmentItem =
-    JDP.decode GloveCompartmentItem
-        |> JDP.required "id" JD.int
-        |> JDP.required "car_id" JD.int
-        |> JDP.required "description" JD.string
-
-
-decodeGloveCompartmentItems : JD.Decoder (List GloveCompartmentItem)
-decodeGloveCompartmentItems =
-    JD.list decodeGloveCompartmentItem
-
-
-decodeTrunkContentItem : JD.Decoder TrunkContentItem
-decodeTrunkContentItem =
-    JDP.decode TrunkContentItem
-        |> JDP.required "id" JD.int
-        |> JDP.required "car_id" JD.int
-        |> JDP.required "description" JD.string
-
-
-decodeTrunkContentItems : JD.Decoder (List TrunkContentItem)
-decodeTrunkContentItems =
-    JD.list decodeTrunkContentItem
-
-
-decodeCupHolderContentItem : JD.Decoder CupHolderContentItem
-decodeCupHolderContentItem =
-    JDP.decode CupHolderContentItem
-        |> JDP.required "id" JD.int
-        |> JDP.required "car_id" JD.int
-        |> JDP.required "description" JD.string
-
-
-decodeCupHolderContentItems : JD.Decoder (List CupHolderContentItem)
-decodeCupHolderContentItems =
-    JD.list decodeCupHolderContentItem
-
-
-decodeDamageEntry : JD.Decoder DamageEntry
-decodeDamageEntry =
-    JDP.decode DamageEntry
-        |> JDP.required "id" JD.int
-        |> JDP.required "car_id" JD.int
-        |> JDP.required "description" JD.string
-
-
-decodeDamageEntries : JD.Decoder (List DamageEntry)
-decodeDamageEntries =
-    JD.list decodeCupHolderContentItem
-
-
-decodeDiaryEntry : JD.Decoder DiaryEntry
-decodeDiaryEntry =
-    JDP.decode DiaryEntry
-        |> JDP.required "id" JD.int
-        |> JDP.required "car_id" JD.int
-        |> JDP.required "page_number" JD.int
-        |> JDP.required "page_date" JDE.date
-        |> JDP.required "page_title" JD.string
-        |> JDP.required "page_body" JD.string
-
-
-decodeDiaryEntries : JD.Decoder (List DiaryEntry)
-decodeDiaryEntries =
-    JD.list decodeDiaryEntry
-
-
-decodeMysterySolveTag : JD.Decoder MysterySolveTag
-decodeMysterySolveTag =
-    JDP.decode MysterySolveTag
-        |> JDP.required "mystery_id" JD.string
-        |> JDP.required "solve_tag_id" JD.int
-        |> JDP.required "solve_tag" decodeSolveTag
-
-
-decodeMysteriesSolveTags : JD.Decoder (List MysterySolveTag)
-decodeMysteriesSolveTags =
-    JD.list decodeMysterySolveTag
-
-
-decodeSolveTag : JD.Decoder SolveTag
-decodeSolveTag =
-    JDP.decode SolveTag
-        |> JDP.required "id" JD.int
-        |> JDP.required "description" JD.string
+decodeProbabilities : JD.Value -> Result String (Dict String Probability)
+decodeProbabilities =
+    JD.decodeValue decoderProbabilities
 
 
 
@@ -575,25 +533,14 @@ decodeSolveTag =
 
 type Route
     = RouteLanding
-    | RouteMystery
-    | RouteDriver
-    | RouteSmartphone
-    | RouteContacts
-    | RouteApps
-    | RouteMessages
-    | RouteToDoList
-    | RouteBrowserHistory
-    | RouteCallHistory
-    | RouteWallet
-    | RouteCreditCards
-    | RouteKeys
-    | RouteCar
-    | RouteGloveCompartment
-    | RouteTrunk
-    | RouteCupHolder
-    | RouteDamage
-    | RouteDiary
-    | RouteTags
+    | RouteSettings
+    | RouteSource
+    | RoutePhoto
+    | RouteCrop
+    | RouteBlack
+    | RouteWhite
+    | RouteProcessing
+    | RouteScore
     | RouteNotFound
 
 
@@ -601,25 +548,14 @@ matchers : UP.Parser (Route -> a) a
 matchers =
     UP.oneOf
         [ UP.map RouteLanding UP.top
-        , UP.map RouteMystery (UP.s Translation.locationMystery)
-        , UP.map RouteDriver (UP.s Translation.locationDriver)
-        , UP.map RouteSmartphone (UP.s Translation.locationSmartphone)
-        , UP.map RouteContacts (UP.s Translation.locationContacts)
-        , UP.map RouteApps (UP.s Translation.locationApps)
-        , UP.map RouteMessages (UP.s Translation.locationMessages)
-        , UP.map RouteToDoList (UP.s Translation.locationToDoList)
-        , UP.map RouteBrowserHistory (UP.s Translation.locationBrowserHistory)
-        , UP.map RouteCallHistory (UP.s Translation.locationCallHistory)
-        , UP.map RouteWallet (UP.s Translation.locationWallet)
-        , UP.map RouteCreditCards (UP.s Translation.locationCreditCards)
-        , UP.map RouteKeys (UP.s Translation.locationKeys)
-        , UP.map RouteCar (UP.s Translation.locationCar)
-        , UP.map RouteGloveCompartment (UP.s Translation.locationGloveCompartment)
-        , UP.map RouteTrunk (UP.s Translation.locationTrunk)
-        , UP.map RouteCupHolder (UP.s Translation.locationCupHolder)
-        , UP.map RouteDamage (UP.s Translation.locationDamage)
-        , UP.map RouteDiary (UP.s Translation.locationDiary)
-        , UP.map RouteTags (UP.s Translation.locationTags)
+        , UP.map RouteSettings (UP.s "settings")
+        , UP.map RouteSource (UP.s "source")
+        , UP.map RoutePhoto (UP.s "photo")
+        , UP.map RouteCrop (UP.s "crop")
+        , UP.map RouteBlack (UP.s "black")
+        , UP.map RouteWhite (UP.s "white")
+        , UP.map RouteProcessing (UP.s "processing")
+        , UP.map RouteScore (UP.s "score")
         ]
 
 
@@ -639,12 +575,29 @@ parseLocation location =
 
 type Msg
     = ChangePath String
-    | LocationChange Location
-    | ToggleVisibility String
-    | RetrieveMysteries
-    | NewMysteries (Result Http.Error (List Mystery))
-    | RetrieveMystery String
-    | NewMystery (Result Http.Error Mystery)
+    | ChangeLocation Location
+    | StartCamera
+    | NewFile
+    | NewBoardSize String
+    | NewKomi String
+    | NewPrisonersBlack String
+    | NewPrisonersWhite String
+    | NewAreDeadRemoved Bool
+    | NewShowHelp Bool
+    | CameraStarted Bool
+    | CameraStopped Bool
+    | TakePhoto
+    | InputSuccessful Bool
+    | CropPhoto
+    | CroppingSuccessful Bool
+    | PickBlack
+    | PickingBlackSuccessful Bool
+    | PickWhite
+    | PickingWhiteSuccessful Bool
+    | ProcessingSuccessful (Result String (Dict String Probability))
+    | NewState State
+    | NewTool Tool
+    | UseToolAt BoardPosition
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -653,73 +606,208 @@ update message model =
         ChangePath path ->
             ( model, Navigation.newUrl path )
 
-        LocationChange location ->
+        ChangeLocation location ->
             let
                 newRoute =
                     parseLocation location
-            in
-                ( { model | route = newRoute, location = location }, Cmd.none )
 
-        ToggleVisibility key ->
+                newModel =
+                    { model | route = newRoute, location = location }
+
+                commandOldRoute =
+                    if model.route == RoutePhoto && model.isVideoPlaying then
+                        PT.stopCamera True
+                    else
+                        Cmd.none
+
+                commandNewRoute =
+                    case newRoute of
+                        RouteCrop ->
+                            PT.startCropping True
+
+                        RouteBlack ->
+                            PT.startPickingBlack True
+
+                        RouteWhite ->
+                            PT.startPickingWhite True
+
+                        RouteProcessing ->
+                            PT.startProcessing True
+
+                        _ ->
+                            Cmd.none
+
+                newCommands =
+                    Cmd.batch [ commandOldRoute, commandNewRoute ]
+            in
+                ( newModel, newCommands )
+
+        StartCamera ->
+            ( { model | isLoading = True, loadingMessage = Just "Starting camera" }, PT.startCamera True )
+
+        NewFile ->
+            ( model, PT.useFile "file-input" )
+
+        NewBoardSize boardSize ->
             let
-                oldBool =
-                    checkVisibility model key
+                newBoardSize =
+                    stringToBoardSize boardSize
             in
-                ( { model | togglesVisibility = Dict.insert key (not oldBool) model.togglesVisibility }, Cmd.none )
+                ( { model | boardSize = newBoardSize }, Cmd.none )
 
-        RetrieveMysteries ->
-            ( model, retrieveMysteries model )
+        NewKomi komi ->
+            let
+                newKomi =
+                    Result.withDefault 0 (String.toFloat komi)
+            in
+                ( { model | komi = newKomi }, Cmd.none )
 
-        NewMysteries (Ok newMysteries) ->
-            ( { model | mysteries = newMysteries }, Cmd.none )
+        NewPrisonersBlack prisoners ->
+            let
+                newPrisoners =
+                    Result.withDefault 0 (String.toInt prisoners)
+            in
+                ( { model | prisonersBlack = newPrisoners }, Cmd.none )
 
-        NewMysteries (Err _) ->
+        NewPrisonersWhite prisoners ->
+            let
+                newPrisoners =
+                    Result.withDefault 0 (String.toInt prisoners)
+            in
+                ( { model | prisonersWhite = newPrisoners }, Cmd.none )
+
+        NewAreDeadRemoved removed ->
+            ( { model | areDeadRemoved = removed }, Cmd.none )
+
+        NewShowHelp show ->
+            ( { model | showHelp = show }, Cmd.none )
+
+        CameraStarted isPlaying ->
+            ( { model | isVideoPlaying = isPlaying, isLoading = False, loadingMessage = Nothing }, Cmd.none )
+
+        CameraStopped isPlaying ->
+            ( { model | isVideoPlaying = isPlaying }, Cmd.none )
+
+        TakePhoto ->
+            ( model, PT.takePhoto True )
+
+        InputSuccessful isSuccessful ->
+            ( { model | isInputSuccessful = isSuccessful }, Navigation.newUrl "#crop" )
+
+        CropPhoto ->
+            ( model, PT.cropPhoto True )
+
+        CroppingSuccessful isSuccessful ->
+            ( { model | isCroppingSuccessful = isSuccessful }, Navigation.newUrl "#black" )
+
+        PickBlack ->
+            ( model, PT.pickBlack True )
+
+        PickingBlackSuccessful isSuccessful ->
+            ( { model | isPickingBlackSuccessful = isSuccessful }, Navigation.newUrl "#white" )
+
+        PickWhite ->
+            ( model, PT.pickWhite True )
+
+        PickingWhiteSuccessful isSuccessful ->
+            ( { model | isPickingWhiteSuccessful = isSuccessful }, Navigation.newUrl "#processing" )
+
+        ProcessingSuccessful (Ok probabilities) ->
+            let
+                maximumProbability =
+                    Dict.values probabilities
+                        |> List.map .probabilityStone
+                        |> List.maximum
+                        |> Maybe.withDefault 0
+
+                stones =
+                    Dict.map (probabilityToStone maximumProbability) probabilities
+
+                board =
+                    Dict.Extra.mapKeys boardKeyToBoardPosition stones
+            in
+                ( { model | isProcessingSuccessful = True, board = board }, Cmd.none )
+
+        ProcessingSuccessful (Err _) ->
             ( model, Cmd.none )
 
-        RetrieveMystery id ->
-            ( model, retrieveMystery model id )
+        NewState state ->
+            let
+                showingTools =
+                    case state of
+                        Editing ->
+                            not model.showingTools
 
-        NewMystery (Ok newMystery) ->
-            ( { model | mystery = newMystery }, Cmd.none )
+                        Scoring ->
+                            False
 
-        NewMystery (Err _) ->
-            ( model, Cmd.none )
+                showingScore =
+                    case state of
+                        Scoring ->
+                            not model.showingScore
 
+                        Editing ->
+                            False
 
-retrieveMysteries : Model -> Cmd Msg
-retrieveMysteries model =
-    let
-        url =
-            model.config.baseURL ++ endpointMysteries ++ queryMysteries
+                territory =
+                    case state of
+                        Scoring ->
+                            findTerritories model.board model.dead
 
-        request =
-            Http.get url decodeMysteries
-    in
-        Http.send NewMysteries request
+                        Editing ->
+                            model.territory
 
+                scoreBlack =
+                    calculateScoreBlack territory model.dead model.prisonersBlack
 
-retrieveMystery : Model -> String -> Cmd Msg
-retrieveMystery model id =
-    let
-        url =
-            model.config.baseURL ++ endpointMysteries ++ (queryMystery id)
+                scoreWhite =
+                    calculateScoreWhite territory model.dead model.prisonersWhite model.komi
+            in
+                ( { model
+                    | state = state
+                    , showingTools = showingTools
+                    , showingScore = showingScore
+                    , territory = territory
+                    , scoreBlack = scoreBlack
+                    , scoreWhite = scoreWhite
+                  }
+                , Cmd.none
+                )
 
-        request =
-            Http.get url (JD.index 0 decodeMystery)
-    in
-        Http.send NewMystery request
+        NewTool tool ->
+            ( { model | tool = tool, showingTools = False }, Cmd.none )
 
+        UseToolAt position ->
+            let
+                board =
+                    case model.tool of
+                        AddBlack ->
+                            Dict.insert position (Stone True Black) model.board
 
-retrieveMysteryLatest : Model -> Cmd Msg
-retrieveMysteryLatest model =
-    let
-        url =
-            model.config.baseURL ++ endpointMysteries ++ queryMysteryLatest
+                        AddWhite ->
+                            Dict.insert position (Stone True White) model.board
 
-        request =
-            Http.get url (JD.index 0 decodeMystery)
-    in
-        Http.send NewMystery request
+                        Remove ->
+                            Dict.insert position (Stone False Empty) model.board
+
+                        _ ->
+                            model.board
+
+                dead =
+                    case model.tool of
+                        DeadBlack ->
+                            Dict.insert position (Dead True Black) model.dead
+
+                        DeadWhite ->
+                            Dict.insert position (Dead True White) model.dead
+
+                        Alive ->
+                            Dict.remove position model.dead
+
+                        _ ->
+                            model.dead
+            in
+                ( { model | board = board, dead = dead }, Cmd.none )
 
 
 
@@ -728,7 +816,15 @@ retrieveMysteryLatest model =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    Sub.none
+    Sub.batch
+        [ PT.cameraStarted CameraStarted
+        , PT.cameraStopped CameraStopped
+        , PT.inputSuccessful InputSuccessful
+        , PT.croppingSuccessful CroppingSuccessful
+        , PT.pickingBlackSuccessful PickingBlackSuccessful
+        , PT.pickingWhiteSuccessful PickingWhiteSuccessful
+        , PT.processingSuccessful (decodeProbabilities >> ProcessingSuccessful)
+        ]
 
 
 
@@ -738,222 +834,792 @@ subscriptions model =
 view : Model -> Html Msg
 view model =
     div [ classList [ ( "container-app", True ) ] ]
-        [ viewMystery model ]
+        [ page model
+        , viewCanvas "canvas-input" (model.isInputSuccessful && model.route == RouteCrop)
+        , viewCanvas "canvas-color-black" (model.isCroppingSuccessful && model.route == RouteBlack)
+        , viewCanvas "canvas-color-white" (model.isPickingBlackSuccessful && model.route == RouteWhite)
+        , viewCanvas "canvas-output" (model.isPickingWhiteSuccessful && model.route == RouteProcessing)
+        , viewCanvas "canvas-temporary" False
+        , viewCropFrame "crop-input" Rectangle (model.isInputSuccessful && model.route == RouteCrop)
+        , viewCropFrame "crop-color-black" Circle (model.isCroppingSuccessful && model.route == RouteBlack)
+        , viewCropFrame "crop-color-white" Circle (model.isPickingBlackSuccessful && model.route == RouteWhite)
+        , video
+            [ id "video"
+            , classList [ ( "video", True ), ( "video--visible", model.isVideoPlaying ) ]
+            , onClick TakePhoto
+            ]
+            []
+        , div [ classList [ ( "loading", True ), ( "loading--visible", model.isLoading ) ] ]
+            [ div [ classList [ ( "loading-animation", True ) ] ]
+                [ span [ classList [ ( "stone", True ), ( "stone--black", True ) ] ] []
+                , span [ classList [ ( "stone", True ), ( "stone--white", True ) ] ] []
+                ]
+            , div [ classList [ ( "loading-message", True ) ] ]
+                [ text (Maybe.withDefault "Loading" model.loadingMessage)
+                ]
+            ]
+        ]
+
+
+page : Model -> Html Msg
+page model =
+    case model.route of
+        RouteLanding ->
+            viewLanding model
+
+        RouteSettings ->
+            viewSettings model
+
+        RouteSource ->
+            viewSource model
+
+        RoutePhoto ->
+            viewPhoto model
+
+        RouteCrop ->
+            viewCrop model
+
+        RouteBlack ->
+            viewBlack model
+
+        RouteWhite ->
+            viewWhite model
+
+        RouteProcessing ->
+            viewProcessing model
+
+        RouteScore ->
+            viewScore model
+
+        RouteNotFound ->
+            div [] []
 
 
 
 -- VIEW GENERAL
 
 
-viewIcon : String -> String -> Html Msg
-viewIcon name modifier =
-    svg [ SA.class ("icon " ++ modifier) ]
-        [ use [ xlinkHref ("#" ++ name) ] [] ]
+viewIcon : String -> List ( String, Bool ) -> Html Msg
+viewIcon name classesExtra =
+    let
+        classes =
+            [ ( "icon", True ) ] ++ classesExtra
+    in
+        svg [ SA.class (classString classes) ]
+            [ use [ xlinkHref ("#" ++ name) ] [] ]
 
 
-viewIconText : String -> String -> String -> Html Msg
-viewIconText name modifier description =
-    span [ classList [ ( "container-icon-text", True ) ] ]
-        [ viewIcon name modifier
-        , span [ classList [ ( "text-icon", True ) ] ] [ text description ]
+viewIconText : String -> List ( String, Bool ) -> String -> TextDirection -> Bool -> ViewSize -> Html Msg
+viewIconText name classesExtra value direction isClickable size =
+    let
+        classes =
+            [ ( "container-icon-text", True ), ( "link-fake", isClickable ) ] ++ classesExtra
+
+        textClass =
+            case size of
+                Medium ->
+                    "text-icon--medium"
+
+                Big ->
+                    "text-icon--big"
+
+        iconClass =
+            case size of
+                Medium ->
+                    "icon--medium"
+
+                Big ->
+                    "icon--big"
+
+        content =
+            case direction of
+                ToLeft ->
+                    [ span [ classList [ ( "text-icon", True ), ( textClass, True ) ] ] [ text value ]
+                    , viewIcon name [ ( iconClass, True ) ]
+                    ]
+
+                ToRight ->
+                    [ viewIcon name [ ( iconClass, True ) ]
+                    , span [ classList [ ( "text-icon", True ), ( textClass, True ) ] ] [ text value ]
+                    ]
+    in
+        span [ classList classes ]
+            content
+
+
+viewIconTextLink : String -> List ( String, Bool ) -> String -> TextDirection -> Msg -> ViewSize -> Html Msg
+viewIconTextLink name classesExtra value direction msg size =
+    let
+        classes =
+            [ ( "container-icon-text-link", True ), ( "link-fake", True ) ] ++ classesExtra
+
+        textClass =
+            case size of
+                Medium ->
+                    "text-icon--medium"
+
+                Big ->
+                    "text-icon--big"
+
+        iconClass =
+            case size of
+                Medium ->
+                    "icon--medium"
+
+                Big ->
+                    "icon--big"
+
+        content =
+            case direction of
+                ToLeft ->
+                    [ span [ classList [ ( "text-icon", True ), ( textClass, True ) ] ] [ text value ]
+                    , viewIcon name [ ( iconClass, True ) ]
+                    ]
+
+                ToRight ->
+                    [ viewIcon name [ ( iconClass, True ) ]
+                    , span [ classList [ ( "text-icon", True ), ( textClass, True ) ] ] [ text value ]
+                    ]
+    in
+        span [ classList classes, onClick msg ]
+            content
+
+
+viewCanvas : String -> Bool -> Html Msg
+viewCanvas identifier isVisible =
+    canvas
+        [ id identifier
+        , classList [ ( "canvas", True ), ( "canvas--visible", isVisible ) ]
         ]
+        []
 
 
-viewIconTextLink : String -> String -> String -> String -> Html Msg
-viewIconTextLink name modifier description path =
-    span [ classList [ ( "container-icon-text", True ), ( "link-fake", True ) ], onClick (ChangePath path) ]
-        [ viewIcon name modifier
-        , span [ classList [ ( "text-icon", True ) ] ] [ text description ]
-        , viewIcon "forward" (modifier ++ " icon--hover")
-        ]
+viewCropFrame : String -> CropShape -> Bool -> Html Msg
+viewCropFrame identifier shape isVisible =
+    let
+        content =
+            case shape of
+                Rectangle ->
+                    [ div
+                        [ id identifier
+                        , classList
+                            [ ( "crop-frame", True )
+                            , ( "crop-frame--rectangle", True )
+                            ]
+                        ]
+                        [ img [ id (identifier ++ "-image"), classList [ ( "crop-frame--image", True ) ] ] []
+                        , div [ id (identifier ++ "-move"), classList [ ( "crop-frame--move", True ) ] ] []
+                        , div [ id (identifier ++ "-resize"), classList [ ( "crop-frame--resize", True ) ] ] []
+                        ]
+                    ]
+
+                Circle ->
+                    [ div
+                        [ id identifier
+                        , classList
+                            [ ( "crop-frame", True )
+                            , ( "crop-frame--circle", True )
+                            ]
+                        ]
+                        [ img [ id (identifier ++ "-image"), classList [ ( "crop-frame--image", True ) ] ] []
+                        , div [ id (identifier ++ "-move"), classList [ ( "crop-frame--move", True ) ] ] []
+                        ]
+                    , div [ id (identifier ++ "-preview"), classList [ ( "crop-frame-preview", True ) ] ]
+                        [ img [ id (identifier ++ "-preview-image"), classList [ ( "crop-frame-preview--image", True ) ] ] [] ]
+                    , input [ id (identifier ++ "-slider"), classList [ ( "crop-frame-slider", True ) ], type_ "range" ] []
+                    ]
+    in
+        div [ classList [ ( "container-crop-frame", True ), ( "container-crop-frame--visible", isVisible ) ] ]
+            [ div
+                [ id (identifier ++ "-fader")
+                , classList
+                    [ ( "crop-frame-fader", True ) ]
+                ]
+                []
+            , div
+                [ id (identifier ++ "-boundary")
+                , classList
+                    [ ( "crop-frame-boundary", True ) ]
+                ]
+                content
+            ]
 
 
-viewListItem : String -> Html Msg
-viewListItem description =
-    li []
-        [ viewIconText "bullet" "icon--big" description ]
-
-viewCardLink : Html Msg
-viewCardLink =
-    div [classList [("card-link", True)]]
-        [ span [ classList [("card-link-circle", True), ("card-link-circle--left", True)]] []
-        , span [ classList [("card-link-line", True)]] []
-        , span [ classList [("card-link-circle", True), ("card-link-circle--right", True)]] []
-        ]
+viewButtonClose : Bool -> Html Msg
+viewButtonClose isOverlay =
+    viewIconTextLink "close" [ ( "close", True ), ( "close--overlay", isOverlay ) ] "Close" ToLeft (ChangePath "#") Big
 
 
 
 -- VIEW CONTENT
 
 
-viewMystery : Model -> Html Msg
-viewMystery model =
-    div [ classList [ ( "mystery", True ) ] ]
-        [ viewCards model
-        , viewBuilding model
-        , viewDriver model
-        , viewCar model
-        , viewTags model
+viewLanding : Model -> Html Msg
+viewLanding model =
+    div [ classList [ ( "container-landing", True ) ] ]
+        [ viewIconTextLink
+            "start"
+            [ ( "landing", True ), ( "landing--overlay", True ), ( "landing--action", True ) ]
+            "Start"
+            ToRight
+            (ChangePath "#settings")
+            Big
+        , p [ classList [ ( "landing-pitch", True ) ] ]
+            [ text "Automatically score your finished Go games in just a few simple steps" ]
         ]
 
 
-viewCards : Model -> Html Msg
-viewCards model =
-    case model.route of
-        RouteCar ->
-            div [ classList [ ( "cards", True ) ] ]
-                [ viewCardCar model ]
+viewSettings : Model -> Html Msg
+viewSettings model =
+    let
+        nameAreDeadRemoved =
+            if model.areDeadRemoved then
+                "checked"
+            else
+                "box"
 
-        RouteGloveCompartment ->
-            div [ classList [ ( "cards", True ) ] ]
-                [ viewCardCar model
-                , viewCardGloveCompartment model
+        nameShowHelp =
+            if model.showHelp then
+                "checked"
+            else
+                "box"
+    in
+        div [ classList [ ( "container-settings", True ) ] ]
+            [ viewButtonClose False
+            , viewIconTextLink
+                "continue"
+                [ ( "settings", True ), ( "settings--overlay", True ), ( "settings--action", True ) ]
+                "Continue"
+                ToRight
+                (ChangePath "#source")
+                Big
+            , div [ classList [ ( "container-settings-list", True ) ] ]
+                [ ul [ classList [ ( "settings-list", True ) ] ]
+                    [ li [ classList [ ( "container-select", True ), ( "list-item", True ) ] ]
+                        [ viewIconText "grid" [] "Board size" ToRight False Medium
+                        , select [ classList [ ( "input", True ) ], on "change" (JD.map NewBoardSize targetValue) ]
+                            (List.map (viewOptionBoardSize model) model.boardSizes)
+                        ]
+                    , li [ classList [ ( "list-item", True ) ] ]
+                        [ label [ for "prisoners-black" ]
+                            [ viewIconText "white" [] "Prisoners for black" ToRight False Medium
+                            , input
+                                [ id "prisoners-black"
+                                , classList [ ( "input", True ) ]
+                                , type_ "number"
+                                , onInput NewPrisonersBlack
+                                , value (toString model.prisonersBlack)
+                                ]
+                                []
+                            ]
+                        ]
+                    , li [ classList [ ( "list-item", True ) ] ]
+                        [ label [ for "prisoners-white" ]
+                            [ viewIconText "black" [] "Prisoners for white" ToRight False Medium
+                            , input
+                                [ id "prisoners-white"
+                                , classList [ ( "input", True ) ]
+                                , type_ "number"
+                                , onInput NewPrisonersWhite
+                                , value (toString model.prisonersWhite)
+                                ]
+                                []
+                            ]
+                        ]
+                    ]
+                , ul [ classList [ ( "settings-list", True ) ] ]
+                    [ li [ classList [ ( "list-item", True ) ] ]
+                        [ label [ for "komi" ]
+                            [ viewIconText "score" [] "Komi" ToRight False Medium
+                            , input
+                                [ id "komi"
+                                , classList [ ( "input", True ) ]
+                                , type_ "number"
+                                , onInput NewKomi
+                                , value (toString model.komi)
+                                ]
+                                []
+                            ]
+                        ]
+                    , li [ classList [ ( "list-item", True ) ] ]
+                        [ viewIconTextLink
+                            nameAreDeadRemoved
+                            []
+                            "Dead stones have been removed"
+                            ToRight
+                            (NewAreDeadRemoved <| not model.areDeadRemoved)
+                            Medium
+                        ]
+                    , li [ classList [ ( "list-item", True ) ] ]
+                        [ viewIconTextLink
+                            nameShowHelp
+                            []
+                            "Show help messages"
+                            ToRight
+                            (NewShowHelp <| not model.showHelp)
+                            Medium
+                        ]
+                    ]
                 ]
-
-        _ ->
-            div [] []
+            ]
 
 
-viewBuilding : Model -> Html Msg
-viewBuilding model =
-    div [ classList [ ( "building", True ) ] ] []
+viewOptionBoardSize : Model -> BoardSize -> Html Msg
+viewOptionBoardSize model boardSize =
+    option [ value (boardSizeToString boardSize), selected (model.boardSize == boardSize) ]
+        [ text (boardSizeToString boardSize) ]
 
 
-viewDriver : Model -> Html Msg
-viewDriver model =
-    div [ classList [ ( "driver", True ) ] ]
-        [ viewIcon "smartphone" ""
-        , viewSmartphone model
-        , viewIcon "wallet" ""
-        , viewWallet model
-        , viewIcon "key" ""
-        , viewKeys model
+viewSource : Model -> Html Msg
+viewSource model =
+    div [ classList [ ( "container-source", True ) ] ]
+        [ viewButtonClose False
+        , ul []
+            [ li [ classList [ ( "container-link", True ), ( "list-item", True ) ] ]
+                [ viewIconTextLink "camera" [] "Photo" ToRight (ChangePath "#photo") Big ]
+            , li [ classList [ ( "container-input", True ), ( "list-item", True ) ] ]
+                [ label [ for "file-input" ]
+                    [ viewIconText "file" [] "File" ToRight True Big
+                    , input [ id "file-input", type_ "file", on "change" (JD.succeed NewFile) ] []
+                    ]
+                ]
+            ]
         ]
 
 
-viewSmartphone : Model -> Html Msg
-viewSmartphone model =
-    div [ classList [ ( "smartphone", True ) ] ]
-        [ viewContacts model
-        , viewApps model
-        , viewMessages model
-        , viewToDoList model
-        , viewBrowserHistory model
-        , viewCallHistory model
+viewPhoto : Model -> Html Msg
+viewPhoto model =
+    let
+        overlay =
+            case model.isVideoPlaying of
+                True ->
+                    [ viewButtonClose True
+                    , viewIconText
+                        "info"
+                        [ ( "camera", True ), ( "camera--overlay", True ), ( "camera--info", True ) ]
+                        "Tap/click anywhere to take a photo"
+                        ToRight
+                        False
+                        Big
+                    ]
+
+                False ->
+                    [ viewButtonClose False
+                    , viewIconTextLink
+                        "camera"
+                        [ ( "camera", True ), ( "camera--action", True ) ]
+                        "Start camera"
+                        ToRight
+                        StartCamera
+                        Big
+                    ]
+    in
+        div [ classList [ ( "container-photo", True ) ] ]
+            overlay
+
+
+viewCrop : Model -> Html Msg
+viewCrop model =
+    let
+        overlay =
+            case model.isInputSuccessful of
+                True ->
+                    [ viewButtonClose True
+                    , viewIconText
+                        "info"
+                        [ ( "crop", True ), ( "crop--overlay", True ), ( "crop--info", True ) ]
+                        "Crop the image so only the board remains"
+                        ToRight
+                        False
+                        Big
+                    , viewIconTextLink
+                        "crop"
+                        [ ( "crop", True ), ( "crop--overlay", True ), ( "crop--action", True ) ]
+                        "Crop"
+                        ToRight
+                        CropPhoto
+                        Big
+                    ]
+
+                False ->
+                    [ viewButtonClose False
+                    , viewIconText
+                        "info"
+                        [ ( "crop", True ) ]
+                        "Nothing to crop"
+                        ToRight
+                        False
+                        Big
+                    ]
+    in
+        div
+            [ classList [ ( "container-crop", True ) ] ]
+            overlay
+
+
+viewBlack : Model -> Html Msg
+viewBlack model =
+    let
+        overlay =
+            case model.isCroppingSuccessful of
+                True ->
+                    [ viewButtonClose True
+                    , viewIconText
+                        "info"
+                        [ ( "color", True ), ( "color--overlay", True ), ( "color--info--black", True ) ]
+                        "Select the lightest black stone"
+                        ToRight
+                        False
+                        Big
+                    , viewIconTextLink
+                        "color"
+                        [ ( "color", True ), ( "color--overlay", True ), ( "color--action", True ) ]
+                        "Pick"
+                        ToRight
+                        PickBlack
+                        Big
+                    ]
+
+                False ->
+                    [ viewButtonClose False
+                    , viewIconText
+                        "info"
+                        [ ( "color", True ) ]
+                        "Nothing to pick"
+                        ToRight
+                        False
+                        Big
+                    ]
+    in
+        div
+            [ classList [ ( "container-color-black", True ) ] ]
+            overlay
+
+
+viewWhite : Model -> Html Msg
+viewWhite model =
+    let
+        overlay =
+            case model.isPickingBlackSuccessful of
+                True ->
+                    [ viewButtonClose True
+                    , viewIconText
+                        "info"
+                        [ ( "color", True ), ( "color--overlay", True ), ( "color--info--white", True ) ]
+                        "Select the darkest white stone"
+                        ToRight
+                        False
+                        Big
+                    , viewIconTextLink
+                        "color"
+                        [ ( "color", True ), ( "color--overlay", True ), ( "color--action", True ) ]
+                        "Pick"
+                        ToRight
+                        PickWhite
+                        Big
+                    ]
+
+                False ->
+                    [ viewButtonClose False
+                    , viewIconText
+                        "info"
+                        [ ( "color", True ) ]
+                        "Nothing to pick"
+                        ToRight
+                        False
+                        Big
+                    ]
+    in
+        div
+            [ classList [ ( "container-color-white", True ) ] ]
+            overlay
+
+
+viewProcessing : Model -> Html Msg
+viewProcessing model =
+    let
+        overlay =
+            case model.isCroppingSuccessful of
+                True ->
+                    [ viewButtonClose True
+                    , viewIconText
+                        "info"
+                        [ ( "processed", True ), ( "processed--overlay", True ), ( "processed--info", True ) ]
+                        "This is how I detected the stones on the board. You can make corrections in the next step"
+                        ToRight
+                        False
+                        Big
+                    , viewIconTextLink
+                        "continue"
+                        [ ( "processed", True ), ( "processed--overlay", True ), ( "processed--action", True ) ]
+                        "Continue"
+                        ToRight
+                        (ChangePath "#score")
+                        Big
+                    ]
+
+                False ->
+                    [ viewButtonClose False
+                    , viewIconText
+                        "info"
+                        [ ( "crop", True ) ]
+                        "Nothing to process"
+                        ToRight
+                        False
+                        Big
+                    ]
+    in
+        div [ classList [ ( "container-processing", True ) ] ]
+            overlay
+
+
+viewScore : Model -> Html Msg
+viewScore model =
+    div
+        [ classList [ ( "container-score", True ) ] ]
+        [ viewButtonClose True
+        , viewBoard model
+        , div
+            [ classList
+                [ ( "container-board-surface", True )
+                , ( "container-board-surface--19x19", model.boardSize == Nineteen )
+                , ( "container-board-surface--13x13", model.boardSize == Thirteen )
+                , ( "container-board-surface--13x13", model.boardSize == Nine )
+                ]
+            ]
+            []
+        , ul [ classList [ ( "controls-buttons", True ) ] ]
+            [ li [ classList [ ( "list-item", True ) ] ]
+                [ div
+                    [ classList
+                        [ ( "controls-button", True )
+                        , ( "controls-button--active", model.state == Scoring )
+                        ]
+                    , onClick (NewState Scoring)
+                    ]
+                    [ text "Score" ]
+                ]
+            , li [ classList [ ( "list-item", True ) ] ]
+                [ div
+                    [ classList
+                        [ ( "controls-button", True )
+                        , ( "controls-button--active", model.state == Editing )
+                        ]
+                    , onClick (NewState Editing)
+                    ]
+                    [ text "Tools" ]
+                ]
+            ]
+        , ul [ classList [ ( "controls-score", True ) ] ]
+            [ li [ classList [ ( "list-item", True ) ] ]
+                [ viewIconText
+                    "black"
+                    [ ( "points", True ), ( "points--overlay", True ), ( "points--visible", model.showingScore ) ]
+                    (toString model.scoreBlack)
+                    ToRight
+                    False
+                    Big
+                ]
+            , li [ classList [ ( "list-item", True ) ] ]
+                [ viewIconText
+                    "white"
+                    [ ( "points", True ), ( "points--overlay", True ), ( "points--visible", model.showingScore ) ]
+                    (toString model.scoreWhite)
+                    ToRight
+                    False
+                    Big
+                ]
+            ]
+        , ul [ classList [ ( "controls-tools", True ) ] ]
+            [ li [ classList [ ( "list-item", True ) ] ]
+                [ viewIconTextLink
+                    "deadblack"
+                    [ ( "tool", True ), ( "tool--overlay", True ), ( "tool--visible", model.showingTools ) ]
+                    "Dead black"
+                    ToRight
+                    (NewTool DeadBlack)
+                    Big
+                ]
+            , li [ classList [ ( "list-item", True ) ] ]
+                [ viewIconTextLink
+                    "deadwhite"
+                    [ ( "tool", True ), ( "tool--overlay", True ), ( "tool--visible", model.showingTools ) ]
+                    "Dead white"
+                    ToRight
+                    (NewTool DeadWhite)
+                    Big
+                ]
+            , li [ classList [ ( "list-item", True ) ] ]
+                [ viewIconTextLink
+                    "alive"
+                    [ ( "tool", True ), ( "tool--overlay", True ), ( "tool--visible", model.showingTools ) ]
+                    "Alive"
+                    ToRight
+                    (NewTool Alive)
+                    Big
+                ]
+            , li [ classList [ ( "list-item", True ) ] ]
+                [ viewIconTextLink
+                    "addblack"
+                    [ ( "tool", True ), ( "tool--overlay", True ), ( "tool--visible", model.showingTools ) ]
+                    "Add black"
+                    ToRight
+                    (NewTool AddBlack)
+                    Big
+                ]
+            , li [ classList [ ( "list-item", True ) ] ]
+                [ viewIconTextLink
+                    "addwhite"
+                    [ ( "tool", True ), ( "tool--overlay", True ), ( "tool--visible", model.showingTools ) ]
+                    "Add white"
+                    ToRight
+                    (NewTool AddWhite)
+                    Big
+                ]
+            , li [ classList [ ( "list-item", True ) ] ]
+                [ viewIconTextLink
+                    "remove"
+                    [ ( "tool", True ), ( "tool--overlay", True ), ( "tool--visible", model.showingTools ) ]
+                    "Remove"
+                    ToRight
+                    (NewTool Remove)
+                    Big
+                ]
+            ]
         ]
 
 
-viewContacts : Model -> Html Msg
-viewContacts model =
-    div [ classList [ ( "smartphone-contacts", True ) ] ]
-        []
-
-
-viewApps : Model -> Html Msg
-viewApps model =
-    div [ classList [ ( "smartphone-apps", True ) ] ]
-        []
-
-
-viewMessages : Model -> Html Msg
-viewMessages model =
-    div [ classList [ ( "smartphone-messages", True ) ] ]
-        []
-
-
-viewToDoList : Model -> Html Msg
-viewToDoList model =
-    div [ classList [ ( "smartphone-to-do-list", True ) ] ]
-        []
-
-
-viewBrowserHistory : Model -> Html Msg
-viewBrowserHistory model =
-    div [ classList [ ( "smartphone-browser-history", True ) ] ]
-        []
-
-
-viewCallHistory : Model -> Html Msg
-viewCallHistory model =
-    div [ classList [ ( "smartphone-call-history", True ) ] ]
-        []
-
-
-viewWallet : Model -> Html Msg
-viewWallet model =
-    div [ classList [ ( "wallet", True ) ] ]
-        [ viewCreditCards model ]
-
-
-viewCreditCards : Model -> Html Msg
-viewCreditCards model =
-    div [ classList [ ( "wallet-credit-cards", True ) ] ]
-        []
-
-
-viewKeys : Model -> Html Msg
-viewKeys model =
-    div [ classList [ ( "keys", True ) ] ]
-        []
-
-
-viewCar : Model -> Html Msg
-viewCar model =
-    div [ classList [ ( "car", True ) ], onClick (ChangePath Translation.pathCar) ]
-        []
-
-
-viewCardCar : Model -> Html Msg
-viewCardCar model =
-    div [ classList [ ( "card-car", True ), ( "card", True ) ] ]
-        [ viewIconTextLink "hands" "icon--big" Translation.gloveCompartment Translation.pathGloveCompartment
-        , viewIconTextLink "trunk" "icon--big" Translation.trunk Translation.pathTrunk
-        , viewIconTextLink "drink" "icon--big" Translation.cupHolder Translation.pathCupHolder
-        , viewIconTextLink "damage" "icon--big" Translation.damage Translation.pathDamage
-        , viewIconTextLink "book" "icon--big" Translation.diary Translation.pathDiary
-        , viewCardLink
+viewBoard : Model -> Html Msg
+viewBoard model =
+    div
+        [ classList
+            [ ( "container-board", True )
+            , ( "container-board--19x19", model.boardSize == Nineteen )
+            , ( "container-board--13x13", model.boardSize == Thirteen )
+            , ( "container-board--9x9", model.boardSize == Nine )
+            ]
         ]
+        (List.map (viewBoardRow model) (boardSizeToRange model.boardSize))
 
 
-viewCardGloveCompartment : Model -> Html Msg
-viewCardGloveCompartment model =
-    div [ classList [ ( "card-glove-compartment", True ), ( "card", True ) ] ]
-        [ ul [ classList [ ( "list", True ) ] ]
-            (List.map (\item -> viewListItem item.description) model.mystery.car.gloveCompartmentItems)
-        ]
+viewBoardRow : Model -> Int -> Html Msg
+viewBoardRow model y =
+    div [ classList [ ( "board-row", True ) ] ]
+        (List.map (viewBoardColumn model y) (boardSizeToRange model.boardSize))
 
 
-viewTrunk : Model -> Html Msg
-viewTrunk model =
-    div [ classList [ ( "car-trunk", True ) ] ]
-        []
+viewBoardColumn : Model -> Int -> Int -> Html Msg
+viewBoardColumn model y x =
+    let
+        position =
+            ( y, x )
+
+        stone =
+            Dict.get position model.board
+                |> Maybe.withDefault (Stone False Empty)
+
+        isStar =
+            case model.boardSize of
+                Nineteen ->
+                    isPositionStar model.stars19x19 x y
+
+                Thirteen ->
+                    isPositionStar model.stars13x13 x y
+
+                Nine ->
+                    isPositionStar model.stars9x9 x y
+
+        isDead =
+            Dict.get position model.dead
+                |> Maybe.withDefault (Dead False Empty)
+                |> .isDead
+
+        territory =
+            Dict.get position model.territory
+                |> Maybe.withDefault (Territory False Empty)
+
+        classColorStone =
+            case stone.color of
+                Black ->
+                    "board-stone--black"
+
+                White ->
+                    "board-stone--white"
+
+                Conflict ->
+                    "board-stone--conflict"
+
+                Empty ->
+                    "board-stone--empty"
+
+        classColorTerritory =
+            if territory.isTerritory && model.state == Scoring then
+                case territory.color of
+                    Black ->
+                        "board-point--territory-black"
+
+                    White ->
+                        "board-point--territory-white"
+
+                    _ ->
+                        "board-point--territory-neutral"
+            else
+                "board-point--territory-empty"
+    in
+        div
+            [ classList
+                [ ( "board-column", True )
+                , ( "board-column--19x19", model.boardSize == Nineteen )
+                , ( "board-column--13x13", model.boardSize == Thirteen )
+                , ( "board-column--9x9", model.boardSize == Nine )
+                ]
+            ]
+            [ span
+                [ classList
+                    [ ( "board-stone", True )
+                    , ( "board-stone--dead", isDead )
+                    , ( "board-stone--dead--editing", isDead && model.state == Editing )
+                    , ( classColorStone, True )
+                    ]
+                , onClick (UseToolAt ( y, x ))
+                ]
+                []
+            , span
+                [ classList
+                    [ ( "board-point", True )
+                    , ( "board-point--star", isStar )
+                    , ( classColorTerritory, True )
+                    ]
+                ]
+                []
+            , span [ classList [ ( "board-connection", True ), ( "board-connection--right", True ) ] ] []
+            , span [ classList [ ( "board-connection", True ), ( "board-connection--down", True ) ] ] []
+            ]
 
 
-viewCupHolder : Model -> Html Msg
-viewCupHolder model =
-    div [ classList [ ( "car-cup-holder", True ) ] ]
-        []
+
+-- VIEW HELPERS
 
 
-viewDamage : Model -> Html Msg
-viewDamage model =
-    div [ classList [ ( "car-damage", True ) ] ]
-        []
+classToString : ( String, Bool ) -> String
+classToString tuple =
+    case Tuple.second tuple of
+        True ->
+            Tuple.first tuple
+
+        False ->
+            ""
 
 
-viewDiary : Model -> Html Msg
-viewDiary model =
-    div [ classList [ ( "car-diary", True ) ] ]
-        []
+classString : List ( String, Bool ) -> String
+classString classes =
+    let
+        classList =
+            List.map classToString classes
+    in
+        String.join " " classList
 
 
-viewTags : Model -> Html Msg
-viewTags model =
-    div [ classList [ ( "tags", True ) ] ]
-        []
-
-
-viewCard : Model -> Html Msg
-viewCard model =
-    div [ classList [ ( "card", True ) ] ]
-        []
+intToPixels : Int -> String
+intToPixels value =
+    toString value ++ "px"

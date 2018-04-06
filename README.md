@@ -1,3 +1,3 @@
-# CarCrashMystery
+# GoAutoScore
 
-Website voor CarCrashMystery
+Automatic scoring of Go board using a picture or camera

@@ -1,8 +1,8 @@
 {
     "private": true,
-    "name": "carcrashmystery",
+    "name": "goautoscore",
     "version": "0.0.1",
-    "description": "Website voor CarCrashMystery",
+    "description": "Automatic scoring for finished Go games",
     "main": "app.js",
     "scripts": {
         "optimize:js": "uglifyjs dist/app.js --compress --mangle --output dist/app.js",
@@ -10,7 +10,7 @@
         "optimize": "npm run optimize:js && npm run optimize:css",
         "svg:generate": "svg-sprite-generate -d src/assets/svg -o src/sprite/icons.svg",
         "sass:generate": "node-sass -q src/assets/scss/app.scss dist/app.css",
-        "copy:scripts": "cp -r src/scripts/ dist/",
+        "copy:scripts": "cp -r src/scripts/. dist/",
         "copy:html": "cp src/index.html dist/",
         "copy:vendor": "cp -r src/vendor/ dist/",
         "copy:development": "npm run copy:scripts && npm run copy:html",

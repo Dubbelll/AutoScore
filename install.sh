@@ -1,9 +1,9 @@
 #!/bin/sh
 #Variables
 CI_PIPELINE_ID=$1
-PATH_BUILDS="/home/musilitar/builds/carcrashmystery"
-PATH_PUBLISHED="/home/musilitar/published/carcrashmystery"
-PATH_WEBROOT="/var/www/carcrashmystery"
+PATH_BUILDS="/home/musilitar/builds/goautoscore"
+PATH_PUBLISHED="/home/musilitar/published/goautoscore"
+PATH_WEBROOT="/var/www/goautoscore"
 #Script
 echo "Changing directory to builds..."
 cd $PATH_BUILDS

@@ -21,7 +21,6 @@
         "build:development": "npm run elm:development && npm run sass:generate && npm run copy:development",
         "build:staging": "npm run elm:development && npm run sass:generate && npm run copy:development",
         "build:production": "npm run elm:production && npm run sass:generate && npm run copy:production && npm run optimize",
-        "test": "elm-test",
         "install:staging": "npm run elm:install && npm run build:staging",
         "install:production": "npm run elm:install && npm run build:production",
         "watch": "npm run watch:elm & npm run watch:scripts & npm run watch:scss & npm run watch:html",
@@ -45,10 +44,8 @@
         "browser-sync": "2.19.0",
         "clean-css-cli": "4.1.10",
         "elm": "0.18.0",
-        "http-proxy-middleware": "0.17.4",
         "svg-sprite-generator": "0.0.7",
         "uglify-es": "3.2.2",
-        "elm-test": "0.18.12",
         "node-sass": "4.7.2",
         "onchange": "3.3.0"
     }

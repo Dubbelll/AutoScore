@@ -228,10 +228,11 @@ input[type="file"] {
     align-items: center;
 }
 
-.container-icon-text-link
+.container-icon-text-action
 {
     display: flex;
     align-items: center;
+    cursor: pointer;
 }
 
 /* SHARED CONTENT */
@@ -362,6 +363,7 @@ input[type="file"] {
 
 .crop-frame-fader
 {
+    display: none;
     position: absolute;
     top: 50%;
     left: 50%;
@@ -369,6 +371,11 @@ input[type="file"] {
     opacity: 0.75;
     background-color: $color-object-primary;
     z-index: $depth-fader;
+
+    &.crop-frame-fader--visible
+    {
+        display: block;
+    }
 }
 
 .crop-frame-boundary
@@ -445,7 +452,10 @@ input[type="file"] {
     top: 50%;
     left: 50%;
     transform: translateX(-50%) translateY(-50%);
-    z-index: $depth-overlay-ui;
+    padding: $padding-default;
+    background-color: $color-accent-primary;
+    border-radius: $border-radius-default;
+    z-index: $depth-message;
 
     &.message--visible
     {
@@ -453,12 +463,19 @@ input[type="file"] {
     }
 }
 
+.message-item
+{
+    &:nth-child(2)
+    {
+        margin-top: 10.5rem;
+    }
+}
+
 .message-close
 {
     position: absolute;
-    top: 0;
-    right: 0;
-    transform: translateY(-100%);
+    top: $positioning-default;
+    right: $positioning-default;
     color: $color-text-primary;
     background-color: $color-background-primary;
     border-radius: $border-radius-default;
@@ -469,11 +486,6 @@ input[type="file"] {
     color: $color-text-primary;
     background-color: $color-background-primary;
     border-radius: $border-radius-default;
-
-    &:first-child
-    {
-        margin-top: $margin-minimal;
-    }
 }
 
 .overlay

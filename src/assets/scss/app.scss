@@ -213,8 +213,13 @@ input[type="file"] {
 
 .list-item
 {
+    position: relative;
     list-style: none;
-    margin-bottom: $margin-minimal;
+
+    &:not(:last-child)
+    {
+        margin-bottom: $margin-minimal;
+    }
 }
 
 .container-icon-text
@@ -433,6 +438,44 @@ input[type="file"] {
     }
 }
 
+.message
+{
+    display: none;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translateX(-50%) translateY(-50%);
+    z-index: $depth-overlay-ui;
+
+    &.message--visible
+    {
+        display: block;
+    }
+}
+
+.message-close
+{
+    position: absolute;
+    top: 0;
+    right: 0;
+    transform: translateY(-100%);
+    color: $color-text-primary;
+    background-color: $color-background-primary;
+    border-radius: $border-radius-default;
+}
+
+.message-part
+{
+    color: $color-text-primary;
+    background-color: $color-background-primary;
+    border-radius: $border-radius-default;
+
+    &:first-child
+    {
+        margin-top: $margin-minimal;
+    }
+}
+
 .overlay
 {
     color: $color-text-primary;
@@ -446,6 +489,14 @@ input[type="file"] {
     }
 }
 
+.action
+{
+    top: auto;
+    bottom: $positioning-thumb;
+    transform: translateX(-50%); 
+    z-index: $depth-overlay-ui;
+}
+
 .close
 {
     position: absolute;
@@ -457,14 +508,6 @@ input[type="file"] {
     {
         @extend .overlay;
     }
-}
-
-.action
-{
-    top: auto;
-    bottom: $positioning-thumb;
-    transform: translateX(-50%); 
-    z-index: $depth-overlay-ui;
 }
 
 /* CONTENT */

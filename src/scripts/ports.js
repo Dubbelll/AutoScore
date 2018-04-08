@@ -36,10 +36,6 @@ const state = {
 const CROP_TYPE_RECTANGLE = 1;
 const CROP_TYPE_CIRCLE = 2;
 
-if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("worker.js", { scope: "/" });
-}
-
 window.addEventListener("load", function () {
     setViewportMinimum();
 });
@@ -700,7 +696,7 @@ app.ports.startProcessing.subscribe(function (bool) {
     for (let y = 1; y < 20; y++) {
         for (let x = 1; x < 20; x++) {
             const key = y.toString() + "-" + x.toString();
-            probabilities[key] = { probabilityStone: 0, probabilityBlack: 0, probabilityWhite: 0 };
+            probabilities[key] = { stone: 0, black: 0, white: 0 };
         }
     }
 
@@ -713,14 +709,14 @@ app.ports.startProcessing.subscribe(function (bool) {
 
         if (x > 0 && y > 0) {
             const key = y.toString() + "-" + x.toString();
-            const stone = probabilities[key];
+            const probability = probabilities[key];
 
-            stone.probabilityStone += 1;
+            probability.stone += 1;
             if (match.color === 0) {
-                stone.probabilityBlack += 1;
+                probability.black += 1;
             }
             if (match.color === 1) {
-                stone.probabilityWhite += 1;
+                probability.white += 1;
             }
         }
     }

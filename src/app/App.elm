@@ -28,6 +28,7 @@ type alias Model =
     , location : Location
     , isLoading : Bool
     , loadingMessage : Maybe String
+    , messages : Dict String Message
     , boardSizes : List BoardSize
     , boardSize : BoardSize
     , komi : Float
@@ -71,8 +72,12 @@ type CropShape
     | Circle
 
 
+type alias Message =
+    { isVisible : Bool, content : List String }
+
+
 type alias Probability =
-    { probabilityStone : Int, probabilityBlack : Int, probabilityWhite : Int }
+    { stone : Int, black : Int, white : Int }
 
 
 type alias Star =
@@ -155,6 +160,7 @@ init location =
             , location = location
             , isLoading = False
             , loadingMessage = Nothing
+            , messages = messages
             , boardSizes = [ Nineteen, Thirteen, Nine ]
             , boardSize = Nineteen
             , komi = 6.5
@@ -176,7 +182,7 @@ init location =
             , territory = Dict.empty
             , state = Editing
             , tool = NoTool
-            , showingTools = True
+            , showingTools = False
             , showingScore = False
             , scoreBlack = 0
             , scoreWhite = 0
@@ -235,7 +241,7 @@ probabilityToStone : Int -> String -> Probability -> Stone
 probabilityToStone maximumProbability key probability =
     let
         probabilityPercentage =
-            toFloat probability.probabilityStone / toFloat maximumProbability
+            toFloat probability.stone / toFloat maximumProbability
 
         isStone =
             probabilityPercentage > 0.25
@@ -243,24 +249,24 @@ probabilityToStone maximumProbability key probability =
         color =
             if
                 isStone
-                    && probability.probabilityBlack
+                    && probability.black
                     > 0
-                    && probability.probabilityBlack
-                    > probability.probabilityWhite
+                    && probability.black
+                    > probability.white
             then
                 Black
             else if
                 isStone
-                    && probability.probabilityWhite
+                    && probability.white
                     > 0
-                    && probability.probabilityWhite
-                    > probability.probabilityBlack
+                    && probability.white
+                    > probability.black
             then
                 White
             else if
                 isStone
-                    && probability.probabilityBlack
-                    == probability.probabilityWhite
+                    && probability.black
+                    == probability.white
             then
                 Conflict
             else
@@ -298,6 +304,51 @@ isPositionStar stars x y =
 
 
 -- DATA
+
+
+messages : Dict String Message
+messages =
+    [ ( "photo"
+      , Message True
+            [ "Press anywhere to take a photo"
+            , "Put the camera directly above the board, not at an angle"
+            ]
+      )
+    , ( "crop"
+      , Message True
+            [ "Crop the image so only the board remains"
+            , "Try to be precise, it's important for getting accurate results"
+            ]
+      )
+    , ( "black"
+      , Message True
+            [ "Select the LIGHTEST BLACK stone"
+            , "Make sure the preview shows exactly one stone and nothing else, not even the board"
+            , "The lightest one is usually the one with the most reflection on it"
+            ]
+      )
+    , ( "white"
+      , Message True
+            [ "Select the DARKEST WHITE stone"
+            , "Make sure the preview shows exactly one stone and nothing else, not even the board"
+            , "The darkest one is usually the one with the most shadow on it"
+            ]
+      )
+    , ( "processing"
+      , Message True
+            [ "This is how I detected the stones on the board"
+            , "If you see large errors, you should repeat the previous steps"
+            , "You can make corrections in the next step"
+            ]
+      )
+    , ( "score"
+      , Message True
+            [ "Please mark all dead stones by using the approriate tools"
+            , "To use a tool, select it and then press anywhere on the board"
+            ]
+      )
+    ]
+        |> Dict.fromList
 
 
 stars19x19 : List Star
@@ -512,9 +563,9 @@ calculateScoreWhite territory dead prisoners komi =
 decoderProbability : JD.Decoder Probability
 decoderProbability =
     JD.map3 Probability
-        (JD.field "probabilityStone" JD.int)
-        (JD.field "probabilityBlack" JD.int)
-        (JD.field "probabilityWhite" JD.int)
+        (JD.field "stone" JD.int)
+        (JD.field "black" JD.int)
+        (JD.field "white" JD.int)
 
 
 decoderProbabilities : JD.Decoder (Dict String Probability)
@@ -576,6 +627,7 @@ parseLocation location =
 type Msg
     = ChangePath String
     | ChangeLocation Location
+    | CloseMessage String (List String)
     | StartCamera
     | NewFile
     | NewBoardSize String
@@ -641,6 +693,16 @@ update message model =
                     Cmd.batch [ commandOldRoute, commandNewRoute ]
             in
                 ( newModel, newCommands )
+
+        CloseMessage name content ->
+            let
+                newMessage =
+                    Message False content
+
+                newMessages =
+                    Dict.insert name newMessage model.messages
+            in
+                ( { model | messages = newMessages }, Cmd.none )
 
         StartCamera ->
             ( { model | isLoading = True, loadingMessage = Just "Starting camera" }, PT.startCamera True )
@@ -716,7 +778,7 @@ update message model =
             let
                 maximumProbability =
                     Dict.values probabilities
-                        |> List.map .probabilityStone
+                        |> List.map .stone
                         |> List.maximum
                         |> Maybe.withDefault 0
 
@@ -1045,8 +1107,44 @@ viewCropFrame identifier shape isVisible =
             ]
 
 
-viewButtonClose : Bool -> Html Msg
-viewButtonClose isOverlay =
+viewMessagePart : String -> Html Msg
+viewMessagePart message =
+    li [ classList [ ( "list-item", True ) ] ]
+        [ viewIconText
+            "info"
+            [ ( "message-part", True ) ]
+            message
+            ToRight
+            False
+            Medium
+        ]
+
+
+viewMessage : String -> Bool -> Dict String Message -> Bool -> Html Msg
+viewMessage name alwaysShow messages showHelp =
+    let
+        message =
+            Dict.get name messages
+                |> Maybe.withDefault (Message False [])
+
+        isVisible =
+            showHelp && message.isVisible && alwaysShow
+    in
+        ul [ classList [ ( "message", True ), ( "message--visible", isVisible ) ] ]
+            ([ viewIconTextLink
+                "close"
+                [ ( "message-close", True ) ]
+                "Close"
+                ToLeft
+                (CloseMessage name message.content)
+                Medium
+             ]
+                ++ (List.map viewMessagePart message.content)
+            )
+
+
+viewClose : Bool -> Html Msg
+viewClose isOverlay =
     viewIconTextLink "close" [ ( "close", True ), ( "close--overlay", isOverlay ) ] "Close" ToLeft (ChangePath "#") Big
 
 
@@ -1085,7 +1183,7 @@ viewSettings model =
                 "box"
     in
         div [ classList [ ( "container-settings", True ) ] ]
-            [ viewButtonClose False
+            [ viewClose False
             , viewIconTextLink
                 "continue"
                 [ ( "settings", True ), ( "settings--overlay", True ), ( "settings--action", True ) ]
@@ -1173,7 +1271,7 @@ viewOptionBoardSize model boardSize =
 viewSource : Model -> Html Msg
 viewSource model =
     div [ classList [ ( "container-source", True ) ] ]
-        [ viewButtonClose False
+        [ viewClose False
         , ul []
             [ li [ classList [ ( "container-link", True ), ( "list-item", True ) ] ]
                 [ viewIconTextLink "camera" [] "Photo" ToRight (ChangePath "#photo") Big ]
@@ -1193,18 +1291,12 @@ viewPhoto model =
         overlay =
             case model.isVideoPlaying of
                 True ->
-                    [ viewButtonClose True
-                    , viewIconText
-                        "info"
-                        [ ( "camera", True ), ( "camera--overlay", True ), ( "camera--info", True ) ]
-                        "Tap/click anywhere to take a photo"
-                        ToRight
-                        False
-                        Big
+                    [ viewClose True
+                    , viewMessage "photo" True model.messages model.showHelp
                     ]
 
                 False ->
-                    [ viewButtonClose False
+                    [ viewClose False
                     , viewIconTextLink
                         "camera"
                         [ ( "camera", True ), ( "camera--action", True ) ]
@@ -1224,14 +1316,8 @@ viewCrop model =
         overlay =
             case model.isInputSuccessful of
                 True ->
-                    [ viewButtonClose True
-                    , viewIconText
-                        "info"
-                        [ ( "crop", True ), ( "crop--overlay", True ), ( "crop--info", True ) ]
-                        "Crop the image so only the board remains"
-                        ToRight
-                        False
-                        Big
+                    [ viewClose True
+                    , viewMessage "crop" True model.messages model.showHelp
                     , viewIconTextLink
                         "crop"
                         [ ( "crop", True ), ( "crop--overlay", True ), ( "crop--action", True ) ]
@@ -1242,7 +1328,7 @@ viewCrop model =
                     ]
 
                 False ->
-                    [ viewButtonClose False
+                    [ viewClose False
                     , viewIconText
                         "info"
                         [ ( "crop", True ) ]
@@ -1263,14 +1349,8 @@ viewBlack model =
         overlay =
             case model.isCroppingSuccessful of
                 True ->
-                    [ viewButtonClose True
-                    , viewIconText
-                        "info"
-                        [ ( "color", True ), ( "color--overlay", True ), ( "color--info--black", True ) ]
-                        "Select the lightest black stone"
-                        ToRight
-                        False
-                        Big
+                    [ viewClose True
+                    , viewMessage "black" True model.messages model.showHelp
                     , viewIconTextLink
                         "color"
                         [ ( "color", True ), ( "color--overlay", True ), ( "color--action", True ) ]
@@ -1281,7 +1361,7 @@ viewBlack model =
                     ]
 
                 False ->
-                    [ viewButtonClose False
+                    [ viewClose False
                     , viewIconText
                         "info"
                         [ ( "color", True ) ]
@@ -1302,14 +1382,8 @@ viewWhite model =
         overlay =
             case model.isPickingBlackSuccessful of
                 True ->
-                    [ viewButtonClose True
-                    , viewIconText
-                        "info"
-                        [ ( "color", True ), ( "color--overlay", True ), ( "color--info--white", True ) ]
-                        "Select the darkest white stone"
-                        ToRight
-                        False
-                        Big
+                    [ viewClose True
+                    , viewMessage "white" True model.messages model.showHelp
                     , viewIconTextLink
                         "color"
                         [ ( "color", True ), ( "color--overlay", True ), ( "color--action", True ) ]
@@ -1320,7 +1394,7 @@ viewWhite model =
                     ]
 
                 False ->
-                    [ viewButtonClose False
+                    [ viewClose False
                     , viewIconText
                         "info"
                         [ ( "color", True ) ]
@@ -1341,14 +1415,8 @@ viewProcessing model =
         overlay =
             case model.isCroppingSuccessful of
                 True ->
-                    [ viewButtonClose True
-                    , viewIconText
-                        "info"
-                        [ ( "processed", True ), ( "processed--overlay", True ), ( "processed--info", True ) ]
-                        "This is how I detected the stones on the board. You can make corrections in the next step"
-                        ToRight
-                        False
-                        Big
+                    [ viewClose True
+                    , viewMessage "processing" True model.messages model.showHelp
                     , viewIconTextLink
                         "continue"
                         [ ( "processed", True ), ( "processed--overlay", True ), ( "processed--action", True ) ]
@@ -1359,7 +1427,7 @@ viewProcessing model =
                     ]
 
                 False ->
-                    [ viewButtonClose False
+                    [ viewClose False
                     , viewIconText
                         "info"
                         [ ( "crop", True ) ]
@@ -1377,7 +1445,8 @@ viewScore : Model -> Html Msg
 viewScore model =
     div
         [ classList [ ( "container-score", True ) ] ]
-        [ viewButtonClose True
+        [ viewClose True
+        , viewMessage "score" (not model.areDeadRemoved) model.messages model.showHelp
         , viewBoard model
         , div
             [ classList

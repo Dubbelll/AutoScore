@@ -1179,8 +1179,13 @@ viewLanding model =
             ToRight
             (ChangePath "#settings")
             Big
-        , p [ classList [ ( "landing-pitch", True ) ] ]
-            [ text "Automatically score your finished Go games in just a few simple steps" ]
+        , div [ classList [ ( "container-landing-pitch", True ) ] ]
+            [ div [ classList [ ( "landing-logo", True ) ] ]
+                [ viewIcon "logo" [ ( "icon--logo", True ) ]
+                ]
+            , p [ classList [ ( "landing-blurb", True ) ] ]
+                [ text "Automatically score your finished Go games in just a few simple steps" ]
+            ]
         ]
 
 

@@ -650,6 +650,7 @@ type Msg
     | NewState State
     | NewTool Tool
     | UseToolAt BoardPosition
+    | NoMsg
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -871,6 +872,9 @@ update message model =
             in
                 ( { model | board = board, dead = dead }, Cmd.none )
 
+        NoMsg ->
+            ( model, Cmd.none )
+
 
 
 -- SUBSCRIPTIONS
@@ -913,8 +917,8 @@ view model =
             []
         , div [ classList [ ( "loading", True ), ( "loading--visible", model.isLoading ) ] ]
             [ div [ classList [ ( "loading-animation", True ) ] ]
-                [ span [ classList [ ( "stone", True ), ( "stone--black", True ) ] ] []
-                , span [ classList [ ( "stone", True ), ( "stone--white", True ) ] ] []
+                [ span [ classList [ ( "loading-stone", True ), ( "loading-stone--black", True ) ] ] []
+                , span [ classList [ ( "loading-stone", True ), ( "loading-stone--white", True ) ] ] []
                 ]
             , div [ classList [ ( "loading-message", True ) ] ]
                 [ text (Maybe.withDefault "Loading" model.loadingMessage)
@@ -1005,12 +1009,12 @@ viewIconText name classesExtra value direction isClickable size =
                     , span [ classList [ ( "text-icon", True ), ( textClass, True ) ] ] [ text value ]
                     ]
     in
-        span [ classList classes ]
+        div [ classList classes ]
             content
 
 
-viewIconTextAction : String -> List ( String, Bool ) -> String -> TextDirection -> Msg -> ViewSize -> Html Msg
-viewIconTextAction name classesExtra value direction msg size =
+viewIconTextCommand : String -> List ( String, Bool ) -> String -> TextDirection -> Msg -> ViewSize -> Html Msg
+viewIconTextCommand name classesExtra value direction msg size =
     let
         classes =
             [ ( "container-icon-text-action", True ) ] ++ classesExtra
@@ -1043,8 +1047,62 @@ viewIconTextAction name classesExtra value direction msg size =
                     , span [ classList [ ( "text-icon", True ), ( textClass, True ) ] ] [ text value ]
                     ]
     in
-        span [ classList classes, onClick msg ]
+        div [ classList classes, onClick msg ]
             content
+
+
+viewIconTextAction : String -> List ( String, Bool ) -> String -> TextDirection -> Msg -> ViewSize -> Html Msg
+viewIconTextAction name classesExtra value direction msg size =
+    let
+        classes =
+            [ ( "action", True ) ] ++ classesExtra
+    in
+        viewIconTextCommand name classes value direction msg size
+
+
+viewIconTextActionClose : Html Msg
+viewIconTextActionClose =
+    viewIconTextAction "close" [ ( "action--close", True ) ] "Close" ToLeft (ChangePath "#") Big
+
+
+viewMessagePart : String -> Html Msg
+viewMessagePart message =
+    li [ classList [ ( "list-item", True ), ( "message-item", True ) ] ]
+        [ viewIconText
+            "info"
+            [ ( "message-part", True ) ]
+            message
+            ToRight
+            False
+            Medium
+        ]
+
+
+viewMessage : String -> Bool -> Dict String Message -> Bool -> Html Msg
+viewMessage name alwaysShow messages showHelp =
+    let
+        message =
+            Dict.get name messages
+                |> Maybe.withDefault (Message False [])
+
+        isVisible =
+            showHelp && message.isVisible && alwaysShow
+    in
+        ul [ classList [ ( "message", True ), ( "message--visible", isVisible ) ] ]
+            ([ viewIconTextAction
+                "close"
+                [ ( "action--close", True ) ]
+                "Close"
+                ToLeft
+                (CloseMessage name message.content)
+                Medium
+             ]
+                ++ (List.map viewMessagePart message.content)
+            )
+
+
+
+-- VIEW DRAWING
 
 
 viewCanvas : String -> Bool -> Html Msg
@@ -1107,47 +1165,6 @@ viewCropFrame identifier shape isVisible =
             ]
 
 
-viewMessagePart : String -> Html Msg
-viewMessagePart message =
-    li [ classList [ ( "list-item", True ), ( "message-item", True ) ] ]
-        [ viewIconText
-            "info"
-            [ ( "message-part", True ) ]
-            message
-            ToRight
-            False
-            Medium
-        ]
-
-
-viewMessage : String -> Bool -> Dict String Message -> Bool -> Html Msg
-viewMessage name alwaysShow messages showHelp =
-    let
-        message =
-            Dict.get name messages
-                |> Maybe.withDefault (Message False [])
-
-        isVisible =
-            showHelp && message.isVisible && alwaysShow
-    in
-        ul [ classList [ ( "message", True ), ( "message--visible", isVisible ) ] ]
-            ([ viewIconTextAction
-                "close"
-                [ ( "message-close", True ) ]
-                "Close"
-                ToLeft
-                (CloseMessage name message.content)
-                Medium
-             ]
-                ++ (List.map viewMessagePart message.content)
-            )
-
-
-viewClose : Bool -> Html Msg
-viewClose isOverlay =
-    viewIconTextAction "close" [ ( "close", True ), ( "close--overlay", isOverlay ) ] "Close" ToLeft (ChangePath "#") Big
-
-
 
 -- VIEW CONTENT
 
@@ -1157,7 +1174,7 @@ viewLanding model =
     div [ classList [ ( "container-landing", True ) ] ]
         [ viewIconTextAction
             "start"
-            [ ( "landing", True ), ( "landing--overlay", True ), ( "landing--action", True ) ]
+            [ ( "action--thumb", True ) ]
             "Start"
             ToRight
             (ChangePath "#settings")
@@ -1183,10 +1200,10 @@ viewSettings model =
                 "box"
     in
         div [ classList [ ( "container-settings", True ) ] ]
-            [ viewClose False
+            [ viewIconTextActionClose
             , viewIconTextAction
                 "continue"
-                [ ( "settings", True ), ( "settings--overlay", True ), ( "settings--action", True ) ]
+                [ ( "action--thumb", True ) ]
                 "Continue"
                 ToRight
                 (ChangePath "#source")
@@ -1228,7 +1245,7 @@ viewSettings model =
                 , ul [ classList [ ( "settings-list", True ) ] ]
                     [ li [ classList [ ( "list-item", True ) ] ]
                         [ label [ for "komi" ]
-                            [ viewIconText "score" [] "Komi" ToRight False Medium
+                            [ viewIconText "komi" [] "Komi" ToRight False Medium
                             , input
                                 [ id "komi"
                                 , classList [ ( "input", True ) ]
@@ -1240,7 +1257,7 @@ viewSettings model =
                             ]
                         ]
                     , li [ classList [ ( "list-item", True ) ] ]
-                        [ viewIconTextAction
+                        [ viewIconTextCommand
                             nameAreDeadRemoved
                             []
                             "Dead stones have been removed"
@@ -1249,7 +1266,7 @@ viewSettings model =
                             Medium
                         ]
                     , li [ classList [ ( "list-item", True ) ] ]
-                        [ viewIconTextAction
+                        [ viewIconTextCommand
                             nameShowHelp
                             []
                             "Show help messages"
@@ -1271,13 +1288,13 @@ viewOptionBoardSize model boardSize =
 viewSource : Model -> Html Msg
 viewSource model =
     div [ classList [ ( "container-source", True ) ] ]
-        [ viewClose False
+        [ viewIconTextActionClose
         , ul []
             [ li [ classList [ ( "container-link", True ), ( "list-item", True ) ] ]
                 [ viewIconTextAction "camera" [] "Photo" ToRight (ChangePath "#photo") Big ]
             , li [ classList [ ( "container-input", True ), ( "list-item", True ) ] ]
                 [ label [ for "file-input" ]
-                    [ viewIconText "file" [] "File" ToRight True Big
+                    [ viewIconTextAction "file" [] "File" ToRight NoMsg Big
                     , input [ id "file-input", type_ "file", on "change" (JD.succeed NewFile) ] []
                     ]
                 ]
@@ -1291,15 +1308,15 @@ viewPhoto model =
         overlay =
             case model.isVideoPlaying of
                 True ->
-                    [ viewClose True
+                    [ viewIconTextActionClose
                     , viewMessage "photo" True model.messages model.showHelp
                     ]
 
                 False ->
-                    [ viewClose False
+                    [ viewIconTextActionClose
                     , viewIconTextAction
                         "camera"
-                        [ ( "camera", True ), ( "camera--action", True ) ]
+                        [ ( "action--thumb", True ) ]
                         "Start camera"
                         ToRight
                         StartCamera
@@ -1316,11 +1333,11 @@ viewCrop model =
         overlay =
             case model.isInputSuccessful of
                 True ->
-                    [ viewClose True
+                    [ viewIconTextActionClose
                     , viewMessage "crop" True model.messages model.showHelp
                     , viewIconTextAction
                         "crop"
-                        [ ( "crop", True ), ( "crop--overlay", True ), ( "crop--action", True ) ]
+                        [ ( "action--thumb", True ) ]
                         "Crop"
                         ToRight
                         CropPhoto
@@ -1328,10 +1345,10 @@ viewCrop model =
                     ]
 
                 False ->
-                    [ viewClose False
+                    [ viewIconTextActionClose
                     , viewIconText
                         "info"
-                        [ ( "crop", True ) ]
+                        [ ( "info", True ) ]
                         "Nothing to crop"
                         ToRight
                         False
@@ -1349,11 +1366,11 @@ viewBlack model =
         overlay =
             case model.isCroppingSuccessful of
                 True ->
-                    [ viewClose True
+                    [ viewIconTextActionClose
                     , viewMessage "black" True model.messages model.showHelp
                     , viewIconTextAction
                         "color"
-                        [ ( "color", True ), ( "color--overlay", True ), ( "color--action", True ) ]
+                        [ ( "action--thumb", True ) ]
                         "Pick"
                         ToRight
                         PickBlack
@@ -1361,10 +1378,10 @@ viewBlack model =
                     ]
 
                 False ->
-                    [ viewClose False
+                    [ viewIconTextActionClose
                     , viewIconText
                         "info"
-                        [ ( "color", True ) ]
+                        [ ( "info", True ) ]
                         "Nothing to pick"
                         ToRight
                         False
@@ -1382,11 +1399,11 @@ viewWhite model =
         overlay =
             case model.isPickingBlackSuccessful of
                 True ->
-                    [ viewClose True
+                    [ viewIconTextActionClose
                     , viewMessage "white" True model.messages model.showHelp
                     , viewIconTextAction
                         "color"
-                        [ ( "color", True ), ( "color--overlay", True ), ( "color--action", True ) ]
+                        [ ( "action--thumb", True ) ]
                         "Pick"
                         ToRight
                         PickWhite
@@ -1394,10 +1411,10 @@ viewWhite model =
                     ]
 
                 False ->
-                    [ viewClose False
+                    [ viewIconTextActionClose
                     , viewIconText
                         "info"
-                        [ ( "color", True ) ]
+                        [ ( "info", True ) ]
                         "Nothing to pick"
                         ToRight
                         False
@@ -1415,11 +1432,11 @@ viewProcessing model =
         overlay =
             case model.isCroppingSuccessful of
                 True ->
-                    [ viewClose True
+                    [ viewIconTextActionClose
                     , viewMessage "processing" True model.messages model.showHelp
                     , viewIconTextAction
                         "continue"
-                        [ ( "processed", True ), ( "processed--overlay", True ), ( "processed--action", True ) ]
+                        [ ( "action--thumb", True ) ]
                         "Continue"
                         ToRight
                         (ChangePath "#score")
@@ -1427,10 +1444,10 @@ viewProcessing model =
                     ]
 
                 False ->
-                    [ viewClose False
+                    [ viewIconTextActionClose
                     , viewIconText
                         "info"
-                        [ ( "crop", True ) ]
+                        [ ( "info", True ) ]
                         "Nothing to process"
                         ToRight
                         False
@@ -1445,7 +1462,7 @@ viewScore : Model -> Html Msg
 viewScore model =
     div
         [ classList [ ( "container-score", True ) ] ]
-        [ viewClose True
+        [ viewIconTextActionClose
         , viewMessage "score" (not model.areDeadRemoved) model.messages model.showHelp
         , viewBoard model
         , div
@@ -1459,31 +1476,29 @@ viewScore model =
             []
         , ul [ classList [ ( "controls-buttons", True ) ] ]
             [ li [ classList [ ( "list-item", True ) ] ]
-                [ div
-                    [ classList
-                        [ ( "controls-button", True )
-                        , ( "controls-button--active", model.state == Scoring )
-                        ]
-                    , onClick (NewState Scoring)
-                    ]
-                    [ text "Score" ]
+                [ viewIconTextAction
+                    "score"
+                    []
+                    "Score"
+                    ToRight
+                    (NewState Scoring)
+                    Big
                 ]
             , li [ classList [ ( "list-item", True ) ] ]
-                [ div
-                    [ classList
-                        [ ( "controls-button", True )
-                        , ( "controls-button--active", model.state == Editing )
-                        ]
-                    , onClick (NewState Editing)
-                    ]
-                    [ text "Tools" ]
+                [ viewIconTextAction
+                    "tools"
+                    []
+                    "Tools"
+                    ToRight
+                    (NewState Editing)
+                    Big
                 ]
             ]
-        , ul [ classList [ ( "controls-score", True ) ] ]
+        , ul [ classList [ ( "controls-score", True ), ( "controls-score--visible", model.showingScore ) ] ]
             [ li [ classList [ ( "list-item", True ) ] ]
                 [ viewIconText
                     "black"
-                    [ ( "points", True ), ( "points--overlay", True ), ( "points--visible", model.showingScore ) ]
+                    []
                     (toString model.scoreBlack)
                     ToRight
                     False
@@ -1492,18 +1507,18 @@ viewScore model =
             , li [ classList [ ( "list-item", True ) ] ]
                 [ viewIconText
                     "white"
-                    [ ( "points", True ), ( "points--overlay", True ), ( "points--visible", model.showingScore ) ]
+                    []
                     (toString model.scoreWhite)
                     ToRight
                     False
                     Big
                 ]
             ]
-        , ul [ classList [ ( "controls-tools", True ) ] ]
+        , ul [ classList [ ( "controls-tools", True ), ( "controls-tools--visible", model.showingTools ) ] ]
             [ li [ classList [ ( "list-item", True ) ] ]
                 [ viewIconTextAction
                     "deadblack"
-                    [ ( "tool", True ), ( "tool--overlay", True ), ( "tool--visible", model.showingTools ) ]
+                    []
                     "Dead black"
                     ToRight
                     (NewTool DeadBlack)
@@ -1512,7 +1527,7 @@ viewScore model =
             , li [ classList [ ( "list-item", True ) ] ]
                 [ viewIconTextAction
                     "deadwhite"
-                    [ ( "tool", True ), ( "tool--overlay", True ), ( "tool--visible", model.showingTools ) ]
+                    []
                     "Dead white"
                     ToRight
                     (NewTool DeadWhite)
@@ -1521,7 +1536,7 @@ viewScore model =
             , li [ classList [ ( "list-item", True ) ] ]
                 [ viewIconTextAction
                     "alive"
-                    [ ( "tool", True ), ( "tool--overlay", True ), ( "tool--visible", model.showingTools ) ]
+                    []
                     "Alive"
                     ToRight
                     (NewTool Alive)
@@ -1530,7 +1545,7 @@ viewScore model =
             , li [ classList [ ( "list-item", True ) ] ]
                 [ viewIconTextAction
                     "addblack"
-                    [ ( "tool", True ), ( "tool--overlay", True ), ( "tool--visible", model.showingTools ) ]
+                    []
                     "Add black"
                     ToRight
                     (NewTool AddBlack)
@@ -1539,7 +1554,7 @@ viewScore model =
             , li [ classList [ ( "list-item", True ) ] ]
                 [ viewIconTextAction
                     "addwhite"
-                    [ ( "tool", True ), ( "tool--overlay", True ), ( "tool--visible", model.showingTools ) ]
+                    []
                     "Add white"
                     ToRight
                     (NewTool AddWhite)
@@ -1548,7 +1563,7 @@ viewScore model =
             , li [ classList [ ( "list-item", True ) ] ]
                 [ viewIconTextAction
                     "remove"
-                    [ ( "tool", True ), ( "tool--overlay", True ), ( "tool--visible", model.showingTools ) ]
+                    []
                     "Remove"
                     ToRight
                     (NewTool Remove)

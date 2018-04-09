@@ -185,13 +185,17 @@ body,
     }
 }
 
-.link-fake
+.container-icon-text
 {
-    cursor: pointer;
+    display: flex;
+    align-items: center;
 }
 
-input[type="file"] {
-    display: none;
+.container-icon-text-action
+{
+    display: flex;
+    align-items: center;
+    cursor: pointer;
 }
 
 .input
@@ -211,6 +215,11 @@ input[type="file"] {
     font-size: $font-size-heading;
 }
 
+input[type="file"] 
+{
+    display: none;
+}
+
 .list-item
 {
     position: relative;
@@ -222,22 +231,12 @@ input[type="file"] {
     }
 }
 
-.container-icon-text
-{
-    display: flex;
-    align-items: center;
-}
-
-.container-icon-text-action
-{
-    display: flex;
-    align-items: center;
-    cursor: pointer;
-}
-
 /* SHARED CONTENT */
 /* SHARED CONTENT */
 /* SHARED CONTENT */
+/* LOADING */
+/* LOADING */
+/* LOADING */
 .loading
 {
     display: none;
@@ -264,14 +263,14 @@ input[type="file"] {
     font-size: $font-size-title;
 }
 
-.stone
+.loading-stone
 {
     display: inline-block;
     width: $icon-size-big;
     height: $icon-size-big;
     border-radius: 50%;
 
-    &.stone--black
+    &.loading-stone--black
     {
         animation: 5s infinite stoneBlack;
         margin-right: calc(#{$icon-size-big} / 2);
@@ -300,7 +299,7 @@ input[type="file"] {
         }
     }
 
-    &.stone--white
+    &.loading-stone--white
     {
         animation: 5s infinite stoneWhite;
         margin-left: calc(#{$icon-size-big} / 2);
@@ -330,6 +329,9 @@ input[type="file"] {
     }
 }
 
+/* DRAWING */
+/* DRAWING */
+/* DRAWING */
 .canvas
 {
     display: none;
@@ -445,6 +447,47 @@ input[type="file"] {
     }
 }
 
+/* REUSABLE */
+/* REUSABLE */
+/* REUSABLE */
+.action
+{
+    
+    border-bottom: 0.5rem solid $color-shadow;
+    border-radius: $border-radius-default;
+    background-color: $color-white;
+    z-index: $depth-overlay-ui;
+
+    &:hover
+    {
+        border-bottom: 0.5rem solid $color-text-primary;
+    }
+
+    &.action--thumb
+    {
+        position: absolute;
+        top: auto;
+        bottom: $positioning-thumb;
+        left: 50%;
+        transform: translateX(-50%);
+    }
+
+    &.action--close
+    {
+        position: absolute;
+        top: $positioning-default;
+        right: $positioning-default;
+    }
+}
+
+.info
+{
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translateX(-50%) translateY(-50%);
+}
+
 .message
 {
     display: none;
@@ -471,55 +514,11 @@ input[type="file"] {
     }
 }
 
-.message-close
-{
-    position: absolute;
-    top: $positioning-default;
-    right: $positioning-default;
-    color: $color-text-primary;
-    background-color: $color-background-primary;
-    border-radius: $border-radius-default;
-}
-
 .message-part
 {
     color: $color-text-primary;
-    background-color: $color-background-primary;
+    background-color: $color-white;
     border-radius: $border-radius-default;
-}
-
-.overlay
-{
-    color: $color-text-primary;
-    background-color: $color-background-primary;
-    border-radius: $border-radius-default;
-    z-index: $depth-overlay-ui;
-
-    &>.icon 
-    {
-        fill: $color-text-primary;
-    }
-}
-
-.action
-{
-    top: auto;
-    bottom: $positioning-thumb;
-    transform: translateX(-50%); 
-    z-index: $depth-overlay-ui;
-}
-
-.close
-{
-    position: absolute;
-    top: $positioning-default;
-    right: $positioning-default;
-    z-index: $depth-overlay;
-
-    &.close--overlay
-    {
-        @extend .overlay;
-    }
 }
 
 /* CONTENT */
@@ -538,22 +537,6 @@ input[type="file"] {
     flex-wrap: wrap;
 }
 
-.landing
-{
-    position: absolute;
-    left: 50%;
-
-    &.landing--overlay
-    {
-        @extend .overlay;
-    }
-
-    &.landing--action
-    {
-        @extend .action;
-    }
-}
-
 .landing-pitch
 {
     @extend .text;
@@ -570,45 +553,10 @@ input[type="file"] {
     transform: translateX(-50%) translateY(-50%);
 }
 
-.settings
-{
-    position: absolute;
-    left: 50%;
-
-    &.settings--overlay
-    {
-        @extend .overlay;
-    }
-
-    &.settings--action
-    {
-        @extend .action;
-    }
-}
-
 .container-photo
 {
     position: relative;
     background-color: $color-background-primary;
-}
-
-.camera
-{
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translateX(-50%) translateY(-50%);
-
-    &.camera--overlay
-    {
-        @extend .overlay;
-    }
-
-    &.camera--info
-    {
-        display: flex;
-        @include animation-fade-out(fadeOutCamera);
-    }
 }
 
 .video
@@ -626,141 +574,34 @@ input[type="file"] {
     }
 }
 
-.crop
-{
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translateX(-50%) translateY(-50%);
-
-    &.crop--overlay
-    {
-        @extend .overlay;
-    }
-    
-
-    &.crop--info {
-        @include animation-fade-out(fadeOutCrop);
-    }
-
-    &.crop--action
-    {
-        @extend .action;
-    }
-}
-
-.color 
-{
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translateX(-50%) translateY(-50%);
-
-    &.color--overlay
-    {
-        @extend .overlay;
-    }
-    
-
-    &.color--info--black {
-        @include animation-fade-out(fadeOutColorBlack);
-    }
-
-    &.color--info--white {
-        @include animation-fade-out(fadeOutColorWhite);
-    }
-
-    &.color--action
-    {
-        @extend .action;
-    }
-}
-
-.processed
-{
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translateX(-50%) translateY(-50%);
-
-    &.processed--overlay
-    {
-        @extend .overlay;
-    }
-
-    &.processed--info {
-        @include animation-fade-out(fadeOutProcessed);
-    }
-
-    &.processed--action
-    {
-        @extend .action;
-    }
-}
-
 .controls-buttons, .controls-score, .controls-tools
 {
     position: absolute;
     z-index: $depth-overlay-ui;
 }
 
+.controls-score
+{
+    display: none;
+
+    &.controls-score--visible
+    {
+        display: block;
+    }
+}
+
 .controls-tools
 {
+    display: none;
     top: 50%;
     left: 50%;
     transform: translateX(-50%) translateY(-50%);
     max-width: 90rem;
     max-height: 90rem;
-}
 
-.controls-button
-{
-    @extend .text;
-
-    position: relative;
-    width: 12.5rem;
-    padding: $padding-default;
-    background-color: $color-accent-primary;
-    border-radius: 1rem;
-    text-align: center;
-    cursor: pointer;
-    user-select: none;
-
-    &.controls-button--active
+    &.controls-tools--visible
     {
-        font-weight: bold;
-    }
-}
-
-.tool
-{
-    display: none;
-    position: relative;
-    
-    &.tool--overlay
-    {
-        @extend .overlay;
-    }
-
-    &.tool--visible
-    {
-        display: flex;
-    }
-}
-
-.points
-{
-    display: none;
-    position: relative;
-    
-    &.points--overlay
-    {
-        @extend .overlay;
-    }
-
-    &.points--visible
-    {
-        display: flex;
+        display: block;
     }
 }
 

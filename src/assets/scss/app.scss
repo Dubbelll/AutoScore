@@ -34,30 +34,38 @@
 {
     .container-settings-list
     {
-        display: flex;
+        width: 90vmin;
+        height: 50%;
     }
 
     .settings-list
     {
-        width: 50%;
+        position: absolute;
 
-        &:not(:first-child)
+        &:first-child
         {
-            margin-left: 12.5rem;
+            left: 0;
+            width : 55%;
+        }
+
+        &:last-child
+        {
+            right: 0;
+            width: 45%;
         }
     }
 
     .controls-buttons,
     {
         top: 50%;
-        left: $positioning-thumb;
+        left: calc(((100% - 89.5rem) / 2) - 31rem);
         transform: translateY(-50%);
     }
 
     .controls-score
     {
         top: 50%;
-        right: $positioning-thumb;
+        right: calc(((100% - 89.5rem) / 2) - 26rem);
         transform: translateY(-50%);
     }
 }
@@ -66,14 +74,17 @@
 {
     .controls-buttons
     {
+        display: flex;
         bottom: $positioning-thumb;
         left: 50%;
         transform: translateX(-50%);
 
         &>.list-item
         {
-            display: inline-block;
-            margin-bottom: 0;
+            &:not(:last-child)
+            {
+                margin-bottom: 0;
+            }
             
             &:not(:first-child)
             {
@@ -160,6 +171,12 @@ body,
         max-height: $icon-size-big;
         padding: $padding-minimal;
     }
+
+    &.icon--logo
+    {
+        width: 25rem;
+        height: 25rem;
+    }
 }
 
 .text
@@ -210,7 +227,6 @@ body,
     border-bottom: 0.3rem solid $color-text-primary;
     color: $color-text-primary;
     background-color: $color-background-primary;
-    box-shadow: 0 0.3rem $color-shadow;
     font-family: $font-family-default;
     font-size: $font-size-heading;
 }
@@ -537,11 +553,20 @@ input[type="file"]
     flex-wrap: wrap;
 }
 
-.landing-pitch
+.container-landing-pitch
+{
+    width: 50%;
+}
+
+.landing-logo
+{
+    text-align: center;
+}
+
+.landing-blurb
 {
     @extend .text;
 
-    width: 50%;
     text-align: center;
 }
 

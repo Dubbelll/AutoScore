@@ -30,7 +30,8 @@ const state = {
     movementStartWidth: 0,
     movementStartHeight: 0,
     thresholdsBlack: {},
-    thresholdsWhite: {}
+    thresholdsWhite: {},
+    radius: 50
 };
 
 const CROP_TYPE_RECTANGLE = 1;
@@ -302,7 +303,7 @@ function initializeCropFrame(name, type) {
     const image = document.getElementById("crop-" + name + "-image");
     const move = document.getElementById("crop-" + name + "-move");
     const border = rem() * 0.3;
-    const size = Math.min(canvas.width, canvas.height) / 2;
+    const size = Math.min(canvas.width, canvas.height) * (state.radius / 100);
     const top = (canvas.height / 2) - (size / 2);
     const left = (canvas.width / 2) - (size / 2);
     const widthInput = numberToPixels(canvas.width);
@@ -360,6 +361,7 @@ function initializeCropFrame(name, type) {
         });
         imagePreview.src = canvas.toDataURL("image/png");
 
+        slider.value = state.radius.toString();
         slider.style.top = numberToPixels((canvas.height / 2) - (heightSlider / 2));
         slider.style.left = numberToPixels(
             (canvas.width - (canvas.height / 2))
@@ -633,6 +635,9 @@ app.ports.startPickingBlack.subscribe(function (bool) {
 
 app.ports.pickBlack.subscribe(function (bool) {
     function useAverages(averages) {
+        const slider = document.getElementById("crop-color-black-slider");
+
+        state.radius = parseFloat(slider.value);
         state.thresholdsBlack = averages;
 
         app.ports.pickingBlackSuccessful.send(true);
@@ -647,6 +652,9 @@ app.ports.startPickingWhite.subscribe(function (bool) {
 
 app.ports.pickWhite.subscribe(function (bool) {
     function useAverages(averages) {
+        const slider = document.getElementById("crop-color-white-slider");
+
+        state.radius = parseFloat(slider.value);
         state.thresholdsWhite = averages;
 
         app.ports.pickingWhiteSuccessful.send(true);

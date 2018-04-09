@@ -90,6 +90,39 @@
         <circle cx="14.8" cy="18" r="2"/>
         <circle cx="15.2" cy="8.8" r="4.8"/>
     </symbol>
+    <symbol id="logo" viewBox="0 0 174.625 174.625">
+        <g
+            transform="translate(-21.166641,-73.994064)"
+            style="display:inline"
+            id="layer1">
+            <circle
+                r="87.3125"
+                cy="161.30656"
+                cx="108.47914"
+                id="path4530"
+                style="fill:#03a9f4;fill-opacity:1;stroke-width:0.26458332" 
+            />
+        </g>
+        <g
+            transform="translate(-21.166641,-73.994064)"
+            style="display:inline"
+            id="layer2">
+            <circle
+                r="27.970238"
+                cy="161.98689"
+                cx="71.059525"
+                id="path4533"
+                style="fill:#000000;fill-opacity:1;stroke-width:0.26458332" 
+            />
+            <circle
+                r="27.970238"
+                cy="161.45773"
+                cx="145.67194"
+                id="path4533-3"
+                style="fill:#ffffff;fill-opacity:1;stroke-width:0.26458332" 
+            />
+        </g>
+    </symbol>
     <symbol id="remove" viewBox="0 0 24 24">
         <path d="M19 13H5v-2h14v2z"/>
         <path d="M0 0h24v24H0z" fill="none"/>

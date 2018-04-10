@@ -35,7 +35,7 @@ module.exports = {
     "port": 3000,
     "middleware": [],
     "serveStatic": [],
-    "https": false,
+    "https": true,
     "ghostMode": {
         "clicks": true,
         "scroll": true,

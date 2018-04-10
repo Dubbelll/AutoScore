@@ -23,6 +23,7 @@ const state = {
     },
     isDragging: false,
     isResizing: false,
+    zoom: 10,
     movementStartX: 0,
     movementStartY: 0,
     movementStartTop: 0,
@@ -30,8 +31,7 @@ const state = {
     movementStartWidth: 0,
     movementStartHeight: 0,
     thresholdsBlack: {},
-    thresholdsWhite: {},
-    radius: 50
+    thresholdsWhite: {}
 };
 
 const CROP_TYPE_RECTANGLE = 1;
@@ -175,7 +175,7 @@ function resizeByFrame(currentX, currentY, boundary, crop, border, image) {
     }
 }
 
-function calculateSliderDimensions(value, size, widthBoundary, heightBoundary, topCrop, leftCrop, border) {
+function calculateZoomDimensions(value, size, widthBoundary, heightBoundary, topCrop, leftCrop, border) {
     const newSize = size * (value / 100);
     const maxWidth = widthBoundary - leftCrop - (border * 2);
     const maxHeight = heightBoundary - topCrop - (border * 2);
@@ -193,8 +193,7 @@ function calculatePreviewDimensions(size, sizePreview, widthBoundary, heightBoun
     return { width: newWidth, height: newHeight };
 }
 
-function resizeBySlider(targetValue, boundary, crop, border, image, imagePreview, sizePreview) {
-    const value = parseFloat(targetValue);
+function resizeByZoom(value, boundary, crop, border, percentage, image, imagePreview, sizePreview) {
     const widthBoundary = pixelsToNumber(boundary.style.width);
     const heightBoundary = pixelsToNumber(boundary.style.height);
     const topCrop = pixelsToNumber(crop.style.top);
@@ -202,7 +201,7 @@ function resizeBySlider(targetValue, boundary, crop, border, image, imagePreview
     const size = Math.min(widthBoundary, heightBoundary);
     const ratio = widthBoundary / heightBoundary;
 
-    const dimensions = calculateSliderDimensions(
+    const dimensions = calculateZoomDimensions(
         value,
         size,
         widthBoundary,
@@ -213,6 +212,7 @@ function resizeBySlider(targetValue, boundary, crop, border, image, imagePreview
     );
     crop.style.width = numberToPixels(dimensions.width);
     crop.style.height = numberToPixels(dimensions.height);
+    percentage.innerHTML = value.toString() + "%";
 
     if (imagePreview) {
         const topCrop = pixelsToNumber(crop.style.top);
@@ -289,9 +289,71 @@ function addEventListenersForResizingByFrame(boundary, crop, border, area, image
     });
 }
 
-function addEventListenerForResizingBySlider(boundary, crop, border, slider, image, imagePreview, sizePreview) {
-    slider.addEventListener("input", function (event) {
-        resizeBySlider(event.target.value, boundary, crop, border, image, imagePreview, sizePreview);
+function addEventListenerForResizingByZoom(boundary, crop, border, increase, decrease, percentage, image, imagePreview, sizePreview) {
+    let timer = 0;
+    
+    increase.addEventListener("mousedown", function (event) {
+        timer = setInterval(function () {
+            if(state.zoom - 1 >= 0) {
+                state.zoom -= 1;
+            }
+
+            resizeByZoom(state.zoom, boundary, crop, border, percentage, image, imagePreview, sizePreview);
+        }, 50);
+    });
+
+    increase.addEventListener("mouseup", function(event) {
+        if(timer !== 0) {
+            clearInterval(timer);
+        }
+    });
+
+    decrease.addEventListener("mousedown", function (event) {
+        timer = setInterval(function () {
+            if(state.zoom + 1 <= 100) {
+                state.zoom += 1;
+            }
+
+            resizeByZoom(state.zoom, boundary, crop, border, percentage, image, imagePreview, sizePreview);
+        }, 50);
+    });
+
+    decrease.addEventListener("mouseup", function(event) {
+        if(timer !== 0) {
+            clearInterval(timer);
+        }
+    });
+
+    increase.addEventListener("touchstart", function (event) {
+        timer = setInterval(function () {
+            if(state.zoom - 1 >= 0) {
+                state.zoom -= 1;
+            }
+
+            resizeByZoom(state.zoom, boundary, crop, border, percentage, image, imagePreview, sizePreview);
+        }, 75);
+    });
+
+    increase.addEventListener("touchend", function(event) {
+        if(timer !== 0) {
+            clearInterval(timer);
+        }
+    });
+
+    decrease.addEventListener("touchstart", function (event) {
+        timer = setInterval(function () {
+            if(state.zoom + 1 <= 100) {
+                state.zoom += 1;
+            }
+
+            resizeByZoom(state.zoom, boundary, crop, border, percentage, image, imagePreview, sizePreview);
+        }, 75);
+    });
+
+    decrease.addEventListener("touchend", function(event) {
+        if(timer !== 0) {
+            clearInterval(timer);
+        }
     });
 }
 
@@ -303,7 +365,10 @@ function initializeCropFrame(name, type) {
     const image = document.getElementById("crop-" + name + "-image");
     const move = document.getElementById("crop-" + name + "-move");
     const border = rem() * 0.3;
-    const size = Math.min(canvas.width, canvas.height) * (state.radius / 100);
+    const size = 
+        type === CROP_TYPE_RECTANGLE 
+        ? Math.min(canvas.width, canvas.height) / 2 
+        : Math.min(canvas.width, canvas.height) * (state.zoom / 100);
     const top = (canvas.height / 2) - (size / 2);
     const left = (canvas.width / 2) - (size / 2);
     const widthInput = numberToPixels(canvas.width);
@@ -345,8 +410,10 @@ function initializeCropFrame(name, type) {
     if (type === CROP_TYPE_CIRCLE) {
         const preview = document.getElementById("crop-" + name + "-preview");
         const imagePreview = document.getElementById("crop-" + name + "-preview-image");
-        const slider = document.getElementById("crop-" + name + "-slider");
-        const sizePreview = Math.min(canvas.width, canvas.height) * 0.2;
+        const zoomIn = document.getElementById("crop-" + name + "-zoom-in");
+        const zoomOut = document.getElementById("crop-" + name + "-zoom-out");
+        const zoomPercentage = document.getElementById("crop-" + name + "-zoom-percentage");
+        const sizePreview = window.innerHeight * 0.15;
         const heightSlider = rem() * 2;
 
         preview.style.top = numberToPixels(- (sizePreview + (rem() * 5)));
@@ -361,38 +428,50 @@ function initializeCropFrame(name, type) {
         });
         imagePreview.src = canvas.toDataURL("image/png");
 
-        slider.value = state.radius.toString();
-        slider.style.top = numberToPixels((canvas.height / 2) - (heightSlider / 2));
-        slider.style.left = numberToPixels(
-            (canvas.width - (canvas.height / 2))
-            + (rem() * 2.5)
-            + ((rem() * 2.5) - (heightSlider / 2))
-            + (rem() * 5)
-        );
-        slider.style.width = numberToPixels(canvas.height);
+        zoomPercentage.innerHTML = state.zoom.toString() + "%";
 
-        addEventListenersForDragging(boundary, crop, border, move, image, imagePreview, sizePreview);
-        addEventListenerForResizingBySlider(boundary, crop, border, slider, image, imagePreview, sizePreview);
+        addEventListenersForDragging(boundary, crop, border, boundary, image, imagePreview, sizePreview);
+        addEventListenerForResizingByZoom(boundary, crop, border, zoomIn, zoomOut, zoomPercentage, image, imagePreview, sizePreview);
     }
 }
 
 function calculateFixedAspectDimensions(width, height, maxWidth, maxHeight) {
     let newWidth = width;
     let newHeight = height;
-    let newAspectRatio = 1;
+    let newAspectRatio = 0;
 
-    if (width > height) {
-        if (width > maxWidth) {
+    if (maxWidth > maxHeight) {
+        if (width > maxWidth && height > maxHeight) {
+            newAspectRatio = width / height;
+            newWidth = Math.round(maxHeight * newAspectRatio);
+            newHeight = maxHeight;
+        }
+        else if (width > maxWidth) {
             newAspectRatio = width / height;
             newWidth = maxWidth;
-            newHeight = Math.round(maxWidth / newAspectRatio);
+            newHeight = Math.round(maxWidth * newAspectRatio);
+        }
+        else if (height > maxHeight) {
+            newAspectRatio = width / height;
+            newWidth = Math.round(maxHeight * newAspectRatio);
+            newHeight = maxHeight;
         }
     }
-    else if (height > width) {
-        if (height > maxHeight) {
+    else if (maxHeight > maxWidth) {
+        if (height > maxHeight && width > maxWidth) {
             newAspectRatio = height / width;
-            newWidth = Math.round(maxHeight / newAspectRatio);
+            newWidth = maxWidth;
+            newHeight = Math.round(maxWidth * newAspectRatio);
+        }
+        else if (height > maxHeight) {
+            newAspectRatio = height / width;
+            newWidth = Math.round(maxHeight * newAspectRatio);
             newHeight = maxHeight;
+        }
+        else if(width > maxWidth) {
+            newAspectRatio = height / width;
+            newWidth = maxWidth;
+            newHeight = Math.round(maxWidth * newAspectRatio);
         }
     }
     else {
@@ -403,6 +482,7 @@ function calculateFixedAspectDimensions(width, height, maxWidth, maxHeight) {
         }
     }
 
+    console.log({ width: newWidth, height: newHeight, aspectRatio: newAspectRatio });
     return { width: newWidth, height: newHeight, aspectRatio: newAspectRatio };
 }
 
@@ -514,7 +594,7 @@ app.ports.useFile.subscribe(function (id) {
 app.ports.startCamera.subscribe(function (bool) {
     const canvas = document.getElementById("canvas-input");
     const video = document.getElementById("video");
-    const options = { video: { facingMode: "environment" }, audio: false };
+    const options = { video: { width: 1920, height: 1080, facingMode: "environment" }, audio: false };
 
     navigator.mediaDevices.getUserMedia(options)
         .then(function (stream) {
@@ -605,8 +685,8 @@ app.ports.cropPhoto.subscribe(function (bool) {
     const dimensions = calculateFixedAspectDimensions(
         width,
         height,
-        window.innerWidth * 0.6,
-        window.innerHeight * 0.6
+        window.innerWidth * 0.5,
+        window.innerHeight * 0.5
     );
 
     canvasTemporary.width = width;
@@ -635,9 +715,6 @@ app.ports.startPickingBlack.subscribe(function (bool) {
 
 app.ports.pickBlack.subscribe(function (bool) {
     function useAverages(averages) {
-        const slider = document.getElementById("crop-color-black-slider");
-
-        state.radius = parseFloat(slider.value);
         state.thresholdsBlack = averages;
 
         app.ports.pickingBlackSuccessful.send(true);
@@ -652,9 +729,6 @@ app.ports.startPickingWhite.subscribe(function (bool) {
 
 app.ports.pickWhite.subscribe(function (bool) {
     function useAverages(averages) {
-        const slider = document.getElementById("crop-color-white-slider");
-
-        state.radius = parseFloat(slider.value);
         state.thresholdsWhite = averages;
 
         app.ports.pickingWhiteSuccessful.send(true);

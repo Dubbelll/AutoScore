@@ -182,7 +182,7 @@ init location =
             , territory = Dict.empty
             , state = Editing
             , tool = NoTool
-            , showingTools = False
+            , showingTools = True
             , showingScore = False
             , scoreBlack = 0
             , scoreWhite = 0
@@ -503,14 +503,12 @@ isTerritoryForWho board position stone =
             List.filter (\x -> x == ColorEdge White) edges
                 |> List.length
     in
-        if blackEdges > 0 && whiteEdges == 0 then
+        if blackEdges > 1 && whiteEdges == 0 then
             Territory True Black
-        else if whiteEdges > 0 && blackEdges == 0 then
+        else if whiteEdges > 1 && blackEdges == 0 then
             Territory True White
-        else if blackEdges > 0 && whiteEdges > 0 then
-            Territory True Empty
         else
-            Territory False Empty
+            Territory True Empty
 
 
 findTerritories : Board -> Dict BoardPosition Dead -> Dict BoardPosition Territory
@@ -740,7 +738,21 @@ update message model =
                 ( { model | prisonersWhite = newPrisoners }, Cmd.none )
 
         NewAreDeadRemoved removed ->
-            ( { model | areDeadRemoved = removed }, Cmd.none )
+            let
+                state =
+                    if removed then
+                        Scoring
+                    else
+                        Editing
+            in
+                ( { model
+                    | areDeadRemoved = removed
+                    , state = state
+                    , showingScore = removed
+                    , showingTools = not removed
+                  }
+                , Cmd.none
+                )
 
         NewShowHelp show ->
             ( { model | showHelp = show }, Cmd.none )
@@ -788,8 +800,25 @@ update message model =
 
                 board =
                     Dict.Extra.mapKeys boardKeyToBoardPosition stones
+
+                territory =
+                    findTerritories board model.dead
+
+                scoreBlack =
+                    calculateScoreBlack territory model.dead model.prisonersBlack
+
+                scoreWhite =
+                    calculateScoreWhite territory model.dead model.prisonersWhite model.komi
             in
-                ( { model | isProcessingSuccessful = True, board = board }, Cmd.none )
+                ( { model
+                    | isProcessingSuccessful = True
+                    , board = board
+                    , territory = territory
+                    , scoreBlack = scoreBlack
+                    , scoreWhite = scoreWhite
+                  }
+                , Cmd.none
+                )
 
         ProcessingSuccessful (Err _) ->
             ( model, Cmd.none )
@@ -1146,7 +1175,17 @@ viewCropFrame identifier shape isVisible =
                         ]
                     , div [ id (identifier ++ "-preview"), classList [ ( "crop-frame-preview", True ) ] ]
                         [ img [ id (identifier ++ "-preview-image"), classList [ ( "crop-frame-preview--image", True ) ] ] [] ]
-                    , input [ id (identifier ++ "-slider"), classList [ ( "crop-frame-slider", True ) ], type_ "range" ] []
+                    , div [ id (identifier ++ "-zoom"), classList [ ( "crop-frame-zoom", True ) ] ]
+                        [ div [ id (identifier ++ "-zoom-in"), classList [ ( "crop-frame-zoom--in", True ) ] ]
+                            [ viewIcon "remove" [ ( "icon--big", True ) ] ]
+                        , div
+                            [ id (identifier ++ "-zoom-percentage")
+                            , classList [ ( "crop-frame-zoom--percentage", True ) ]
+                            ]
+                            []
+                        , div [ id (identifier ++ "-zoom-out"), classList [ ( "crop-frame-zoom--out", True ) ] ]
+                            [ viewIcon "add" [ ( "icon--big", True ) ] ]
+                        ]
                     ]
     in
         div [ classList [ ( "container-crop-frame", True ), ( "container-crop-frame--visible", isVisible ) ] ]
@@ -1321,7 +1360,7 @@ viewPhoto model =
                     [ viewIconTextActionClose
                     , viewIconTextAction
                         "camera"
-                        [ ( "action--thumb", True ) ]
+                        [ ( "action--center", True ) ]
                         "Start camera"
                         ToRight
                         StartCamera
@@ -1483,7 +1522,7 @@ viewScore model =
             [ li [ classList [ ( "list-item", True ) ] ]
                 [ viewIconTextAction
                     "score"
-                    []
+                    [ ( "action--active", model.state == Scoring ) ]
                     "Score"
                     ToRight
                     (NewState Scoring)
@@ -1492,7 +1531,7 @@ viewScore model =
             , li [ classList [ ( "list-item", True ) ] ]
                 [ viewIconTextAction
                     "tools"
-                    []
+                    [ ( "action--active", model.state == Editing ) ]
                     "Tools"
                     ToRight
                     (NewState Editing)

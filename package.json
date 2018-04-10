@@ -1,7 +1,7 @@
 {
     "private": true,
     "name": "goautoscore",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "description": "Automatic scoring for finished Go games",
     "main": "app.js",
     "scripts": {

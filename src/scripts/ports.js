@@ -290,68 +290,69 @@ function addEventListenersForResizingByFrame(boundary, crop, border, area, image
 }
 
 function addEventListenerForResizingByZoom(boundary, crop, border, increase, decrease, percentage, image, imagePreview, sizePreview) {
+    const sensitivity = 60;
     let timer = 0;
-    
+
     increase.addEventListener("mousedown", function (event) {
         timer = setInterval(function () {
-            if(state.zoom - 1 >= 0) {
+            if (state.zoom - 1 >= 0) {
                 state.zoom -= 1;
             }
 
             resizeByZoom(state.zoom, boundary, crop, border, percentage, image, imagePreview, sizePreview);
-        }, 50);
+        }, sensitivity);
     });
 
-    increase.addEventListener("mouseup", function(event) {
-        if(timer !== 0) {
+    increase.addEventListener("mouseup", function (event) {
+        if (timer !== 0) {
             clearInterval(timer);
         }
     });
 
     decrease.addEventListener("mousedown", function (event) {
         timer = setInterval(function () {
-            if(state.zoom + 1 <= 100) {
+            if (state.zoom + 1 <= 100) {
                 state.zoom += 1;
             }
 
             resizeByZoom(state.zoom, boundary, crop, border, percentage, image, imagePreview, sizePreview);
-        }, 50);
+        }, sensitivity);
     });
 
-    decrease.addEventListener("mouseup", function(event) {
-        if(timer !== 0) {
+    decrease.addEventListener("mouseup", function (event) {
+        if (timer !== 0) {
             clearInterval(timer);
         }
     });
 
     increase.addEventListener("touchstart", function (event) {
         timer = setInterval(function () {
-            if(state.zoom - 1 >= 0) {
+            if (state.zoom - 1 >= 0) {
                 state.zoom -= 1;
             }
 
             resizeByZoom(state.zoom, boundary, crop, border, percentage, image, imagePreview, sizePreview);
-        }, 75);
+        }, sensitivity);
     });
 
-    increase.addEventListener("touchend", function(event) {
-        if(timer !== 0) {
+    increase.addEventListener("touchend", function (event) {
+        if (timer !== 0) {
             clearInterval(timer);
         }
     });
 
     decrease.addEventListener("touchstart", function (event) {
         timer = setInterval(function () {
-            if(state.zoom + 1 <= 100) {
+            if (state.zoom + 1 <= 100) {
                 state.zoom += 1;
             }
 
             resizeByZoom(state.zoom, boundary, crop, border, percentage, image, imagePreview, sizePreview);
-        }, 75);
+        }, sensitivity);
     });
 
-    decrease.addEventListener("touchend", function(event) {
-        if(timer !== 0) {
+    decrease.addEventListener("touchend", function (event) {
+        if (timer !== 0) {
             clearInterval(timer);
         }
     });
@@ -365,10 +366,10 @@ function initializeCropFrame(name, type) {
     const image = document.getElementById("crop-" + name + "-image");
     const move = document.getElementById("crop-" + name + "-move");
     const border = rem() * 0.3;
-    const size = 
-        type === CROP_TYPE_RECTANGLE 
-        ? Math.min(canvas.width, canvas.height) / 2 
-        : Math.min(canvas.width, canvas.height) * (state.zoom / 100);
+    const size =
+        type === CROP_TYPE_RECTANGLE
+            ? Math.min(canvas.width, canvas.height) / 2
+            : Math.min(canvas.width, canvas.height) * (state.zoom / 100);
     const top = (canvas.height / 2) - (size / 2);
     const left = (canvas.width / 2) - (size / 2);
     const widthInput = numberToPixels(canvas.width);
@@ -468,7 +469,7 @@ function calculateFixedAspectDimensions(width, height, maxWidth, maxHeight) {
             newWidth = Math.round(maxHeight * newAspectRatio);
             newHeight = maxHeight;
         }
-        else if(width > maxWidth) {
+        else if (width > maxWidth) {
             newAspectRatio = height / width;
             newWidth = maxWidth;
             newHeight = Math.round(maxWidth * newAspectRatio);

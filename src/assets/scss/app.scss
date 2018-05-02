@@ -7,8 +7,8 @@
     font-style: normal;
     font-weight: 400;
     src: local("Nunito Regular"), local("Nunito-Regular"),
-         url("nunito.woff2") format("woff2"),
-         url("nunito.woff") format("woff");
+         url("font.woff2") format("woff2"),
+         url("font.woff") format("woff");
 }
 
 :root
@@ -55,7 +55,7 @@
         }
     }
 
-    .controls-buttons,
+    .controls-buttons
     {
         top: 50%;
         left: calc(((100% - 89.5rem) / 2) - 35rem);
@@ -65,7 +65,7 @@
     .controls-score
     {
         top: 50%;
-        right: calc(((100% - 89.5rem) / 2) - 28rem);
+        right: calc(((100% - 89.5rem) / 2) - 31rem);
         transform: translateY(-50%);
 
         &.controls-score--visible
@@ -575,14 +575,25 @@ input[type="file"]
     left: 50%;
     transform: translateX(-50%) translateY(-50%);
     padding: $padding-default;
-    background-color: $color-accent-primary;
-    border-radius: $border-radius-default;
     z-index: $depth-message;
 
     &.message--visible
     {
         display: block;
     }
+}
+
+.message-background
+{
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: $color-accent-primary;
+    border-radius: $border-radius-default;
+    opacity: 0.75;
+    z-index: -1;
 }
 
 .message-item
@@ -631,6 +642,56 @@ input[type="file"]
     @extend .text;
 
     text-align: center;
+}
+
+.landing-list
+{
+    position: absolute;
+    bottom: $positioning-thumb;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 67rem;
+}
+
+.landing-list-item
+{
+    display: inline-block;
+    width: 32.5rem;
+
+    &:not(:first-child)
+    {
+        margin-left: $margin-default;
+    }
+
+    &:not(:last-child)
+    {
+        margin: 0;
+    }
+}
+
+.demo
+{
+    @extend .message;
+
+    &.demo--visible
+    {
+        display: block;
+    }
+
+    width: 80vmin;
+    height: 56.5vmin;
+}
+
+.demo-background
+{
+    @extend .message-background;
+}
+
+.demo-video
+{
+    width: 100%;
+    height: calc(100% - 11.5rem);
+    margin-top: 11.5rem;
 }
 
 .container-settings-list

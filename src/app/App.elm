@@ -29,6 +29,7 @@ type alias Model =
     , isLoading : Bool
     , loadingMessage : Maybe String
     , messages : Dict String Message
+    , showingDemo : Bool
     , boardSizes : List BoardSize
     , boardSize : BoardSize
     , komi : Float
@@ -161,6 +162,7 @@ init location =
             , isLoading = False
             , loadingMessage = Nothing
             , messages = messages
+            , showingDemo = False
             , boardSizes = [ Nineteen, Thirteen, Nine ]
             , boardSize = Nineteen
             , komi = 6.5
@@ -503,9 +505,9 @@ isTerritoryForWho board position stone =
             List.filter (\x -> x == ColorEdge White) edges
                 |> List.length
     in
-        if blackEdges > 1 && whiteEdges == 0 then
+        if blackEdges > 0 && whiteEdges == 0 then
             Territory True Black
-        else if whiteEdges > 1 && blackEdges == 0 then
+        else if whiteEdges > 0 && blackEdges == 0 then
             Territory True White
         else
             Territory True Empty
@@ -626,6 +628,8 @@ type Msg
     = ChangePath String
     | ChangeLocation Location
     | CloseMessage String (List String)
+    | ShowDemo
+    | CloseDemo
     | StartCamera
     | NewFile
     | NewBoardSize String
@@ -702,6 +706,12 @@ update message model =
                     Dict.insert name newMessage model.messages
             in
                 ( { model | messages = newMessages }, Cmd.none )
+
+        ShowDemo ->
+            ( { model | showingDemo = True }, Cmd.none )
+
+        CloseDemo ->
+            ( { model | showingDemo = False }, Cmd.none )
 
         StartCamera ->
             ( { model | isLoading = True, loadingMessage = Just "Starting camera" }, PT.startCamera True )
@@ -871,6 +881,10 @@ update message model =
 
         UseToolAt position ->
             let
+                color =
+                    Dict.get position model.board
+                        |> Maybe.withDefault (Stone False Empty)
+
                 board =
                     case model.tool of
                         AddBlack ->
@@ -1117,17 +1131,20 @@ viewMessage name alwaysShow messages showHelp =
         isVisible =
             showHelp && message.isVisible && alwaysShow
     in
-        ul [ classList [ ( "message", True ), ( "message--visible", isVisible ) ] ]
-            ([ viewIconTextAction
-                "close"
-                [ ( "action--close", True ) ]
-                "Close"
-                ToLeft
-                (CloseMessage name message.content)
-                Medium
-             ]
-                ++ (List.map viewMessagePart message.content)
-            )
+        div [ classList [ ( "message", True ), ( "message--visible", isVisible ) ] ]
+            [ div [ classList [ ( "message-background", True ) ] ] []
+            , ul [ classList [ ( "message-list", True ) ] ]
+                ([ viewIconTextAction
+                    "close"
+                    [ ( "action--close", True ) ]
+                    "Close"
+                    ToLeft
+                    (CloseMessage name message.content)
+                    Medium
+                 ]
+                    ++ (List.map viewMessagePart message.content)
+                )
+            ]
 
 
 
@@ -1211,20 +1228,56 @@ viewCropFrame identifier shape isVisible =
 viewLanding : Model -> Html Msg
 viewLanding model =
     div [ classList [ ( "container-landing", True ) ] ]
-        [ viewIconTextAction
-            "start"
-            [ ( "action--thumb", True ) ]
-            "Start"
-            ToRight
-            (ChangePath "#settings")
-            Big
+        [ ul [ classList [ ( "landing-list", True ) ] ]
+            [ li [ classList [ ( "landing-list-item", True ), ( "list-item", True ) ] ]
+                [ viewIconTextAction
+                    "start"
+                    []
+                    "Start"
+                    ToRight
+                    (ChangePath "#settings")
+                    Big
+                ]
+            , li [ classList [ ( "landing-list-item", True ), ( "list-item", True ) ] ]
+                [ viewIconTextAction
+                    "video"
+                    []
+                    "Demo"
+                    ToRight
+                    ShowDemo
+                    Big
+                ]
+            ]
         , div [ classList [ ( "container-landing-pitch", True ) ] ]
             [ div [ classList [ ( "landing-logo", True ) ] ]
                 [ viewIcon "logo" [ ( "icon--logo", True ) ]
                 ]
             , p [ classList [ ( "landing-blurb", True ) ] ]
-                [ text "Automatically score your finished Go games in just a few simple steps" ]
+                [ text "Automatically score your finished Go/Baduk/Weiqi games in just a few simple steps" ]
             ]
+        , viewDemo model
+        ]
+
+
+viewDemo : Model -> Html Msg
+viewDemo model =
+    div [ classList [ ( "demo", True ), ( "demo--visible", model.showingDemo ) ] ]
+        [ div [ classList [ ( "demo-background", True ) ] ] []
+        , viewIconTextAction
+            "close"
+            [ ( "action--close", True ) ]
+            "Close"
+            ToLeft
+            CloseDemo
+            Medium
+        , iframe
+            [ classList [ ( "demo-video", True ) ]
+            , src "https://www.youtube-nocookie.com/embed/T-rPyxODzCk?rel=0"
+            , attributeFrameBorder "0"
+            , attributeAllow "autoplay; encrypted-media"
+            , attributeAllowFullScreen
+            ]
+            []
         ]
 
 
@@ -1751,3 +1804,18 @@ classString classes =
 intToPixels : Int -> String
 intToPixels value =
     toString value ++ "px"
+
+
+attributeFrameBorder : String -> Attribute msg
+attributeFrameBorder value =
+    attribute "frameborder" value
+
+
+attributeAllow : String -> Attribute msg
+attributeAllow value =
+    attribute "allow" value
+
+
+attributeAllowFullScreen : Attribute msg
+attributeAllowFullScreen =
+    attribute "allowfullscreen" ""

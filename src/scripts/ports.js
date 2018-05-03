@@ -483,7 +483,6 @@ function calculateFixedAspectDimensions(width, height, maxWidth, maxHeight) {
         }
     }
 
-    console.log({ width: newWidth, height: newHeight, aspectRatio: newAspectRatio });
     return { width: newWidth, height: newHeight, aspectRatio: newAspectRatio };
 }
 

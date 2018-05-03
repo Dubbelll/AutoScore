@@ -141,9 +141,8 @@ type State
 
 
 type Tool
-    = DeadBlack
-    | DeadWhite
-    | Alive
+    = MarkDead
+    | MarkAlive
     | AddBlack
     | AddWhite
     | Remove
@@ -389,6 +388,186 @@ stars9x9 =
 
 
 -- CALCULATION
+
+
+neighboursOfPositionPerpendicular : BoardPosition -> List BoardPosition
+neighboursOfPositionPerpendicular position =
+    let
+        y =
+            Tuple.first position
+
+        x =
+            Tuple.second position
+    in
+        [ ( (Basics.max 1 (y - 1)), x )
+        , ( y, (Basics.min 19 (x + 1)) )
+        , ( (Basics.min 19 (y + 1)), x )
+        , ( y, (Basics.max 1 (x - 1)) )
+        ]
+
+
+neighboursOfPositionDiagonal : BoardPosition -> List BoardPosition
+neighboursOfPositionDiagonal position =
+    let
+        y =
+            Tuple.first position
+
+        x =
+            Tuple.second position
+    in
+        [ ( (Basics.max 1 (y - 1)), (Basics.min 19 (x + 1)) )
+        , ( (Basics.min 19 (y + 1)), (Basics.min 19 (x + 1)) )
+        , ( (Basics.min 19 (y + 1)), (Basics.max 1 (x - 1)) )
+        , ( (Basics.max 1 (y - 1)), (Basics.max 1 (x - 1)) )
+        ]
+
+
+positionToStonePosition : Board -> BoardPosition -> (BoardPosition, Stone)
+positionToStonePosition board position =
+    Dict.get position board |> Maybe.withDefault (Stone False Empty) |> (,) position
+
+
+isColorAndPositions :  StoneColor -> BoardPosition -> BoardPosition -> (BoardPosition, Stone) -> Bool
+isColorAndPositions color position1 position2 stone =
+    let
+        stonePosition =
+            Tuple.first stone
+
+        stoneColor =
+            (Tuple.second stone).color
+    in
+        ((stonePosition == position1) || (stonePosition == position2)) && stoneColor == color
+
+
+isNeighbourDiagonal : List (BoardPosition, Stone) -> StoneColor -> Int -> Int -> (BoardPosition, Stone) -> Bool
+isNeighbourDiagonal stonesPerpendicular color xOrigin yOrigin stone =
+    let
+        position =
+            Tuple.first stone
+
+        y =
+            Tuple.first position
+
+        x =
+            Tuple.second position
+
+        colorNot =
+            case color of
+                Black ->
+                    White
+
+                White ->
+                    Black
+
+                _ ->
+                    Empty
+
+        log =
+            Debug.log "is neighbour diagonal start" position
+    in 
+        case (y - yOrigin, x - xOrigin) of
+            (-1, 1) ->
+                -- NE
+                let
+                    stonesNot =
+                        List.filter (isColorAndPositions colorNot (yOrigin - 1, xOrigin) (yOrigin, xOrigin + 1)) stonesPerpendicular
+
+                    log =
+                        Debug.log "NE" stonesNot
+                in
+                    List.length stonesNot < 2
+
+            (1, 1) ->
+                -- SE
+                let
+                    stonesNot =
+                        List.filter (isColorAndPositions colorNot (yOrigin, xOrigin + 1) (yOrigin + 1, xOrigin)) stonesPerpendicular
+
+                    log =
+                        Debug.log "SE" stonesNot
+                in
+                    List.length stonesNot < 2
+
+            (1, -1) ->
+                -- SW
+                let
+                    stonesNot =
+                        List.filter (isColorAndPositions colorNot (yOrigin + 1, xOrigin) (yOrigin, xOrigin - 1)) stonesPerpendicular
+
+                    log =
+                        Debug.log "SW" stonesNot
+                in
+                    List.length stonesNot < 2
+
+            (-1, -1) ->
+                -- NW
+                let
+                    stonesNot =
+                        List.filter (isColorAndPositions colorNot (yOrigin, xOrigin - 1) (yOrigin - 1, xOrigin)) stonesPerpendicular
+
+                    log =
+                        Debug.log "NW" stonesNot
+                in
+                    List.length stonesNot < 2
+
+            _ ->
+                False
+
+
+findNeighboursForPosition : Board -> StoneColor -> BoardPosition -> List BoardPosition
+findNeighboursForPosition board color position =
+    let
+        y =
+            Tuple.first position
+
+        x =
+            Tuple.second position
+
+        positionsPerpendicular =
+            neighboursOfPositionPerpendicular position
+
+        positionsDiagonal =
+            neighboursOfPositionDiagonal position
+
+        stonesPerpendicular =
+            List.map (positionToStonePosition board) positionsPerpendicular
+
+        stonesDiagonal =
+            List.map (positionToStonePosition board) positionsDiagonal
+
+        neighboursPerpendicular =
+            List.filter (\n -> (Tuple.second n).color == color) stonesPerpendicular
+                |> List.map (\n -> Tuple.first n)
+
+        neighboursDiagonal =
+            List.filter (isNeighbourDiagonal stonesPerpendicular color x y) stonesDiagonal
+                |> List.map (\n -> Tuple.first n)
+    in
+        neighboursPerpendicular ++ neighboursDiagonal
+
+
+findGroup : Board -> StoneColor -> List BoardPosition -> List BoardPosition -> List BoardPosition
+findGroup board color positions group =
+    case color of
+        Empty ->
+            []
+
+        _ ->
+            let
+                neighbours =
+                    List.map (findNeighboursForPosition board color) positions
+                        |> List.concat
+
+                newGroup =
+                    group ++ neighbours
+
+                nextPositions =
+                    List.filter (\p -> List.member p group |> not) neighbours
+            in
+                if List.length nextPositions == 0 then
+                    newGroup
+                else
+                    findGroup board color nextPositions newGroup
 
 
 findEdgeFromPosition : Board -> BoardPosition -> Direction -> Edge
@@ -881,10 +1060,6 @@ update message model =
 
         UseToolAt position ->
             let
-                color =
-                    Dict.get position model.board
-                        |> Maybe.withDefault (Stone False Empty)
-
                 board =
                     case model.tool of
                         AddBlack ->
@@ -899,16 +1074,34 @@ update message model =
                         _ ->
                             model.board
 
+                color =
+                    Dict.get position model.board
+                        |> Maybe.withDefault (Stone False Empty)
+                        |> .color
+
                 dead =
                     case model.tool of
-                        DeadBlack ->
-                            Dict.insert position (Dead True Black) model.dead
+                        MarkDead ->
+                            let
+                                group =
+                                    findGroup board color [ position ] [ position ]
 
-                        DeadWhite ->
-                            Dict.insert position (Dead True White) model.dead
+                                newDead =
+                                    List.map (\p -> ( p, (Dead True color) )) group
+                                        |> Dict.fromList
+                            in
+                                Dict.union newDead model.dead
 
-                        Alive ->
-                            Dict.remove position model.dead
+                        MarkAlive ->
+                            let
+                                group =
+                                    findGroup board color [ position ] [ position ]
+
+                                newAlive =
+                                    List.map (\p -> ( p, (Dead False color) )) group
+                                        |> Dict.fromList
+                            in
+                                Dict.diff model.dead newAlive
 
                         _ ->
                             model.dead
@@ -1616,27 +1809,18 @@ viewScore model =
                 [ viewIconTextAction
                     "deadblack"
                     []
-                    "Dead black"
+                    "Dead"
                     ToRight
-                    (NewTool DeadBlack)
+                    (NewTool MarkDead)
                     Big
                 ]
             , li [ classList [ ( "list-item", True ) ] ]
                 [ viewIconTextAction
                     "deadwhite"
                     []
-                    "Dead white"
-                    ToRight
-                    (NewTool DeadWhite)
-                    Big
-                ]
-            , li [ classList [ ( "list-item", True ) ] ]
-                [ viewIconTextAction
-                    "alive"
-                    []
                     "Alive"
                     ToRight
-                    (NewTool Alive)
+                    (NewTool MarkAlive)
                     Big
                 ]
             , li [ classList [ ( "list-item", True ) ] ]

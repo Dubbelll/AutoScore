@@ -422,12 +422,12 @@ neighboursOfPositionDiagonal position =
         ]
 
 
-positionToStonePosition : Board -> BoardPosition -> (BoardPosition, Stone)
+positionToStonePosition : Board -> BoardPosition -> ( BoardPosition, Stone )
 positionToStonePosition board position =
     Dict.get position board |> Maybe.withDefault (Stone False Empty) |> (,) position
 
 
-isColorAndPositions :  StoneColor -> BoardPosition -> BoardPosition -> (BoardPosition, Stone) -> Bool
+isColorAndPositions : StoneColor -> BoardPosition -> BoardPosition -> ( BoardPosition, Stone ) -> Bool
 isColorAndPositions color position1 position2 stone =
     let
         stonePosition =
@@ -439,7 +439,7 @@ isColorAndPositions color position1 position2 stone =
         ((stonePosition == position1) || (stonePosition == position2)) && stoneColor == color
 
 
-isNeighbourDiagonal : List (BoardPosition, Stone) -> StoneColor -> Int -> Int -> (BoardPosition, Stone) -> Bool
+isNeighbourDiagonal : List ( BoardPosition, Stone ) -> StoneColor -> Int -> Int -> ( BoardPosition, Stone ) -> Bool
 isNeighbourDiagonal stonesPerpendicular color xOrigin yOrigin stone =
     let
         position =
@@ -461,52 +461,37 @@ isNeighbourDiagonal stonesPerpendicular color xOrigin yOrigin stone =
 
                 _ ->
                     Empty
-
-        log =
-            Debug.log "is neighbour diagonal start" position
-    in 
-        case (y - yOrigin, x - xOrigin) of
-            (-1, 1) ->
+    in
+        case ( y - yOrigin, x - xOrigin ) of
+            ( -1, 1 ) ->
                 -- NE
                 let
                     stonesNot =
-                        List.filter (isColorAndPositions colorNot (yOrigin - 1, xOrigin) (yOrigin, xOrigin + 1)) stonesPerpendicular
-
-                    log =
-                        Debug.log "NE" stonesNot
+                        List.filter (isColorAndPositions colorNot ( yOrigin - 1, xOrigin ) ( yOrigin, xOrigin + 1 )) stonesPerpendicular
                 in
                     List.length stonesNot < 2
 
-            (1, 1) ->
+            ( 1, 1 ) ->
                 -- SE
                 let
                     stonesNot =
-                        List.filter (isColorAndPositions colorNot (yOrigin, xOrigin + 1) (yOrigin + 1, xOrigin)) stonesPerpendicular
-
-                    log =
-                        Debug.log "SE" stonesNot
+                        List.filter (isColorAndPositions colorNot ( yOrigin, xOrigin + 1 ) ( yOrigin + 1, xOrigin )) stonesPerpendicular
                 in
                     List.length stonesNot < 2
 
-            (1, -1) ->
+            ( 1, -1 ) ->
                 -- SW
                 let
                     stonesNot =
-                        List.filter (isColorAndPositions colorNot (yOrigin + 1, xOrigin) (yOrigin, xOrigin - 1)) stonesPerpendicular
-
-                    log =
-                        Debug.log "SW" stonesNot
+                        List.filter (isColorAndPositions colorNot ( yOrigin + 1, xOrigin ) ( yOrigin, xOrigin - 1 )) stonesPerpendicular
                 in
                     List.length stonesNot < 2
 
-            (-1, -1) ->
+            ( -1, -1 ) ->
                 -- NW
                 let
                     stonesNot =
-                        List.filter (isColorAndPositions colorNot (yOrigin, xOrigin - 1) (yOrigin - 1, xOrigin)) stonesPerpendicular
-
-                    log =
-                        Debug.log "NW" stonesNot
+                        List.filter (isColorAndPositions colorNot ( yOrigin, xOrigin - 1 ) ( yOrigin - 1, xOrigin )) stonesPerpendicular
                 in
                     List.length stonesNot < 2
 
@@ -540,7 +525,8 @@ findNeighboursForPosition board color position =
                 |> List.map (\n -> Tuple.first n)
 
         neighboursDiagonal =
-            List.filter (isNeighbourDiagonal stonesPerpendicular color x y) stonesDiagonal
+            List.filter (\n -> (Tuple.second n).color == color) stonesDiagonal
+                |> List.filter (isNeighbourDiagonal stonesPerpendicular color x y)
                 |> List.map (\n -> Tuple.first n)
     in
         neighboursPerpendicular ++ neighboursDiagonal
@@ -559,7 +545,8 @@ findGroup board color positions group =
                         |> List.concat
 
                 newGroup =
-                    group ++ neighbours
+                    List.filter (\n -> List.member n group |> not) neighbours
+                        |> (++) group
 
                 nextPositions =
                     List.filter (\p -> List.member p group |> not) neighbours

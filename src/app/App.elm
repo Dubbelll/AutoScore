@@ -37,6 +37,7 @@ type alias Model =
     , prisonersWhite : Int
     , areDeadRemoved : Bool
     , showHelp : Bool
+    , allowAds : Bool
     , isVideoPlaying : Bool
     , isInputSuccessful : Bool
     , isCroppingSuccessful : Bool
@@ -169,6 +170,7 @@ init location =
             , prisonersWhite = 0
             , areDeadRemoved = False
             , showHelp = True
+            , allowAds = False
             , isVideoPlaying = False
             , isInputSuccessful = False
             , isCroppingSuccessful = False
@@ -384,6 +386,16 @@ stars9x9 =
     , Star 3 7
     , Star 7 7
     ]
+
+
+adSenseURL : String
+adSenseURL =
+    "//pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"
+
+
+adSenseScript : String
+adSenseScript =
+    "(adsbygoogle = window.adsbygoogle || []).push({google_ad_client: \"ca-pub-9243137751192540\",enable_page_level_ads: true});"
 
 
 
@@ -804,6 +816,7 @@ type Msg
     | NewPrisonersWhite String
     | NewAreDeadRemoved Bool
     | NewShowHelp Bool
+    | NewAllowAds Bool
     | CameraStarted Bool
     | CameraStopped Bool
     | TakePhoto
@@ -932,6 +945,18 @@ update message model =
 
         NewShowHelp show ->
             ( { model | showHelp = show }, Cmd.none )
+
+        NewAllowAds allow ->
+            let
+                command =
+                    case allow of
+                        True ->
+                            Cmd.none
+
+                        False ->
+                            Navigation.reload
+            in
+                ( { model | allowAds = allow }, command )
 
         CameraStarted isPlaying ->
             ( { model | isVideoPlaying = isPlaying, isLoading = False, loadingMessage = Nothing }, Cmd.none )
@@ -1122,32 +1147,46 @@ subscriptions model =
 
 view : Model -> Html Msg
 view model =
-    div [ classList [ ( "container-app", True ) ] ]
-        [ page model
-        , viewCanvas "canvas-input" (model.isInputSuccessful && model.route == RouteCrop)
-        , viewCanvas "canvas-color-black" (model.isCroppingSuccessful && model.route == RouteBlack)
-        , viewCanvas "canvas-color-white" (model.isPickingBlackSuccessful && model.route == RouteWhite)
-        , viewCanvas "canvas-output" (model.isPickingWhiteSuccessful && model.route == RouteProcessing)
-        , viewCanvas "canvas-temporary" False
-        , viewCropFrame "crop-input" Rectangle (model.isInputSuccessful && model.route == RouteCrop)
-        , viewCropFrame "crop-color-black" Circle (model.isCroppingSuccessful && model.route == RouteBlack)
-        , viewCropFrame "crop-color-white" Circle (model.isPickingBlackSuccessful && model.route == RouteWhite)
-        , video
-            [ id "video"
-            , classList [ ( "video", True ), ( "video--visible", model.isVideoPlaying ) ]
-            , onClick TakePhoto
-            ]
-            []
-        , div [ classList [ ( "loading", True ), ( "loading--visible", model.isLoading ) ] ]
-            [ div [ classList [ ( "loading-animation", True ) ] ]
-                [ span [ classList [ ( "loading-stone", True ), ( "loading-stone--black", True ) ] ] []
-                , span [ classList [ ( "loading-stone", True ), ( "loading-stone--white", True ) ] ] []
+    let
+        ads =
+            case model.allowAds of
+                True ->
+                    div [ classList [ ( "ads", True ), ( "ads--allowed", True ) ] ]
+                        [ script [ type_ "text/javascript", src adSenseURL, attributeAsync ] []
+                        , script [ type_ "text/javascript" ]
+                            [ text adSenseScript ]
+                        ]
+
+                False ->
+                    div [ classList [ ( "ads", True ), ( "ads--not-allowed", True ) ] ] []
+    in
+        div [ classList [ ( "container-app", True ) ] ]
+            [ page model
+            , viewCanvas "canvas-input" (model.isInputSuccessful && model.route == RouteCrop)
+            , viewCanvas "canvas-color-black" (model.isCroppingSuccessful && model.route == RouteBlack)
+            , viewCanvas "canvas-color-white" (model.isPickingBlackSuccessful && model.route == RouteWhite)
+            , viewCanvas "canvas-output" (model.isPickingWhiteSuccessful && model.route == RouteProcessing)
+            , viewCanvas "canvas-temporary" False
+            , viewCropFrame "crop-input" Rectangle (model.isInputSuccessful && model.route == RouteCrop)
+            , viewCropFrame "crop-color-black" Circle (model.isCroppingSuccessful && model.route == RouteBlack)
+            , viewCropFrame "crop-color-white" Circle (model.isPickingBlackSuccessful && model.route == RouteWhite)
+            , video
+                [ id "video"
+                , classList [ ( "video", True ), ( "video--visible", model.isVideoPlaying ) ]
+                , onClick TakePhoto
                 ]
-            , div [ classList [ ( "loading-message", True ) ] ]
-                [ text (Maybe.withDefault "Loading" model.loadingMessage)
+                []
+            , div [ classList [ ( "loading", True ), ( "loading--visible", model.isLoading ) ] ]
+                [ div [ classList [ ( "loading-animation", True ) ] ]
+                    [ span [ classList [ ( "loading-stone", True ), ( "loading-stone--black", True ) ] ] []
+                    , span [ classList [ ( "loading-stone", True ), ( "loading-stone--white", True ) ] ] []
+                    ]
+                , div [ classList [ ( "loading-message", True ) ] ]
+                    [ text (Maybe.withDefault "Loading" model.loadingMessage)
+                    ]
                 ]
+            , ads
             ]
-        ]
 
 
 page : Model -> Html Msg
@@ -1475,6 +1514,12 @@ viewSettings model =
                 "checked"
             else
                 "box"
+
+        nameAllowAds =
+            if model.allowAds then
+                "checked"
+            else
+                "box"
     in
         div [ classList [ ( "container-settings", True ) ] ]
             [ viewIconTextActionClose
@@ -1487,14 +1532,9 @@ viewSettings model =
                 Big
             , div [ classList [ ( "container-settings-list", True ) ] ]
                 [ ul [ classList [ ( "settings-list", True ) ] ]
-                    [ li [ classList [ ( "container-select", True ), ( "list-item", True ) ] ]
-                        [ viewIconText "grid" [] "Board size" ToRight False Medium
-                        , select [ classList [ ( "input", True ) ], on "change" (JD.map NewBoardSize targetValue) ]
-                            (List.map (viewOptionBoardSize model) model.boardSizes)
-                        ]
-                    , li [ classList [ ( "list-item", True ) ] ]
+                    [ li [ classList [ ( "list-item", True ) ] ]
                         [ label [ for "prisoners-black" ]
-                            [ viewIconText "white" [] "Prisoners for black" ToRight False Medium
+                            [ viewIconText "white" [] "Captured by black" ToRight False Medium
                             , input
                                 [ id "prisoners-black"
                                 , classList [ ( "input", True ) ]
@@ -1507,7 +1547,7 @@ viewSettings model =
                         ]
                     , li [ classList [ ( "list-item", True ) ] ]
                         [ label [ for "prisoners-white" ]
-                            [ viewIconText "black" [] "Prisoners for white" ToRight False Medium
+                            [ viewIconText "black" [] "Captured by white" ToRight False Medium
                             , input
                                 [ id "prisoners-white"
                                 , classList [ ( "input", True ) ]
@@ -1518,9 +1558,7 @@ viewSettings model =
                                 []
                             ]
                         ]
-                    ]
-                , ul [ classList [ ( "settings-list", True ) ] ]
-                    [ li [ classList [ ( "list-item", True ) ] ]
+                    , li [ classList [ ( "list-item", True ) ] ]
                         [ label [ for "komi" ]
                             [ viewIconText "komi" [] "Komi" ToRight False Medium
                             , input
@@ -1533,7 +1571,9 @@ viewSettings model =
                                 []
                             ]
                         ]
-                    , li [ classList [ ( "list-item", True ) ] ]
+                    ]
+                , ul [ classList [ ( "settings-list", True ) ] ]
+                    [ li [ classList [ ( "list-item", True ) ] ]
                         [ viewIconTextCommand
                             nameAreDeadRemoved
                             []
@@ -1549,6 +1589,15 @@ viewSettings model =
                             "Show help messages"
                             ToRight
                             (NewShowHelp <| not model.showHelp)
+                            Medium
+                        ]
+                    , li [ classList [ ( "list-item", True ) ] ]
+                        [ viewIconTextCommand
+                            nameAllowAds
+                            []
+                            "Allow ads"
+                            ToRight
+                            (NewAllowAds <| not model.allowAds)
                             Medium
                         ]
                     ]
@@ -1977,16 +2026,26 @@ intToPixels value =
     toString value ++ "px"
 
 
-attributeFrameBorder : String -> Attribute msg
+attributeFrameBorder : String -> Attribute Msg
 attributeFrameBorder value =
     attribute "frameborder" value
 
 
-attributeAllow : String -> Attribute msg
+attributeAllow : String -> Attribute Msg
 attributeAllow value =
     attribute "allow" value
 
 
-attributeAllowFullScreen : Attribute msg
+attributeAllowFullScreen : Attribute Msg
 attributeAllowFullScreen =
     attribute "allowfullscreen" ""
+
+
+attributeAsync : Attribute Msg
+attributeAsync =
+    attribute "async" ""
+
+
+script : List (Attribute Msg) -> List (Html Msg) -> Html Msg
+script attributes children =
+    node "script" attributes children

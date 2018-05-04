@@ -42,16 +42,16 @@
     {
         position: absolute;
 
-        &:first-child
+        &:nth-child(1)
         {
             left: 0;
             width : 55%;
         }
 
-        &:last-child
+        &:nth-child(2)
         {
             right: 0;
-            width: 45%;
+            width : 45%;
         }
     }
 

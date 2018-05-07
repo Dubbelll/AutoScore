@@ -37,7 +37,6 @@ type alias Model =
     , prisonersWhite : Int
     , areDeadRemoved : Bool
     , showHelp : Bool
-    , allowAds : Bool
     , isVideoPlaying : Bool
     , isInputSuccessful : Bool
     , isCroppingSuccessful : Bool
@@ -169,8 +168,7 @@ init location =
             , prisonersBlack = 0
             , prisonersWhite = 0
             , areDeadRemoved = False
-            , showHelp = True
-            , allowAds = True
+            , showHelp = False
             , isVideoPlaying = False
             , isInputSuccessful = False
             , isCroppingSuccessful = False
@@ -816,7 +814,6 @@ type Msg
     | NewPrisonersWhite String
     | NewAreDeadRemoved Bool
     | NewShowHelp Bool
-    | NewAllowAds Bool
     | CameraStarted Bool
     | CameraStopped Bool
     | TakePhoto
@@ -945,18 +942,6 @@ update message model =
 
         NewShowHelp show ->
             ( { model | showHelp = show }, Cmd.none )
-
-        NewAllowAds allow ->
-            let
-                command =
-                    case allow of
-                        True ->
-                            Cmd.none
-
-                        False ->
-                            Navigation.reload
-            in
-                ( { model | allowAds = allow }, command )
 
         CameraStarted isPlaying ->
             ( { model | isVideoPlaying = isPlaying, isLoading = False, loadingMessage = Nothing }, Cmd.none )
@@ -1147,46 +1132,32 @@ subscriptions model =
 
 view : Model -> Html Msg
 view model =
-    let
-        ads =
-            case model.allowAds of
-                True ->
-                    div [ classList [ ( "ads", True ), ( "ads--allowed", True ) ] ]
-                        [ script [ type_ "text/javascript", src adSenseURL, attributeAsync ] []
-                        , script [ type_ "text/javascript" ]
-                            [ text adSenseScript ]
-                        ]
-
-                False ->
-                    div [ classList [ ( "ads", True ), ( "ads--not-allowed", True ) ] ] []
-    in
-        div [ classList [ ( "container-app", True ) ] ]
-            [ page model
-            , viewCanvas "canvas-input" (model.isInputSuccessful && model.route == RouteCrop)
-            , viewCanvas "canvas-color-black" (model.isCroppingSuccessful && model.route == RouteBlack)
-            , viewCanvas "canvas-color-white" (model.isPickingBlackSuccessful && model.route == RouteWhite)
-            , viewCanvas "canvas-output" (model.isPickingWhiteSuccessful && model.route == RouteProcessing)
-            , viewCanvas "canvas-temporary" False
-            , viewCropFrame "crop-input" Rectangle (model.isInputSuccessful && model.route == RouteCrop)
-            , viewCropFrame "crop-color-black" Circle (model.isCroppingSuccessful && model.route == RouteBlack)
-            , viewCropFrame "crop-color-white" Circle (model.isPickingBlackSuccessful && model.route == RouteWhite)
-            , video
-                [ id "video"
-                , classList [ ( "video", True ), ( "video--visible", model.isVideoPlaying ) ]
-                , onClick TakePhoto
-                ]
-                []
-            , div [ classList [ ( "loading", True ), ( "loading--visible", model.isLoading ) ] ]
-                [ div [ classList [ ( "loading-animation", True ) ] ]
-                    [ span [ classList [ ( "loading-stone", True ), ( "loading-stone--black", True ) ] ] []
-                    , span [ classList [ ( "loading-stone", True ), ( "loading-stone--white", True ) ] ] []
-                    ]
-                , div [ classList [ ( "loading-message", True ) ] ]
-                    [ text (Maybe.withDefault "Loading" model.loadingMessage)
-                    ]
-                ]
-            , ads
+    div [ classList [ ( "container-app", True ) ] ]
+        [ page model
+        , viewCanvas "canvas-input" (model.isInputSuccessful && model.route == RouteCrop)
+        , viewCanvas "canvas-color-black" (model.isCroppingSuccessful && model.route == RouteBlack)
+        , viewCanvas "canvas-color-white" (model.isPickingBlackSuccessful && model.route == RouteWhite)
+        , viewCanvas "canvas-output" (model.isPickingWhiteSuccessful && model.route == RouteProcessing)
+        , viewCanvas "canvas-temporary" False
+        , viewCropFrame "crop-input" Rectangle (model.isInputSuccessful && model.route == RouteCrop)
+        , viewCropFrame "crop-color-black" Circle (model.isCroppingSuccessful && model.route == RouteBlack)
+        , viewCropFrame "crop-color-white" Circle (model.isPickingBlackSuccessful && model.route == RouteWhite)
+        , video
+            [ id "video"
+            , classList [ ( "video", True ), ( "video--visible", model.isVideoPlaying ) ]
+            , onClick TakePhoto
             ]
+            []
+        , div [ classList [ ( "loading", True ), ( "loading--visible", model.isLoading ) ] ]
+            [ div [ classList [ ( "loading-animation", True ) ] ]
+                [ span [ classList [ ( "loading-stone", True ), ( "loading-stone--black", True ) ] ] []
+                , span [ classList [ ( "loading-stone", True ), ( "loading-stone--white", True ) ] ] []
+                ]
+            , div [ classList [ ( "loading-message", True ) ] ]
+                [ text (Maybe.withDefault "Loading" model.loadingMessage)
+                ]
+            ]
+        ]
 
 
 page : Model -> Html Msg
@@ -1514,12 +1485,6 @@ viewSettings model =
                 "checked"
             else
                 "box"
-
-        nameAllowAds =
-            if model.allowAds then
-                "checked"
-            else
-                "box"
     in
         div [ classList [ ( "container-settings", True ) ] ]
             [ viewIconTextActionClose
@@ -1589,15 +1554,6 @@ viewSettings model =
                             "Show help messages"
                             ToRight
                             (NewShowHelp <| not model.showHelp)
-                            Medium
-                        ]
-                    , li [ classList [ ( "list-item", True ) ] ]
-                        [ viewIconTextCommand
-                            nameAllowAds
-                            []
-                            "Allow ads"
-                            ToRight
-                            (NewAllowAds <| not model.allowAds)
                             Medium
                         ]
                     ]

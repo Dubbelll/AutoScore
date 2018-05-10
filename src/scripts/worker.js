@@ -1,4 +1,4 @@
-const version = "goautoscore-1.0.1";
+const version = "goautoscore-1.0.6";
 
 addEventListener("install", function (event) {
     event.waitUntil(
@@ -7,14 +7,16 @@ addEventListener("install", function (event) {
                 "/",
                 "app.css",
                 "app.js",
+                "config.js",
                 "favicon-16x16.png",
                 "favicon-32x32.png",
                 "favicon.ico",
+                "font.woff",
+                "font.woff2",
                 "icon-192x192.png",
                 "icon-512x512.png",
                 "index.html",
-                "nunito.woff",
-                "nunito.woff2",
+                "manifest.json",
                 "ports.js"
             ]);
         })

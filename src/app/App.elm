@@ -1451,24 +1451,35 @@ viewLanding model =
 
 viewDemo : Model -> Html Msg
 viewDemo model =
-    div [ classList [ ( "demo", True ), ( "demo--visible", model.showingDemo ) ] ]
-        [ div [ classList [ ( "demo-background", True ) ] ] []
-        , viewIconTextAction
-            "close"
-            [ ( "action--close", True ) ]
-            "Close"
-            ToLeft
-            CloseDemo
-            Medium
-        , iframe
-            [ classList [ ( "demo-video", True ) ]
-            , src "https://www.youtube-nocookie.com/embed/T-rPyxODzCk?rel=0"
-            , attributeFrameBorder "0"
-            , attributeAllow "autoplay; encrypted-media"
-            , attributeAllowFullScreen
-            ]
-            []
-        ]
+    case model.showingDemo of
+        True ->
+            div [ classList [ ( "demo", True ), ( "demo--visible", True ) ] ]
+                [ div [ classList [ ( "demo-background", True ) ] ] []
+                , viewIconTextAction
+                    "close"
+                    [ ( "action--close", True ) ]
+                    "Close"
+                    ToLeft
+                    CloseDemo
+                    Medium
+                , div [ classList [ ( "demo-video", True ), ( "demo-video--loading", True ) ] ] 
+                    [ div [ classList [ ( "loading-animation", True ) ] ]
+                        [ span [ classList [ ( "loading-stone", True ), ( "loading-stone--black", True ) ] ] []
+                        , span [ classList [ ( "loading-stone", True ), ( "loading-stone--white", True ) ] ] []
+                        ]
+                    ]
+                , iframe
+                    [ classList [ ( "demo-video", True ) ]
+                    , src "https://www.youtube-nocookie.com/embed/T-rPyxODzCk?rel=0"
+                    , attributeFrameBorder "0"
+                    , attributeAllow "autoplay; encrypted-media"
+                    , attributeAllowFullScreen
+                    ]
+                    []
+                ]
+
+        False ->
+            div [ classList [ ( "demo", True ) ] ] []
 
 
 viewSettings : Model -> Html Msg

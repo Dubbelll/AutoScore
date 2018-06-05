@@ -1430,7 +1430,7 @@ viewLanding model =
                 ]
             , li [ classList [ ( "landing-list-item", True ), ( "list-item", True ) ] ]
                 [ viewIconTextAction
-                    "video"
+                    "demo"
                     []
                     "Demo"
                     ToRight

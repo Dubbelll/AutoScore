@@ -1,4 +1,4 @@
-const version = "goautoscore-1.0.8";
+const version = "goautoscore-1.0.9";
 
 addEventListener("install", function (event) {
     event.waitUntil(

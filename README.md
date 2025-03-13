@@ -1,3 +1,3 @@
-# GoAutoScore
+# AutoScore
 
 Automatic scoring of Go board using a picture or camera

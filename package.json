@@ -12,7 +12,7 @@
         "optimize:css": "cleancss dist/app.css --output dist/app.css",
         "optimize": "npm run optimize:js && npm run optimize:css",
         "svg:generate": "svg-sprite-generate -d src/assets/svg -o src/sprite/icons.svg",
-        "sass:generate": "node-sass -q src/assets/scss/app.scss dist/app.css",
+        "sass:generate": "sass src/assets/scss/app.scss dist/app.css",
         "config:development": "cp src/config/development.js dist/ && mv dist/development.js dist/config.js",
         "config:staging": "cp src/config/staging.js dist/ && mv dist/staging.js dist/config.js",
         "config:production": "cp src/config/production.js dist/ && mv dist/production.js dist/config.js",
@@ -41,22 +41,25 @@
         "server": "browser-sync start --config \"bs-config.js\"",
         "format": "elm-format"
     },
-    "repository": {
-        "type": "git",
-        "url": "https://gitlab.com/GeneriekBedrijf/GoAutoScore"
-    },
     "keywords": [
-        "GoAutoScore"
+        "AutoScore"
     ],
     "author": "Lode Lesage",
     "license": "ISC",
     "devDependencies": {
         "browser-sync": "2.19.0",
         "clean-css-cli": "4.1.10",
-        "elm": "0.18.0",
-        "svg-sprite-generator": "0.0.7",
-        "uglify-es": "3.2.2",
+        "elm": "0.18.0-exp5",
         "node-sass": "4.7.2",
-        "onchange": "3.3.0"
+        "onchange": "3.3.0",
+        "sass": "^1.85.1",
+        "svg-sprite-generator": "0.0.7",
+        "uglify-es": "3.2.2"
+    },
+    "pnpm": {
+        "onlyBuiltDependencies": [
+            "elm",
+            "node-sass"
+        ]
     }
 }

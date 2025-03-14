@@ -650,23 +650,14 @@ input[type="file"]
     bottom: $positioning-thumb;
     left: 50%;
     transform: translateX(-50%);
-    width: 67rem;
+    display: flex;
+    gap: 16px;
 }
 
 .landing-list-item
 {
     display: inline-block;
     width: 32.5rem;
-
-    &:not(:first-child)
-    {
-        margin-left: $margin-default;
-    }
-
-    &:not(:last-child)
-    {
-        margin: 0;
-    }
 }
 
 .demo
